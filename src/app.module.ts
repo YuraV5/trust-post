@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { NodeEnv } from './common/consts';
 import appConfig from './configs/app/app.config';
 import { configValidation } from './configs/app/env.schema';
+import { AppLoggerModule } from './shared/logger/app-logger.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { configValidation } from './configs/app/env.schema';
       load: [appConfig],
       validationSchema: configValidation,
     }),
+    AppLoggerModule,
   ],
   controllers: [],
   providers: [],

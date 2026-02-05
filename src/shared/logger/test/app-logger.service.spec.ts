@@ -3,11 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { AppLogger } from '../services/app-logger';
 import { NodeEnv } from '../../../common/consts/node-mode';
 
-// Mock the ALS module to avoid real async-local-storage usage
-jest.mock('../../../infrastructure/als/request-id', () => ({
-  getRequestId: jest.fn(() => 'test-request-id'),
-}));
-
 describe('AppLogger', () => {
   let service: AppLogger;
   let configService: ConfigService;

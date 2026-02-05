@@ -1,11 +1,12 @@
 import appConfig from './configs/app/app.config';
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NodeEnv } from './common/consts';
 import { configValidation } from './configs/app/env.schema';
 import { AppLoggerModule } from './shared/logger/app-logger.module';
 import { APP_FILTER } from '@nestjs/core';
 import { AllExceptionsFilter, HttpExceptionFilter } from './infrastructure/filters';
+import { RequestExecutionContextMiddleware } from './infrastructure/middleware/request-execution-context';
 
 @Module({
   imports: [
@@ -32,4 +33,8 @@ import { AllExceptionsFilter, HttpExceptionFilter } from './infrastructure/filte
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestExecutionContextMiddleware).exclude('/health').forRoutes('/*path');
+  }
+}

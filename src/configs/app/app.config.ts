@@ -1,0 +1,31 @@
+import { IAppConfig } from './interface';
+
+export default (): IAppConfig => ({
+  nodeEnv: process.env.NODE_ENV || 'development',
+  port: parseInt(process.env.PORT!, 10) || 3001,
+  corsAllowOrigin: process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001',
+  serviceName: process.env.SERVICE_NAME || 'work-link-service',
+  loggerLevel: process.env.LOGGER_LEVEL || 'info',
+
+  db: {
+    host: process.env.DB_HOST!,
+    port: parseInt(process.env.DB_PORT!, 10) || 5432,
+    user: String(process.env.DB_USER),
+    password: process.env.DB_PASSWORD!,
+    name: process.env.DB_NAME!,
+  },
+
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT!, 10) || 6379,
+    ttl: parseInt(process.env.REDIS_TTL!, 10) || 300,
+  },
+
+  jwt: {
+    accessSecret: process.env.JWT_ACCESS_SECRET!,
+    accessExpiration: process.env.JWT_ACCESS_EXPIRATION || '15m',
+    refreshSecret: process.env.JWT_REFRESH_SECRET!,
+    refreshExpiration: process.env.JWT_REFRESH_EXPIRATION || '7d',
+    issuer: process.env.JWT_ISSUER!,
+  },
+});

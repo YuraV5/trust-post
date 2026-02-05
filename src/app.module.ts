@@ -34,7 +34,7 @@ import { RequestExecutionContextMiddleware } from './infrastructure/middleware/r
   ],
 })
 export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
+  configure(consumer: MiddlewareConsumer): void {
     consumer.apply(RequestExecutionContextMiddleware).exclude('/health').forRoutes('/*path');
   }
 }

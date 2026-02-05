@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ErrorCode } from '../../../../libs/errors/error-codes';
+import { ErrorCode } from '../../../../shared/errors/error-codes';
 
-export class BadRequestErrorResponse {
+export class ValidationErrorResponse {
   @ApiProperty({ example: 'rid', description: 'Request ID' })
   requestId: string;
 
@@ -9,14 +9,14 @@ export class BadRequestErrorResponse {
   statusCode: number;
 
   @ApiProperty({
-    example: ErrorCode.BAD_REQUEST,
+    example: ErrorCode.VALIDATION,
   })
   error: string;
 
-  @ApiProperty({ example: 'Bad request.', description: 'Error message' })
+  @ApiProperty({ example: 'Validation failed', description: 'Error message' })
   message: string;
 
-  @ApiProperty({ example: 'bad request details or empty field', description: 'Error details', required: false })
+  @ApiProperty({ example: [{ email: 'email must be an email' }], description: 'Error details', required: false })
   details?: any;
 
   @ApiProperty({ example: '2026-01-30T12:00:00.000Z', description: 'Timestamp of the error' })

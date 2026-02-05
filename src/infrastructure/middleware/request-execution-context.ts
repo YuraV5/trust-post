@@ -6,8 +6,7 @@ import { Context } from '../../shared/contex/context.service';
 @Injectable()
 export class RequestExecutionContextMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction): void {
-    const requestId =
-      req.headers['x-request-id']?.toString() ?? uuidv4();
+    const requestId = req.headers['x-request-id']?.toString() ?? uuidv4();
 
     res.setHeader('x-request-id', requestId);
 

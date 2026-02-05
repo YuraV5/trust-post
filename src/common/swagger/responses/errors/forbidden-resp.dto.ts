@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ErrorCode } from '../../../../libs/errors/error-codes';
+import { ErrorCode } from '../../../../shared/errors/error-codes';
 
 export class ForbiddenErrorResponse {
   @ApiProperty({ example: 'rid', description: 'Request ID' })

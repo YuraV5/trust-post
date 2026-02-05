@@ -7,6 +7,7 @@ import { AppLoggerModule } from './shared/logger/app-logger.module';
 import { APP_FILTER } from '@nestjs/core';
 import { AllExceptionsFilter, HttpExceptionFilter } from './infrastructure/filters';
 import { RequestExecutionContextMiddleware } from './infrastructure/middleware/request-execution-context';
+import { HealthModule } from './infrastructure/health/health.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { RequestExecutionContextMiddleware } from './infrastructure/middleware/r
       validationSchema: configValidation,
     }),
     AppLoggerModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [

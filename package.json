@@ -22,7 +22,9 @@
     "mgr:dev": "prisma migrate dev",
     "db:reset": "prisma migrate reset --force",
     "migr:deploy": "prisma migrate deploy",
-    "pr:gen": "prisma generate"
+    "pr:gen": "prisma generate",
+    "docker:prod": "docker build -t trust-post:latest . && docker-compose -f docker-compose.prod.yml up --abort-on-container-exit --remove-orphans",
+    "docker:prod:down": "docker-compose -f docker-compose.prod.yml down -v"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

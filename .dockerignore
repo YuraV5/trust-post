@@ -1,0 +1,25 @@
+# Node modules
+node_modules
+
+# Build output
+dist
+build
+
+# Logs
+*.log
+
+# Environment files
+.env.*
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Git files
+.git
+.gitignore
+
+# Dockerfile and other Docker-related files
+Dockerfile*
+.dockerignore

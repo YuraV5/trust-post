@@ -9,6 +9,7 @@ import { AllExceptionsFilter, HttpExceptionFilter } from './infrastructure/filte
 import { RequestExecutionContextMiddleware } from './infrastructure/middleware/request-execution-context';
 import { HealthModule } from './infrastructure/health/health.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { SecurityModule } from './modules/security/security.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
     AppLoggerModule,
     HealthModule,
     PrismaModule,
+    SecurityModule,
   ],
   controllers: [],
   providers: [

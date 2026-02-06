@@ -7,14 +7,6 @@ export default (): IAppConfig => ({
   serviceName: process.env.SERVICE_NAME || 'work-link-service',
   loggerLevel: process.env.LOGGER_LEVEL || 'info',
 
-  db: {
-    host: process.env.DB_HOST!,
-    port: parseInt(process.env.DB_PORT!, 10) || 5432,
-    user: String(process.env.DB_USER),
-    password: process.env.DB_PASSWORD!,
-    name: process.env.DB_NAME!,
-  },
-
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT!, 10) || 6379,

@@ -5,8 +5,6 @@ export interface IAppConfig {
   serviceName: string;
   loggerLevel: string;
 
-  db: { host: string; port: number; user: string; password: string; name: string };
-
   redis: { host: string; port: number; ttl: number };
 
   jwt: {

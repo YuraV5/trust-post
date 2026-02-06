@@ -3,7 +3,7 @@ services:
     image: trust-post:latest
     container_name: trust_post_app
     env_file:
-      - .env
+      - .env.local
     ports:
       - "3001:3001"
     depends_on:

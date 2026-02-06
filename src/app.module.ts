@@ -8,6 +8,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { AllExceptionsFilter, HttpExceptionFilter } from './infrastructure/filters';
 import { RequestExecutionContextMiddleware } from './infrastructure/middleware/request-execution-context';
 import { HealthModule } from './infrastructure/health/health.module';
+import { PrismaModule } from './modules/prisma/prisma.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { HealthModule } from './infrastructure/health/health.module';
     }),
     AppLoggerModule,
     HealthModule,
+    PrismaModule,
   ],
   controllers: [],
   providers: [

@@ -7,25 +7,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRoleTypes {
+enum UserRoles {
   USER      @map("user")
   ADMIN     @map("admin")
   MODERATOR @map("moderator")
 
-  @@map("UserRoles")
+  @@map("user_roles")
 }
 
 model User {
-  id              String        @id @default(uuid())
-  email           String        @unique @db.VarChar(255)
-  name            String        @db.VarChar(128)
+  id              String    @id @default(uuid())
+  email           String    @unique @db.VarChar(255)
+  name            String    @db.VarChar(128)
   password        String?
-  photoUrl        String?       @db.VarChar(512)
-  role            UserRoleTypes @default(USER)
-  isActive        Boolean       @default(true)
-  isEmailVerified Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  photoUrl        String?   @map("photo_url") @db.VarChar(512)
+  role            UserRoles @default(USER)
+  isActive        Boolean   @default(true) @map("is_active")
+  isEmailVerified Boolean   @default(false) @map("is_email_verified")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@map("users")
 }

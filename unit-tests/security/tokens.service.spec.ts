@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { UnauthorizedError } from '../../src/shared/errors/app-errors';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { mockJwtService } from './mock/token.mock';
-import { AppLoggerMock } from '../mock/logger.mock';
+import { MockAppLogger } from '../mock/logger.mock';
 
 describe('TokensService', () => {
   let service: TokensService;
@@ -36,7 +36,7 @@ describe('TokensService', () => {
           provide: ConfigService,
           useValue: mockConfigService,
         },
-        { provide: APP_LOGGER, useClass: AppLoggerMock },
+        { provide: APP_LOGGER, useClass: MockAppLogger },
       ],
     }).compile();
 

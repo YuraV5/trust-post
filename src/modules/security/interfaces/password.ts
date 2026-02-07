@@ -1,4 +1,4 @@
 export interface IPasswordService {
-  generate(password: string): Promise<string>;
-  compare(password: string, stored: string): Promise<boolean>;
+  hashPassword(password: string): Promise<string>;
+  verifyPassword(password: string, stored: string): Promise<boolean>;
 }

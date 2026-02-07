@@ -2,12 +2,11 @@ name: Checks
 
 on:
   pull_request:
-    branches:
+    branches-ignore:
       - '**'
   push:
-    branches:
+    branches-ignore:
       - main
-      - develop
 
 jobs:
   ci:

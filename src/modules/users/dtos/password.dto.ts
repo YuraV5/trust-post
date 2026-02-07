@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, Matches, MinLength } from 'class-validator';
+import { PASSWORD_REGEX } from '../../../common/validation/regex';
 
 export class UpdatePasswordDto {
   @ApiProperty()
@@ -10,6 +11,8 @@ export class UpdatePasswordDto {
   @ApiProperty({})
   @IsString()
   @MinLength(6)
-  @Matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/) // At least 6 characters, at least one letter and one number
+  @Matches(PASSWORD_REGEX, {
+    message: 'Password must contain at least one letter and one number',
+  })
   newPassword: string;
 }

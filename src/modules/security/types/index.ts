@@ -1,6 +1,6 @@
 export type AccessPayload = {
   sub: string;
-  roles: string[];
+  role: string;
 };
 
 export type RefreshPayload = {

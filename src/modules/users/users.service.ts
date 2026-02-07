@@ -39,6 +39,7 @@ export class UsersService implements IUserService {
 
     const hashedPassword = await this.passwordService.createHashe(inp.password);
     inp.password = hashedPassword;
+    inp.name = inp.name.toLowerCase();
     const user = await this.repo.create(inp);
 
     this.logger.info(`User with id ${user.id} created successfully`);
@@ -52,7 +53,8 @@ export class UsersService implements IUserService {
   }
 
   async update(id: string, inp: UpdateUserInput): Promise<MessageResponse> {
-    const user = await this.repo.update(id, inp);
+    const name = inp?.name?.toLowerCase();
+    const user = await this.repo.update(id, { ...inp, name });
     this.logger.info(`User with id ${user.id} updated successfully`);
     return { message: `User updated successfully` };
   }
@@ -74,5 +76,11 @@ export class UsersService implements IUserService {
 
     this.logger.info(`User with id ${user.id} updated password successfully`);
     return { message: `User password updated successfully` };
+  }
+
+  async findAuthUserbyId(id: string): Promise<UserSecyredOutput | null> {
+    const user = await this.repo.findAuthUserbyId(id);
+    if (!user) throw new UserNotFoundError();
+    return user;
   }
 }

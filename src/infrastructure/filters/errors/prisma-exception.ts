@@ -1,25 +1,24 @@
 import { ExceptionFilter, Catch, ArgumentsHost, Inject, HttpServer } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { Prisma } from '@prisma/client';
 import { ErrorCode } from '../../../shared/errors/error-codes';
 import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
 import { Context } from '../../../shared/contex/context.service';
 
-interface PrismaError extends Error {
-  code?: string;
-  meta?: unknown;
-}
+type PrismaError = Prisma.PrismaClientKnownRequestError;
 
-@Catch()
+@Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaExceptionFilter implements ExceptionFilter {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: AppLogger,
     private readonly adapterHost: HttpAdapterHost,
   ) {}
 
-  catch(exception: unknown, host: ArgumentsHost): void {
-    if (!this.isPrismaError(exception)) {
-      throw exception; // Pass to next filter
-    }
+  catch(exception: PrismaError, host: ArgumentsHost): void {
+    this.logger.error('Exception caught in PrismaExceptionFilter', {
+      exception,
+      context: 'PrismaExceptionFilter',
+    });
 
     const { httpAdapter }: { httpAdapter: HttpServer } = this.adapterHost;
     const ctx = host.switchToHttp();
@@ -27,22 +26,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     const res = ctx.getResponse<Response>();
     const requestId = Context.get()?.requestId || 'no-rid';
 
-    this.handlePrismaError(exception as PrismaError, requestId, req, res, httpAdapter);
-  }
-
-  private isPrismaError(exception: unknown): boolean {
-    if (!(exception instanceof Error)) {
-      return false;
-    }
-
-    const error = exception as PrismaError;
-    return (
-      error.name === 'PrismaClientKnownRequestError' ||
-      error.name === 'PrismaClientValidationError' ||
-      error.name === 'PrismaClientRustPanicError' ||
-      error.name === 'PrismaClientInitializationError' ||
-      (error.code !== undefined && typeof error.code === 'string')
-    );
+    this.handlePrismaError(exception, requestId, req, res, httpAdapter);
   }
 
   private handlePrismaError(

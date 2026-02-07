@@ -12,6 +12,3 @@ export const API_BASE_URL = `${API_PREFIX}/${API_VERSION}`;
 export const HEALTH_ENDPOINTS = {
   CHECK: `${API_BASE_URL}/health`,
 };
-
-
-

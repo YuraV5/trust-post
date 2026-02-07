@@ -9,6 +9,7 @@ import { HealthModule } from './infrastructure/health/health.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { SecurityModule } from './modules/security/security.module';
 import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UsersModule } from './modules/users/users.module';
     PrismaModule,
     SecurityModule,
     UsersModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],

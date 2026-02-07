@@ -1,7 +1,7 @@
-export const NodeEnv = {
+export const AppNodeMode = {
   DEV: 'development',
   TEST: 'test',
   PROD: 'production',
 } as const;
 
-export type NodeEnv = (typeof NodeEnv)[keyof typeof NodeEnv];
+export type AppNodeMode = (typeof AppNodeMode)[keyof typeof AppNodeMode];

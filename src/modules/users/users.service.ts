@@ -37,7 +37,7 @@ export class UsersService implements IUserService {
       throw new UserAlreadyExistsError();
     }
 
-    const hashedPassword = await this.passwordService.hashPassword(inp.password);
+    const hashedPassword = await this.passwordService.createHashe(inp.password);
     inp.password = hashedPassword;
     const user = await this.repo.create(inp);
 
@@ -63,12 +63,12 @@ export class UsersService implements IUserService {
       this.logger.warn(`User with id ${id} not found for password update`);
       throw new UserNotFoundError();
     }
-    const isCurrentPasswordValid = await this.passwordService.verifyPassword(inp.currentPassword, user.password!);
+    const isCurrentPasswordValid = await this.passwordService.verify(inp.currentPassword, user.password!);
     if (!isCurrentPasswordValid) {
       this.logger.warn(`Invalid current password for user with id ${id}`);
       throw new UserNotFoundError('Invalid current password');
     }
-    const newPassword = await this.passwordService.hashPassword(inp.newPassword);
+    const newPassword = await this.passwordService.createHashe(inp.newPassword);
 
     await this.repo.updatePassword(id, newPassword);
 

@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from '../../src/modules/users/users.service';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
-import { MockAppLogger } from '../mock/logger.mock';
 import { UsersRepo } from '../../src/modules/users/repo/users-repo';
 import { PasswordService } from '../../src/modules/security/services';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
+import { StubAppLogger } from '../__mock__';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -16,7 +16,7 @@ describe('UsersService', () => {
         UsersRepo,
         PasswordService,
         { provide: PrismaService, useValue: jest.fn() },
-        { provide: APP_LOGGER, useValue: MockAppLogger },
+        { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();
 

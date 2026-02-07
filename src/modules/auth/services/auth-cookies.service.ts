@@ -1,9 +1,9 @@
-import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { AppNodeMode } from "../../../common/consts";
-import { JwtToken } from "../../security/consts";
-import type { Response } from "express";
-import { IAuthCookiesService } from "../interfaces";
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { AppNodeMode } from '../../../common/consts';
+import { JwtToken } from '../../security/consts';
+import type { Response } from 'express';
+import { IAuthCookiesService } from '../interfaces';
 
 @Injectable()
 export class AuthCookiesService implements IAuthCookiesService {

@@ -6,6 +6,8 @@ import { UserSecyredOutput, UserOutput, NewUserInput, UpdateUserInput, UpdatePas
 import { UsersRepo } from './repo/users-repo';
 import { UserAlreadyExistsError, UserNotFoundError } from './errors';
 import { PasswordService } from '../security/services';
+import { BadRequestError } from '../../shared/errors/app-errors';
+import { hasUpdatableFields } from '../../common/utils';
 
 @Injectable()
 export class UsersService implements IUserService {
@@ -53,6 +55,9 @@ export class UsersService implements IUserService {
   }
 
   async update(id: string, inp: UpdateUserInput): Promise<MessageResponse> {
+    if (!hasUpdatableFields(inp)) {
+      throw new BadRequestError('No fields to update');
+    }
     const name = inp?.name?.toLowerCase();
     const user = await this.repo.update(id, { ...inp, name });
     this.logger.info(`User with id ${user.id} updated successfully`);

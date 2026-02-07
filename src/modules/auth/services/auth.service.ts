@@ -8,7 +8,6 @@ import { BadRequestError } from '../../../shared/errors/app-errors';
 import { PasswordService, TokensService } from '../../security/services';
 import { UserNotFoundError } from '../../users/errors';
 
-
 @Injectable()
 export class AuthService implements IAuthService {
   constructor(

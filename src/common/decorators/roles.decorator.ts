@@ -1,5 +1,6 @@
 import { SetMetadata } from '@nestjs/common';
-import { UserRoleTypes } from '@prisma/client';
+import { UserRoles } from '@prisma/client';
 
-export const ROLES_KEY = 'roles';
-export const Roles = (...roles: UserRoleTypes[]): ReturnType<typeof SetMetadata> => SetMetadata(ROLES_KEY, roles);
+export const ROLES_KEY = 'minRole';
+
+export const Roles = (role: UserRoles): MethodDecorator => SetMetadata(ROLES_KEY, role);

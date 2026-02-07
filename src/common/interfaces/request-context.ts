@@ -1,18 +1,18 @@
-import { UserRoleTypes } from '@prisma/client';
+import { UserRoles } from '@prisma/client';
 import { Request } from 'express';
 
 export interface AuthenticatedUser {
   userId: string;
-  role: UserRoleTypes;
+  role: UserRoles;
+}
+
+export interface AuthenticatedRequest extends Request {
+  user: AuthenticatedUser;
 }
 
 export interface TokenRefreshUser {
   userId: string;
   sessionId?: string;
-}
-
-export interface AuthenticatedRequest extends Request {
-  user: AuthenticatedUser;
 }
 
 export interface RefreshTokenRequest extends Request {

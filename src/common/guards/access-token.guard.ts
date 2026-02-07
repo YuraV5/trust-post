@@ -4,7 +4,7 @@ import { TokensService } from '../../modules/security/services';
 import { UnauthorizedError } from '../../shared/errors/app-errors';
 import { IS_PUBLIC_KEY } from '../decorators';
 import { AuthenticatedRequest } from '../interfaces';
-import { UserRoleTypes } from '@prisma/client';
+import { UserRoles } from '@prisma/client';
 
 @Injectable()
 export class AccessTokenGuard implements CanActivate {
@@ -31,7 +31,7 @@ export class AccessTokenGuard implements CanActivate {
 
     req.user = {
       userId: payload.sub,
-      role: payload.role as UserRoleTypes,
+      role: payload.role as UserRoles,
     };
     return true;
   }

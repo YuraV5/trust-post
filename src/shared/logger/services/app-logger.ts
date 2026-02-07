@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createLogger, format, Logger, transports } from 'winston';
-import { NodeEnv } from '../../../common/consts/node-mode';
+import { AppNodeMode } from '../../../common/consts/node-mode';
 import { IAppLogger, LoggerInfo, LogMeta } from '../intefaces/interface';
 import { Context } from '../../contex/context.service';
 
@@ -40,7 +40,7 @@ export class AppLogger implements IAppLogger {
   }
 
   private createLogger() {
-    return this.nodeEnv === NodeEnv.PROD ? this.createProdLogger() : this.createDevLogger();
+    return this.nodeEnv === AppNodeMode.PROD ? this.createProdLogger() : this.createDevLogger();
   }
 
   private createProdLogger(): Logger {

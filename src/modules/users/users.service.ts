@@ -6,6 +6,8 @@ import { UserSecyredOutput, UserOutput, NewUserInput, UpdateUserInput, UpdatePas
 import { UsersRepo } from './repo/users-repo';
 import { UserAlreadyExistsError, UserNotFoundError } from './errors';
 import { PasswordService } from '../security/services';
+import { BadRequestError } from '../../shared/errors/app-errors';
+import { hasUpdatableFields } from '../../common/utils';
 
 @Injectable()
 export class UsersService implements IUserService {
@@ -37,8 +39,9 @@ export class UsersService implements IUserService {
       throw new UserAlreadyExistsError();
     }
 
-    const hashedPassword = await this.passwordService.hashPassword(inp.password);
+    const hashedPassword = await this.passwordService.createHashe(inp.password);
     inp.password = hashedPassword;
+    inp.name = inp.name.toLowerCase();
     const user = await this.repo.create(inp);
 
     this.logger.info(`User with id ${user.id} created successfully`);
@@ -52,7 +55,11 @@ export class UsersService implements IUserService {
   }
 
   async update(id: string, inp: UpdateUserInput): Promise<MessageResponse> {
-    const user = await this.repo.update(id, inp);
+    if (!hasUpdatableFields(inp)) {
+      throw new BadRequestError('No fields to update');
+    }
+    const name = inp?.name?.toLowerCase();
+    const user = await this.repo.update(id, { ...inp, name });
     this.logger.info(`User with id ${user.id} updated successfully`);
     return { message: `User updated successfully` };
   }
@@ -63,16 +70,22 @@ export class UsersService implements IUserService {
       this.logger.warn(`User with id ${id} not found for password update`);
       throw new UserNotFoundError();
     }
-    const isCurrentPasswordValid = await this.passwordService.verifyPassword(inp.currentPassword, user.password!);
+    const isCurrentPasswordValid = await this.passwordService.verify(inp.currentPassword, user.password!);
     if (!isCurrentPasswordValid) {
       this.logger.warn(`Invalid current password for user with id ${id}`);
       throw new UserNotFoundError('Invalid current password');
     }
-    const newPassword = await this.passwordService.hashPassword(inp.newPassword);
+    const newPassword = await this.passwordService.createHashe(inp.newPassword);
 
     await this.repo.updatePassword(id, newPassword);
 
     this.logger.info(`User with id ${user.id} updated password successfully`);
     return { message: `User password updated successfully` };
+  }
+
+  async findAuthUserbyId(id: string): Promise<UserSecyredOutput | null> {
+    const user = await this.repo.findAuthUserbyId(id);
+    if (!user) throw new UserNotFoundError();
+    return user;
   }
 }

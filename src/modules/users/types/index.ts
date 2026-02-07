@@ -21,7 +21,7 @@ export type UserOutput = {
   updatedAt: Date;
 };
 
-export type UserSecyredOutput = {
+export type UserSecyredOutput = UserOutput & {
   password: string | null;
   role: 'USER' | 'ADMIN' | 'MODERATOR';
 };

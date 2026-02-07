@@ -1,6 +1,6 @@
 import { IAppLogger } from '../../src/shared/logger/intefaces/interface';
 
-export class MockAppLogger implements IAppLogger {
+export class StubAppLogger implements IAppLogger {
   info = jest.fn();
   warn = jest.fn();
   debug = jest.fn();

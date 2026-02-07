@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { UnauthorizedError } from '../../src/shared/errors/app-errors';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { mockJwtService } from './mock/token.mock';
-import { MockAppLogger } from '../mock/logger.mock';
+import { StubAppLogger } from '../__mock__';
 
 describe('TokensService', () => {
   let service: TokensService;
@@ -36,7 +36,7 @@ describe('TokensService', () => {
           provide: ConfigService,
           useValue: mockConfigService,
         },
-        { provide: APP_LOGGER, useClass: MockAppLogger },
+        { provide: APP_LOGGER, useClass: StubAppLogger },
       ],
     }).compile();
 
@@ -51,7 +51,7 @@ describe('TokensService', () => {
   describe('generateAccess', () => {
     it('should generate valid access token', async () => {
       const mockToken = 'mock-access-token';
-      const payload = { sub: 'user-123', roles: ['USER'] };
+      const payload = { sub: 'user-123', role: 'USER' };
 
       mockJwtService.signAsync.mockResolvedValue(mockToken);
 
@@ -62,7 +62,7 @@ describe('TokensService', () => {
     });
 
     it('should throw InternalServerError on token generation failure', async () => {
-      const payload = { sub: 'user-123', roles: ['USER'] };
+      const payload = { sub: 'user-123', role: 'USER' };
 
       mockJwtService.signAsync.mockRejectedValue(new Error('JWT sign error'));
 
@@ -86,7 +86,7 @@ describe('TokensService', () => {
 
   describe('verifyAccess', () => {
     it('should verify valid access token', async () => {
-      const mockPayload = { sub: 'user-123', roles: ['USER'], iat: 1000, exp: 2000, iss: 'test-issuer' };
+      const mockPayload = { sub: 'user-123', role: 'USER', iat: 1000, exp: 2000, iss: 'test-issuer' };
       const token = 'valid-access-token';
 
       mockJwtService.verifyAsync.mockResolvedValue(mockPayload);

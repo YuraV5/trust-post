@@ -33,4 +33,8 @@ export class UsersRepo implements IUserRepo {
     await this.db.user.update({ where: { id }, data: { password: newPassword } });
     return;
   }
+
+  async findAuthUserbyId(id: string): Promise<User | null> {
+    return await this.db.user.findUnique({ where: { id } });
+  }
 }

@@ -2,7 +2,7 @@ import argon2 from 'argon2';
 import { IPasswordService } from '../interfaces';
 
 export class PasswordService implements IPasswordService {
-  async hashPassword(password: string): Promise<string> {
+  async createHashe(password: string): Promise<string> {
     return argon2.hash(password, {
       type: argon2.argon2id,
       memoryCost: 2 ** 16, // 64 MB
@@ -11,7 +11,7 @@ export class PasswordService implements IPasswordService {
     });
   }
 
-  async verifyPassword(password: string, stored: string): Promise<boolean> {
+  async verify(password: string, stored: string): Promise<boolean> {
     return argon2.verify(stored, password);
   }
 }

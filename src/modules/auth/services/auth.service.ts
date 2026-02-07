@@ -1,16 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { IAuthService } from './interfaces';
-import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
-import { UsersService } from '../users/users.service';
-import { UserCredentials, UserLoginOutput, UserRegistration } from './types';
-import { MessageResponse } from '../../common/types';
-import { BadRequestError } from '../../shared/errors/app-errors';
-import { PasswordService, TokensService } from '../security/services';
-import { AppNodeMode } from '../../common/consts';
-import { JwtToken } from '../security/consts';
-import { Response } from 'express';
-import { ConfigService } from '@nestjs/config';
-import { UserNotFoundError } from '../users/errors';
+import { IAuthService } from '../interfaces';
+import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
+import { UsersService } from '../../users/users.service';
+import { UserCredentials, UserLoginOutput, UserRegistration } from '../types';
+import { MessageResponse } from '../../../common/types';
+import { BadRequestError } from '../../../shared/errors/app-errors';
+import { PasswordService, TokensService } from '../../security/services';
+import { UserNotFoundError } from '../../users/errors';
+
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -18,7 +15,6 @@ export class AuthService implements IAuthService {
     @Inject(APP_LOGGER) private readonly logger: AppLogger,
     private readonly usersService: UsersService,
     private readonly passwordService: PasswordService,
-    private readonly config: ConfigService,
     private readonly tokensService: TokensService,
   ) {}
 
@@ -76,31 +72,7 @@ export class AuthService implements IAuthService {
     return { accessToken };
   }
 
-  logout(resp: Response): MessageResponse {
-    this.clearAuthCookies(resp);
-    return { message: 'Logged out successfully' };
-  }
-
   logoutAll(): MessageResponse {
     throw new Error('Method not implemented yet');
-  }
-
-  setAuthCookies(resp: Response, refreshToken: string): void {
-    const isProduction = this.config.get('nodeEnv') === AppNodeMode.PROD;
-
-    resp.cookie(JwtToken.REFRESH, refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/',
-    });
-
-    this.logger.debug('Auth cookies set successfully');
-  }
-
-  clearAuthCookies(resp: Response): void {
-    resp.clearCookie(JwtToken.REFRESH, { path: '/' });
-    this.logger.debug('Auth cookies cleared');
   }
 }

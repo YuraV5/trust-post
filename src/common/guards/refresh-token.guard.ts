@@ -29,6 +29,7 @@ export class RefreshTokenGuard implements CanActivate {
 
     req.user = {
       userId: payload.sub,
+      sessionId: payload.sessionId,
     };
     req.refreshToken = refreshToken;
     return true;

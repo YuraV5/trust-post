@@ -7,6 +7,7 @@ import { MessageResponse } from '../../../common/types';
 import { BadRequestError } from '../../../shared/errors/app-errors';
 import { PasswordService, TokensService } from '../../security/services';
 import { UserNotFoundError } from '../../users/errors';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -41,9 +42,11 @@ export class AuthService implements IAuthService {
       throw new BadRequestError('Invalid credentials');
     }
 
+    const sessionId = uuidv4();
+
     const [accessToken, refreshToken] = await Promise.all([
       this.tokensService.generateAccess({ sub: user.id, role: user.role }),
-      this.tokensService.generateRefresh({ sub: user.id }),
+      this.tokensService.generateRefresh({ sub: user.id, sessionId }),
     ]);
 
     this.logger.info(`User ${inp.email} logged in successfully`);

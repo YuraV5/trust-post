@@ -5,9 +5,10 @@ import { UsersModule } from '../users/users.module';
 import { AppLoggerModule } from '../../shared/logger/app-logger.module';
 import { SecurityModule } from '../security/security.module';
 import { AuthCookiesService } from './services';
+import { SessionsModule } from './sessions/sessions.module';
 
 @Module({
-  imports: [UsersModule, AppLoggerModule, SecurityModule],
+  imports: [UsersModule, AppLoggerModule, SecurityModule, SessionsModule, SessionsModule],
   controllers: [AuthController],
   providers: [AuthService, AuthCookiesService],
 })

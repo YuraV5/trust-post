@@ -10,12 +10,12 @@ export interface AuthenticatedRequest extends Request {
   user: AuthenticatedUser;
 }
 
-export interface TokenRefreshUser {
+export interface RefreshTokenUser {
   userId: string;
-  sessionId?: string;
+  sessionId: string;
 }
 
 export interface RefreshTokenRequest extends Request {
-  user: TokenRefreshUser;
+  user: RefreshTokenUser;
   refreshToken: string;
 }

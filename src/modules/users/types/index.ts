@@ -15,10 +15,8 @@ export type UserOutput = {
   name: string;
   email: string;
   photoUrl: string | null;
-  isActive: boolean;
   isEmailVerified: boolean;
   createdAt: Date;
-  updatedAt: Date;
 };
 
 export type UserSecyredOutput = UserOutput & {

@@ -73,7 +73,7 @@ export class AuthService implements IAuthService {
       expiresAt: new Date(Date.now() + parseDuration(this.config.get<string>('session.expiresInMs')!)),
     });
 
-    this.logger.info(`User ${inp.email} logged successfully`);
+    this.logger.info(`User ${user.id} logged successfully`);
 
     return {
       accessToken,

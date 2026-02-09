@@ -3,4 +3,10 @@ export interface ExecutionContext {
   ip: string;
   userAgent: string;
   deviceName: string;
+
+  // HTTP
+  method?: string;
+  path?: string;
+  status?: number;
+  duration?: number;
 }

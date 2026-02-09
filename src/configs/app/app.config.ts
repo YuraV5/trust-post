@@ -20,4 +20,8 @@ export default (): IAppConfig => ({
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION || '7d',
     issuer: process.env.JWT_ISSUER!,
   },
+
+  session: {
+    expiresInMs: parseInt(process.env.SESSION_EXPIRES_IN_MS!, 10) || 604800000, // Default to 7 days
+  },
 });

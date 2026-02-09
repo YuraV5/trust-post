@@ -29,6 +29,9 @@ export class AccessTokenGuard implements CanActivate {
     const token = auth.split(' ')[1];
     const payload = await this.tokenService.verifyAccess(token);
 
+    if (!payload) {
+      throw new UnauthorizedError();
+    }
     req.user = {
       userId: payload.sub,
       role: payload.role as UserRoles,

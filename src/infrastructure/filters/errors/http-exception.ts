@@ -20,7 +20,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<Response>();
 
-    const requestId = Context.get()?.requestId || 'no-rid';
+    const requestId = Context.getRequired().requestId;
 
     let status = exception.getStatus();
     let code = ErrorCode.INTERNAL;

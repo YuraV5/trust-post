@@ -5,5 +5,5 @@ export type AccessPayload = {
 
 export type RefreshPayload = {
   sub: string;
-  sessionId?: string;
+  sessionId: string;
 };

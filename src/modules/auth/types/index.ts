@@ -7,6 +7,7 @@ export type UserRegistration = {
 export type UserCredentials = {
   email: string;
   password: string;
+  deviceId: string;
 };
 
 type UserOutput = {

@@ -21,4 +21,6 @@ export const configValidation = Joi.object({
   JWT_REFRESH_SECRET: Joi.string().required(),
   JWT_REFRESH_EXPIRATION: Joi.string().default('7d'),
   JWT_ISSUER: Joi.string().required().default('work-link-service'),
+
+  SESSION_EXPIRES_IN_MS: Joi.string().default('7d'), // Default to 7 days
 });

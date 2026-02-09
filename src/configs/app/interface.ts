@@ -15,4 +15,8 @@ export interface IAppConfig {
     issuer: string;
     audience?: string;
   };
+
+  session: {
+    expiresInMs: number;
+  };
 }

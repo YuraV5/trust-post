@@ -6,7 +6,7 @@ export class AppError extends HttpException {
     public readonly code: ErrorCode,
     status: number,
     message: string,
-    public readonly details?: unknown,
+    public readonly details?: string[],
   ) {
     super(message, status);
   }

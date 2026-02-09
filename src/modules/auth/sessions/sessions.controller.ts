@@ -27,7 +27,10 @@ export class SessionsController {
   }
 
   @Delete(':sessionId')
-  async deleteSession(@CurrentUser() user: RefreshTokenUser, @Param('sessionId') sessionId: string): Promise<MessageResponse> {
+  async deleteSession(
+    @CurrentUser() user: RefreshTokenUser,
+    @Param('sessionId') sessionId: string,
+  ): Promise<MessageResponse> {
     return await this.sessionsService.deleteBySessionId(sessionId);
   }
 }

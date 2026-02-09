@@ -52,10 +52,15 @@ export class AppLogger implements IAppLogger {
           JSON.stringify({
             ts: info.timestamp,
             lvl: info.level,
+            pid: process.pid,
             rid: Context.get()?.requestId ?? 'no-rid',
-            ctx: (info.context as string | null) ?? null,
+            method: Context.get()?.method ?? null,
+            path: Context.get()?.path ?? null,
+            status: Context.get()?.status ?? null,
+            duration: Context.get()?.duration ?? null,
+            ctx: info.context ?? null,
             msg: info.message,
-            stack: (info.stack as string | null) ?? null,
+            stack: info.stack ?? null,
           }),
         ),
       ),
@@ -72,10 +77,14 @@ export class AppLogger implements IAppLogger {
         format.colorize({ all: true }),
         format.timestamp({ format: 'HH:mm:ss' }),
         format.printf((info: LoggerInfo) => {
-          const rid = Context.get()?.requestId ?? 'no-rid';
-          const ctx = info.context ? `[${info.context}]` : '';
-          const stack = info.stack ? `\n${info.stack}` : '';
-          return `[${info.timestamp}] [${info.level}] [pid:${process.pid}] [rid:${rid}] ${ctx} ${info.message}${stack}`;
+          const ctx = Context.get();
+          return (
+            `[${info.timestamp}] [${info.level}] [pid:${process.pid}] [rid:${ctx?.requestId ?? 'no-rid'}]` +
+            ` [${ctx?.method ?? '-'} ${ctx?.path ?? '-'}]` +
+            ` [${ctx?.status ?? '-'} ${ctx?.duration ?? '-'}ms] ` +
+            `${info.message}` +
+            (info.stack ? `\n${info.stack}` : '')
+          );
         }),
       ),
       transports: [new transports.Console()],

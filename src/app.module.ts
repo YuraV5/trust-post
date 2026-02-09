@@ -11,7 +11,8 @@ import { SecurityModule } from './modules/security/security.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AccessTokenGuard } from './common/guards';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { HttpContextInterceptor } from './infrastructure/http/interceptors/http-context.interceptor';
 
 @Module({
   imports: [
@@ -30,6 +31,10 @@ import { APP_GUARD } from '@nestjs/core';
   ],
   controllers: [],
   providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpContextInterceptor,
+    },
     {
       provide: APP_GUARD,
       useClass: AccessTokenGuard,

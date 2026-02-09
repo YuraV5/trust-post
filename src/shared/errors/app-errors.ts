@@ -8,7 +8,7 @@ export class NotFoundError extends AppError {
 }
 
 export class ValidationError extends AppError {
-  constructor(message = 'Validation failed', details?: unknown) {
+  constructor(message = 'Validation failed', details?: string[]) {
     super(ErrorCode.VALIDATION, 400, message, details);
   }
 }
@@ -26,7 +26,7 @@ export class ForbiddenError extends AppError {
 }
 
 export class InternalServerError extends AppError {
-  constructor(message = 'An internal server error occurred', details?: unknown) {
+  constructor(message = 'An internal server error occurred', details?: string[]) {
     super(ErrorCode.INTERNAL, 500, message, details);
   }
 }

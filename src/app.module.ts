@@ -3,7 +3,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { configValidation } from './configs/app/env.schema';
 import { AppLoggerModule } from './shared/logger/app-logger.module';
-import { RequestExecutionContextMiddleware } from './infrastructure/middleware/request-execution-context';
+import { RequestContextMiddleware } from './infrastructure/middleware';
 import { ExceptionFiltersModule } from './infrastructure/filters/exception-filters.module';
 import { HealthModule } from './infrastructure/health/health.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
@@ -38,6 +38,6 @@ import { APP_GUARD } from '@nestjs/core';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestExecutionContextMiddleware).exclude('/health').forRoutes('/*path');
+    consumer.apply(RequestContextMiddleware).exclude('/health').forRoutes('/*path');
   }
 }

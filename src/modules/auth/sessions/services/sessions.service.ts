@@ -1,9 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ISessionService } from '../interfaces';
-import { SessionMapping } from '../types';
+import { SessionMapping, UserSession } from '../types';
 import { APP_LOGGER, AppLogger } from '../../../../shared/logger/services/app-logger';
 import { SessionsRepo } from '../repo/session-repo';
 import { mapSessions } from '../mappers';
+import { HashingService } from '../../../security/services';
 import { MessageResponse } from '../../../../common/types';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class SessionsService implements ISessionService {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: AppLogger,
     private readonly sessionRepo: SessionsRepo,
+    private readonly hashService: HashingService,
   ) {}
 
   async getMySessions(userId: string): Promise<SessionMapping[]> {
@@ -23,26 +25,63 @@ export class SessionsService implements ISessionService {
     return mapSessions(sessions);
   }
 
-  async deleteAllSessions(userId: string): Promise<MessageResponse> {
-    const deletedCount = await this.sessionRepo.deleteByUserId(userId);
-    if (deletedCount === 0) {
-      this.logger.warn(`No sessions deleted for user ${userId}`);
-      return { message: 'No sessions found to delete' };
-    }
-    return { message: `${deletedCount} sessions deleted` };
+  async createOrUpdate(data: UserSession): Promise<void> {
+    await this.sessionRepo.upsert(data);
+    this.logger.debug(`Session upserted for user ${data.userId} on device ${data.deviceId}`);
   }
 
-  async deleteAllExceptCurrentSession(userId: string, currentDeviceId: string): Promise<MessageResponse> {
-    const deletedCount = await this.sessionRepo.deleteByUserIdExcept(userId, currentDeviceId);
+  async deleteAllExceptCurrentSession(userId: string, sessionId: string): Promise<MessageResponse> {
+    const deletedCount = await this.sessionRepo.deleteSessionsExceptCurrent(userId, sessionId);
     if (deletedCount === 0) {
-      this.logger.warn(`No sessions deleted for user ${userId} except device ${currentDeviceId}`);
-      return { message: 'No other sessions found to delete' };
+      this.logger.warn(`No sessions deleted for user ${userId} except ${sessionId}`);
+      return { message: 'No sessions deleted' };
     }
-    return { message: `${deletedCount} sessions deleted, except current session` };
+    return { message: `${deletedCount} sessions deleted` };
   }
 
   async setLastUsedTimestamp(sessionId: string): Promise<void> {
     await this.sessionRepo.update(sessionId, { lastUsedAt: new Date() });
     this.logger.debug(`Updated last used timestamp for session ${sessionId}`);
+  }
+
+  async deleteBySessionId(sessionId: string): Promise<MessageResponse> {
+    const deletedCount = await this.sessionRepo.deleteByIds([sessionId]);
+    if (deletedCount === 0) {
+      this.logger.warn(`No session deleted with ID ${sessionId}`);
+      return { message: 'No session deleted' };
+    }
+    return { message: 'Session deleted' };
+  }
+
+  async deleteAllSessions(userId: string): Promise<MessageResponse> {
+    const deletedCount = await this.sessionRepo.deleteByUserId(userId);
+
+    if (deletedCount === 0) {
+      this.logger.warn(`No sessions deleted for user ${userId}`);
+      return { message: 'No sessions deleted' };
+    }
+
+    return { message: `${deletedCount} sessions deleted` };
+  }
+
+  async validateSession(sessionId: string, token: string): Promise<boolean> {
+    const session = await this.sessionRepo.findById(sessionId);
+    if (!session) {
+      this.logger.warn(`Session ${sessionId} not found for validation`);
+      return false;
+    }
+
+    const isTokenValid = await this.hashService.compare(token, session.refreshTokenHash);
+    if (!isTokenValid) {
+      this.logger.warn(`Invalid token for session ${sessionId}`);
+      return false;
+    }
+
+    return true;
+  }
+
+  async getSessionByUserIdAndDeviceId(userId: string, deviceId: string): Promise<{ sessionId: string } | null> {
+    const session = await this.sessionRepo.findByUserIdAndDeviceId(userId, deviceId);
+    return session ? { sessionId: session.id } : null;
   }
 }

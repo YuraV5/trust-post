@@ -39,12 +39,12 @@ export class UsersService implements IUserService {
       throw new UserAlreadyExistsError();
     }
 
-    const hashedPassword = await this.passwordService.createHashe(inp.password);
+    const hashedPassword = await this.passwordService.createHash(inp.password);
     inp.password = hashedPassword;
     inp.name = inp.name.toLowerCase();
-    const user = await this.repo.create(inp);
+    await this.repo.create(inp);
 
-    this.logger.info(`User with id ${user.id} created successfully`);
+    this.logger.info(`User ${inp.email} created successfully`);
     return { message: `User created successfully` };
   }
 
@@ -59,8 +59,8 @@ export class UsersService implements IUserService {
       throw new BadRequestError('No fields to update');
     }
     const name = inp?.name?.toLowerCase();
-    const user = await this.repo.update(id, { ...inp, name });
-    this.logger.info(`User with id ${user.id} updated successfully`);
+    await this.repo.update(id, { ...inp, name });
+    this.logger.info(`User with id ${id} updated successfully`);
     return { message: `User updated successfully` };
   }
 
@@ -75,7 +75,7 @@ export class UsersService implements IUserService {
       this.logger.warn(`Invalid current password for user with id ${id}`);
       throw new UserNotFoundError('Invalid current password');
     }
-    const newPassword = await this.passwordService.createHashe(inp.newPassword);
+    const newPassword = await this.passwordService.createHash(inp.newPassword);
 
     await this.repo.updatePassword(id, newPassword);
 

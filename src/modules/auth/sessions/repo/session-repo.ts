@@ -13,11 +13,27 @@ export class SessionsRepo implements ISessionRepo {
   }
 
   async findByUserIdAndDeviceId(userId: string, deviceId: string): Promise<Session | null> {
-    return this.db.session.findFirst({ where: { userId, deviceId } });
+    return await this.db.session.findFirst({ where: { userId, deviceId } });
   }
 
-  async create(data: UserSession): Promise<Session> {
-    return await this.db.session.create({ data });
+  async upsert(data: UserSession): Promise<Session> {
+    const { sessionId, ...rest } = data;
+    return this.db.session.upsert({
+      where: {
+        userId_deviceId: {
+          userId: rest.userId,
+          deviceId: rest.deviceId,
+        },
+      },
+      update: {
+        refreshTokenHash: rest.refreshTokenHash,
+        ip: rest.ip,
+        userAgent: rest.userAgent,
+        lastUsedAt: new Date(),
+        expiresAt: rest.expiresAt,
+      },
+      create: { ...rest, id: sessionId, lastUsedAt: new Date() },
+    });
   }
 
   async update(sessionId: string, data: Partial<Session>): Promise<Session> {
@@ -37,15 +53,19 @@ export class SessionsRepo implements ISessionRepo {
     return result.count;
   }
 
-  async deleteByUserIdExcept(userId: string, exceptDeviceId: string): Promise<number> {
-    const result = await this.db.session.deleteMany({ where: { userId, NOT: { deviceId: exceptDeviceId } } });
+  async deleteSessionsExceptCurrent(userId: string, sessionId: string): Promise<number> {
+    const result = await this.db.session.deleteMany({ where: { userId, NOT: { id: sessionId } } });
     return result.count;
   }
 
-  async deleteManyByIds(ids: string[]): Promise<number> {
+  async deleteByIds(ids: string[]): Promise<number> {
     const result = await this.db.session.deleteMany({
       where: { id: { in: ids } },
     });
     return result.count;
+  }
+
+  async findById(sessionId: string): Promise<Session | null> {
+    return this.db.session.findUnique({ where: { id: sessionId } });
   }
 }

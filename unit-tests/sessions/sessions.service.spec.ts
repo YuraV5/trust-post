@@ -4,6 +4,7 @@ import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { StubAppLogger } from '../__mock__';
 import { SessionsRepo } from '../../src/modules/auth/sessions/repo/session-repo';
+import { HashingService } from '../../src/modules/security/services';
 
 describe('SessionsService', () => {
   let service: SessionsService;
@@ -15,6 +16,7 @@ describe('SessionsService', () => {
         SessionsRepo,
         { provide: PrismaService, useValue: jest.fn() },
         { provide: APP_LOGGER, useValue: StubAppLogger },
+        { provide: HashingService, useValue: jest.fn() },
       ],
     }).compile();
 

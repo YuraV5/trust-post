@@ -13,22 +13,27 @@ export class SessionsPolicy implements ISessionsPolicy {
   ) {}
 
   async prepareForLogin(userId: string, deviceId: string): Promise<void> {
-    // one session by device, so delete existing session for this device
-    await this.repo.deleteByUserAndDevice(userId, deviceId);
+    try {
+      // enforce max devices limit by deleting oldest sessions if limit exceeded
+      const sessions = await this.repo.findByUserId(userId);
 
-    // check if user has more than allowed sessions and delete excess
-    const sessions = await this.repo.findByUserId(userId);
+      const excess = sessions.length - this.MAX_DEVICES;
+      if (excess <= 0) return;
 
-    const excess = sessions.length - this.MAX_DEVICES;
-    if (excess <= 0) return;
+      const idsToDelete = sessions
+        .filter((s) => s.deviceId !== deviceId)
+        .sort(
+          (a, b) =>
+            (a.lastUsedAt?.getTime() ?? a.createdAt.getTime()) - (b.lastUsedAt?.getTime() ?? b.createdAt.getTime()),
+        )
+        .slice(0, excess)
+        .map((s) => s.id);
 
-    const idsToDelete = [...sessions]
-      .sort((a, b) => (a.lastUsedAt?.getTime() ?? 0) - (b.lastUsedAt?.getTime() ?? 0))
-      .slice(0, excess)
-      .map((s) => s.id);
+      await this.repo.deleteByIds(idsToDelete);
 
-    await this.repo.deleteManyByIds(idsToDelete);
-
-    this.logger.info(`Deleted ${idsToDelete.length} excess sessions for user ${userId}`);
+      this.logger.info(`Deleted ${idsToDelete.length} excess sessions for user ${userId}`);
+    } catch (e) {
+      this.logger.error(`Session cleanup failed for user ${userId}. Will retry on next login.`, { error: e as Error });
+    }
   }
 }

@@ -50,14 +50,20 @@ export class AuthController {
 
   @Post('logout')
   @UseGuards(RefreshTokenGuard)
-  logout(@Res({ passthrough: true }) resp: Response): MessageResponse {
+  async logout(@Req() req: RefreshTokenRequest, @Res({ passthrough: true }) resp: Response): Promise<MessageResponse> {
+    await this.authService.logout(req.user.sessionId);
     this.cookieService.clear(resp);
     return { message: 'Logged out successfully' };
   }
 
   @Post('logout-all')
   @UseGuards(RefreshTokenGuard)
-  logoutAll(): Promise<MessageResponse> {
-    throw new Error('Method not implemented yet');
+  async logoutAll(
+    @Req() req: RefreshTokenRequest,
+    @Res({ passthrough: true }) resp: Response,
+  ): Promise<MessageResponse> {
+    await this.authService.logoutAll(req.user.userId);
+    this.cookieService.clear(resp);
+    return { message: 'Logged out from all sessions successfully' };
   }
 }

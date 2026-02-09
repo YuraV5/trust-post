@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Param, UseGuards } from '@nestjs/common';
 import { SessionsService } from './services/sessions.service';
 import { RefreshTokenGuard } from '../../../common/guards';
 import { CurrentUser } from '../../../common/decorators';
@@ -16,18 +16,18 @@ export class SessionsController {
     return this.sessionsService.getMySessions(user.userId);
   }
 
-  @Get('all')
-  async getAllSessions(@CurrentUser() user: RefreshTokenUser): Promise<SessionMapping[]> {
-    return this.sessionsService.getMySessions(user.userId);
-  }
-
   @Delete('all')
   async deleteAllSessions(@CurrentUser() user: RefreshTokenUser): Promise<MessageResponse> {
-    return this.sessionsService.deleteAllSessions(user.userId);
+    return await this.sessionsService.deleteAllSessions(user.userId);
   }
 
   @Delete('all-except-current')
   async deleteAllExceptCurrentSession(@CurrentUser() user: RefreshTokenUser): Promise<MessageResponse> {
-    return this.sessionsService.deleteAllExceptCurrentSession(user.userId, user.sessionId);
+    return await this.sessionsService.deleteAllExceptCurrentSession(user.userId, user.sessionId);
+  }
+
+  @Delete(':sessionId')
+  async deleteSession(@CurrentUser() user: RefreshTokenUser, @Param('sessionId') sessionId: string): Promise<MessageResponse> {
+    return await this.sessionsService.deleteBySessionId(sessionId);
   }
 }

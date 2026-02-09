@@ -8,4 +8,6 @@ export interface ISessionService {
   deleteAllExceptCurrentSession(userId: string, currentDeviceId: string): Promise<MessageResponse>;
   setLastUsedTimestamp(sessionId: string): Promise<void>;
   createOrUpdate(data: UserSession): Promise<void>;
+  validateSession(sessionId: string, token: string): Promise<boolean>;
+  getSessionByUserIdAndDeviceId(userId: string, deviceId: string): Promise<{ sessionId: string } | null>;
 }

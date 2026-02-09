@@ -40,14 +40,6 @@ export class SessionsRepo implements ISessionRepo {
     return await this.db.session.update({ where: { id: sessionId }, data });
   }
 
-  async deleteByUserAndDevice(userId: string, deviceId: string): Promise<number> {
-    const res = await this.db.session.deleteMany({
-      where: { userId, deviceId },
-    });
-
-    return res.count;
-  }
-
   async deleteByUserId(userId: string): Promise<number> {
     const result = await this.db.session.deleteMany({ where: { userId } });
     return result.count;

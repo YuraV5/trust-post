@@ -27,6 +27,7 @@
     "docker:prod:down": "docker-compose -f docker-compose.prod.yml down -v"
   },
   "dependencies": {
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
@@ -36,6 +37,7 @@
     "@nestjs/terminus": "^11.0.0",
     "@prisma/client": "^6.4.1",
     "argon2": "^0.44.0",
+    "bullmq": "^5.67.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "cookie-parser": "^1.4.7",

@@ -9,6 +9,7 @@ export default (): IAppConfig => ({
 
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
+    password: process.env.REDIS_PASSWORD || '12345',
     port: parseInt(process.env.REDIS_PORT!, 10) || 6379,
     ttl: parseInt(process.env.REDIS_TTL!, 10) || 300,
   },

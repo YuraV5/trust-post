@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AccessTokenGuard } from './common/guards';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { HttpContextInterceptor } from './infrastructure/http/interceptors/http-context.interceptor';
+import { QueuesModule } from './modules/queues/queues.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { HttpContextInterceptor } from './infrastructure/http/interceptors/http-
     SecurityModule,
     UsersModule,
     AuthModule,
+    QueuesModule,
   ],
   controllers: [],
   providers: [

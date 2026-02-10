@@ -15,13 +15,18 @@ export type UserOutput = {
   name: string;
   email: string;
   photoUrl: string | null;
-  isEmailVerified: boolean;
   createdAt: Date;
+};
+
+export type UserProfileOutput = UserOutput & {
+  isEmailVerified: boolean;
 };
 
 export type UserSecyredOutput = UserOutput & {
   password: string | null;
   role: 'USER' | 'ADMIN' | 'MODERATOR';
+  isActive: boolean;
+  isEmailVerified: boolean;
 };
 
 export type UpdatePasswordInput = {

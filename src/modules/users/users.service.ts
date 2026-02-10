@@ -2,7 +2,7 @@ import { APP_LOGGER, AppLogger } from './../../shared/logger/services/app-logger
 import { Inject, Injectable } from '@nestjs/common';
 import { IUserService } from './interfaces';
 import { MessageResponse } from '../../common/types';
-import { UserSecyredOutput, UserOutput, NewUserInput, UpdateUserInput, UpdatePasswordInput } from './types';
+import { UserSecyredOutput, NewUserInput, UpdateUserInput, UpdatePasswordInput, UserProfileOutput } from './types';
 import { UsersRepo } from './repo/users-repo';
 import { UserAlreadyExistsError, UserNotFoundError } from './errors';
 import { PasswordService } from '../security/services';
@@ -24,7 +24,7 @@ export class UsersService implements IUserService {
     return user;
   }
 
-  async findById(id: string): Promise<UserOutput> {
+  async findById(id: string): Promise<UserProfileOutput> {
     const user = await this.repo.findById(id);
     if (!user) {
       this.logger.warn(`User with id ${id} not found`);

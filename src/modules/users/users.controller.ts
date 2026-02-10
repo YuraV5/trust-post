@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Patch } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { MessageResponse } from '../../common/types';
-import { UserOutput } from './types';
+import { UserProfileOutput } from './types';
 import { UpdatePasswordDto, UpdateUserDto } from './dtos';
 import { CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/interfaces';
@@ -12,7 +12,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('/me')
-  async getMe(@CurrentUser() user: AuthenticatedUser): Promise<UserOutput> {
+  async getMe(@CurrentUser() user: AuthenticatedUser): Promise<UserProfileOutput> {
     return this.usersService.findById(user.userId);
   }
 

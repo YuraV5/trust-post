@@ -1,7 +1,7 @@
 import { User } from '@prisma/client';
-import { UserOutput } from '../types';
+import { UserProfileOutput } from '../types';
 
-export const userMapper = (user: User): UserOutput => ({
+export const userMapper = (user: User): UserProfileOutput => ({
   id: user.id,
   name: user.name,
   email: user.email,
@@ -10,4 +10,4 @@ export const userMapper = (user: User): UserOutput => ({
   createdAt: user.createdAt,
 });
 
-export const usersMapper = (users: User[]): UserOutput[] => users.map(userMapper);
+export const usersMapper = (users: User[]): UserProfileOutput[] => users.map(userMapper);

@@ -6,7 +6,6 @@ import { UserCredentials, UserLoginOutput, UserRegistration } from '../types';
 import { MessageResponse } from '../../../common/types';
 import { BadRequestError } from '../../../shared/errors/app-errors';
 import { PasswordService, TokensService } from '../../security/services';
-import { UserNotFoundError } from '../../users/errors';
 import { v4 as uuidv4 } from 'uuid';
 import { SessionsService } from '../sessions/services';
 import { SessionsPolicy } from '../sessions/services/sessions-polict.service';
@@ -39,9 +38,14 @@ export class AuthService implements IAuthService {
 
   async login(inp: UserCredentials): Promise<UserLoginOutput> {
     const user = await this.usersService.findByEmail(inp.email);
-    if (!user || !user.password) {
-      this.logger.warn(`Login failed for ${inp.email}: user not found`);
-      throw new UserNotFoundError('Invalid credentials');
+    if (!user || !user.password || user.isActive === false) {
+      this.logger.warn(`Login failed`, {
+        email: inp.email,
+        userId: user?.id ?? null,
+        isActive: user?.isActive ?? null,
+        passwordProvided: Boolean(user?.password),
+      });
+      throw new BadRequestError('Invalid credentials');
     }
 
     const isPasswordValid = await this.passwordService.verify(inp.password, user.password);

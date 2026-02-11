@@ -6,9 +6,10 @@ import { AppLoggerModule } from '../../shared/logger/app-logger.module';
 import { SecurityModule } from '../security/security.module';
 import { AuthCookiesService } from './services';
 import { SessionsModule } from './sessions/sessions.module';
+import { EmailsModule } from '../emails/emails.module';
 
 @Module({
-  imports: [UsersModule, AppLoggerModule, SecurityModule, SessionsModule, SessionsModule],
+  imports: [UsersModule, AppLoggerModule, SecurityModule, SessionsModule, SessionsModule, EmailsModule],
   controllers: [AuthController],
   providers: [AuthService, AuthCookiesService],
 })

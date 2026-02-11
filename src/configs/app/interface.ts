@@ -5,7 +5,7 @@ export interface IAppConfig {
   serviceName: string;
   loggerLevel: string;
 
-  redis: { host: string; port: number; ttl: number };
+  redis: { host: string; port: number; password: string; ttl: number };
 
   jwt: {
     accessSecret: string;

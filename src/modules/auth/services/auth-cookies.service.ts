@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AppNodeMode } from '../../../common/consts';
+import { APP_NODE_MODE } from '../../../common/consts';
 import { JwtToken } from '../../security/consts';
 import type { Response } from 'express';
 import { IAuthCookiesService } from '../interfaces';
@@ -10,7 +10,7 @@ export class AuthCookiesService implements IAuthCookiesService {
   constructor(private config: ConfigService) {}
 
   setRefresh(resp: Response, token: string): void {
-    const isProd = this.config.get('nodeEnv') === AppNodeMode.PROD;
+    const isProd = this.config.get('nodeEnv') === APP_NODE_MODE.PROD;
 
     resp.cookie(JwtToken.REFRESH, token, {
       httpOnly: true,

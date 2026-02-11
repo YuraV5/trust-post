@@ -27,5 +27,21 @@ services:
       retries: 5
     restart: unless-stopped
 
+  redis:
+    image: redis:7
+    container_name: trust_post_redis
+    command: >  
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
 volumes:
   pgdata:

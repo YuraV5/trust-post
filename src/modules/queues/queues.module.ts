@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
-import { EmailQueueService } from './email-queue.service';
 import { ConfigService } from '@nestjs/config';
 import { ConfigModule } from '@nestjs/config';
-import { QUEUE_NAME } from './const';
+import { APP_NODE_MODE } from '../../common/consts';
 
 @Module({
   imports: [
@@ -14,16 +13,14 @@ import { QUEUE_NAME } from './const';
         connection: {
           host: config.get<string>('REDIS_HOST'),
           port: config.get<number>('REDIS_PORT', 6379),
-          password: config.get<string>('REDIS_PASSWORD'),
+          password:
+            config.get<string>('nodeEnv') === APP_NODE_MODE.PROD ? config.get<string>('REDIS_PASSWORD') : undefined,
         },
       }),
     }),
-    BullModule.registerQueue({
-      name: QUEUE_NAME.EMAIL,
-    }),
   ],
   controllers: [],
-  providers: [EmailQueueService],
-  exports: [EmailQueueService],
+  providers: [],
+  exports: [],
 })
 export class QueuesModule {}

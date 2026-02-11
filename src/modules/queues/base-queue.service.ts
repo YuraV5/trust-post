@@ -1,5 +1,5 @@
 import { Inject } from '@nestjs/common';
-import { IQueueService, QueueAddOptions } from './interfaces';
+import { IQueueService } from './interfaces';
 import { Queue } from 'bullmq';
 import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
 import { JobOptions } from './types';
@@ -26,7 +26,7 @@ export abstract class BaseQueueService implements IQueueService {
   };
 
   // Add a job to the queue with the specified data and options
-  async add<T>(data: T, { jobName, options }: QueueAddOptions): Promise<void> {
+  async add<T>(jobName: string, data: T, options?: JobOptions): Promise<void> {
     try {
       // Check if the queue is available
       if (!this.queue) {

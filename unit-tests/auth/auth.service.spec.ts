@@ -11,6 +11,7 @@ import { ConfigServiceMock, StubAppLogger } from '../__mock__';
 import { SessionsService } from '../../src/modules/auth/sessions/services';
 import { SessionsPolicy } from '../../src/modules/auth/sessions/services/sessions-polict.service';
 import { SessionsRepo } from '../../src/modules/auth/sessions/repo/session-repo';
+import { EmailQueueService } from '../../src/modules/emails/email-queue.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -29,6 +30,10 @@ describe('AuthService', () => {
         SessionsPolicy,
         SessionsRepo,
         HashingService,
+        {
+          provide: EmailQueueService,
+          useValue: { sendVerificationEmail: jest.fn(), sendPasswordResetEmail: jest.fn() },
+        },
         { provide: ConfigService, useValue: ConfigServiceMock },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],

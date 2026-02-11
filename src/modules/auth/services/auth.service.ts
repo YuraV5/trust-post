@@ -12,11 +12,14 @@ import { SessionsPolicy } from '../sessions/services/sessions-polict.service';
 import { Context } from '../../../shared/contex/context.service';
 import { ConfigService } from '@nestjs/config';
 import { parseDuration } from '../../../common/utils/expiration.util';
+import { EmailQueueService } from '../../emails/email-queue.service';
+import { UserAlreadyExistsError } from '../../users/errors';
 
 @Injectable()
 export class AuthService implements IAuthService {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    private readonly emailQueueService: EmailQueueService,
     private readonly usersService: UsersService,
     private readonly passwordService: PasswordService,
     private readonly tokensService: TokensService,
@@ -26,12 +29,18 @@ export class AuthService implements IAuthService {
   ) {}
 
   async register(inp: UserRegistration): Promise<MessageResponse> {
+    const user = await this.usersService.findByEmail(inp.email);
+    if (user) {
+      this.logger.warn(`Registration failed: user with email ${inp.email} already exists`);
+      throw new UserAlreadyExistsError();
+    }
     await this.usersService.create({
       email: inp.email,
       password: inp.password,
       name: inp.name,
     });
 
+    await this.emailQueueService.sendVerificationEmail(inp.email, inp.name);
     this.logger.info(`User ${inp.email} registered`);
     return { message: 'User registered successfully' };
   }

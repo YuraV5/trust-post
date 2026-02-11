@@ -45,7 +45,6 @@ export class UsersService implements IUserService {
     inp.name = inp.name.toLowerCase();
     await this.repo.create(inp);
 
-    this.logger.info(`User ${inp.email} created successfully`);
     return { message: `User created successfully` };
   }
 

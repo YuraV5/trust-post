@@ -40,7 +40,9 @@ export class AuthService implements IAuthService {
       name: inp.name,
     });
 
-    await this.emailQueueService.sendVerificationEmail(inp.email, inp.name);
+    const veifyLink = 'http://localhost:3001/api/v1/auth/verify-email/:uuid'; // TODO generate real verification link
+
+    await this.emailQueueService.sendVerificationEmail({to: inp.email, name: inp.name, verificationUrl: veifyLink});
     this.logger.info(`User ${inp.email} registered`);
     return { message: 'User registered successfully' };
   }

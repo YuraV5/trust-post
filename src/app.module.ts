@@ -15,6 +15,7 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { HttpContextInterceptor } from './infrastructure/http/interceptors/http-context.interceptor';
 import { QueuesModule } from './modules/queues/queues.module';
 import { EmailsModule } from './modules/emails/emails.module';
+import { EmailsProviderModule } from './modules/emails-provider/emails-provider.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { EmailsModule } from './modules/emails/emails.module';
     AuthModule,
     QueuesModule,
     EmailsModule,
+    EmailsProviderModule,
   ],
   controllers: [],
   providers: [

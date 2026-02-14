@@ -4,7 +4,7 @@ import { NewUserInput, UpdatePasswordInput, UpdateUserInput, UserOutput, UserSec
 export interface IUserService {
   findByEmail(email: string): Promise<UserSecyredOutput | null>;
   findById(id: string): Promise<UserOutput>;
-  create(inp: NewUserInput): Promise<MessageResponse>;
+  create(inp: NewUserInput): Promise<{ userId: string }>;
   remove(id: string): Promise<MessageResponse>;
   update(id: string, inp: UpdateUserInput): Promise<MessageResponse>;
   updatePassword(id: string, inp: UpdatePasswordInput): Promise<MessageResponse>;

@@ -39,7 +39,7 @@ export class EmailsProviderService implements IEmailProvider {
         exponentialBackoff: true,
       });
       return !!result;
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error('Email send failed', { error: error instanceof Error ? error.message : error });
 
       if (error instanceof RetryError && error.isTimeout) {

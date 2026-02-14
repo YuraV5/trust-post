@@ -33,7 +33,7 @@ export class UsersService implements IUserService {
     return userMapper(user);
   }
 
-  async create(inp: NewUserInput): Promise<MessageResponse> {
+  async create(inp: NewUserInput): Promise<{ userId: string }> {
     const existingUser = await this.repo.findByEmail(inp.email);
     if (existingUser) {
       this.logger.warn(`User with email ${inp.email} already exists`);
@@ -43,9 +43,9 @@ export class UsersService implements IUserService {
     const hashedPassword = await this.passwordService.createHash(inp.password);
     inp.password = hashedPassword;
     inp.name = inp.name.toLowerCase();
-    await this.repo.create(inp);
+    const user = await this.repo.create(inp);
 
-    return { message: `User created successfully` };
+    return { userId: user.id };
   }
 
   async remove(id: string): Promise<MessageResponse> {
@@ -87,5 +87,21 @@ export class UsersService implements IUserService {
     const user = await this.repo.findById(id);
     if (!user) throw new UserNotFoundError();
     return user;
+  }
+
+  async resetPasswordThroughEmail(email: string, newPassword: string): Promise<void> {
+    const user = await this.repo.findByEmail(email);
+    if (!user) {
+      this.logger.warn(`User with email ${email} not found for password reset`);
+      throw new UserNotFoundError();
+    }
+    const hashedPassword = await this.passwordService.createHash(newPassword);
+    await this.repo.updatePassword(user.id, hashedPassword);
+    this.logger.info(`User with email ${email} reset password successfully through email`);
+  }
+
+  async markEmailAsVerified(userId: string): Promise<void> {
+    await this.repo.markEmailAsVerified(userId);
+    this.logger.info(`User with id ${userId} marked email as verified`);
   }
 }

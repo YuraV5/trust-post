@@ -31,6 +31,9 @@ export class UsersRepo implements IUserRepo {
 
   async updatePassword(id: string, newPassword: string): Promise<void> {
     await this.db.user.update({ where: { id }, data: { password: newPassword } });
-    return;
+  }
+
+  async markEmailAsVerified(userId: string): Promise<void> {
+    await this.db.user.update({ where: { id: userId }, data: { isEmailVerified: true } });
   }
 }

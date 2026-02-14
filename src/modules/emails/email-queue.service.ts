@@ -3,9 +3,9 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { BaseQueueService } from '../queues/base-queue.service';
 import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
-import { EmailJobData } from './types';
 import { EMAIL_NOTIFICATION_QUEUE, EMAIL_JOB } from './const';
 import { VERIFY_EMAIL_JOB_OPTIONS } from './configs';
+import { EmailVerificationTask, PasswordResetTask } from './types';
 
 @Injectable()
 export class EmailQueueService extends BaseQueueService {
@@ -13,31 +13,28 @@ export class EmailQueueService extends BaseQueueService {
     super(logger, queue);
   }
 
-  async sendVerificationEmail(to: string, userName: string): Promise<void> {
+  async sendVerificationEmail(data: EmailVerificationTask): Promise<void> {
     // TODO improve type and add validation
-    return this.add<EmailJobData>(
+    return this.add<EmailVerificationTask>(
       EMAIL_JOB.VERIFICATION_EMAIL,
       {
-        to,
-        subject: 'Verification Email',
-        template: 'verification-email',
-        context: { userName },
+        to: data.to,
+        name: data.name,
+        verificationUrl: data.verificationUrl, // verification link
       },
-      { ...VERIFY_EMAIL_JOB_OPTIONS, jobId: `verification-email-${to}`, priority: 5 }, // Medium priority
+      { ...VERIFY_EMAIL_JOB_OPTIONS, jobId: `verification-email-${data.to}`, priority: 2 }, // High priority
     );
   }
 
-  async sendPasswordResetEmail(to: string, resetToken: string, resetLink: string): Promise<void> {
+  async sendPasswordResetEmail(data: PasswordResetTask): Promise<void> {
     // TODO improve type and add validation
-    return this.add<EmailJobData>(
+    return this.add<PasswordResetTask>(
       EMAIL_JOB.PASSWORD_RESET_EMAIL,
       {
-        to,
-        subject: 'Password Reset Request',
-        template: 'password-reset',
-        context: { resetToken, resetLink },
+        to: data.to,
+        passwordResetUrl: data.passwordResetUrl, // password reset link
       },
-      { ...VERIFY_EMAIL_JOB_OPTIONS, jobId: `reset-password-${to}`, priority: 2 }, // High priority
+      { ...VERIFY_EMAIL_JOB_OPTIONS, jobId: `reset-password-${data.to}`, priority: 2 }, // High priority
     );
   }
 }

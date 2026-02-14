@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IAuthService } from '../interfaces';
 import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
 import { UsersService } from '../../users/users.service';
-import { UserCredentials, UserLoginOutput, UserRegistration } from '../types';
+import { SetPassword, UserCredentials, UserLoginOutput, UserRegistration } from '../types';
 import { MessageResponse } from '../../../common/types';
 import { BadRequestError } from '../../../shared/errors/app-errors';
 import { PasswordService, TokensService } from '../../security/services';
@@ -34,20 +34,26 @@ export class AuthService implements IAuthService {
       this.logger.warn(`Registration failed: user with email ${inp.email} already exists`);
       throw new UserAlreadyExistsError();
     }
-    await this.usersService.create({
+
+    const result = await this.usersService.create({
       email: inp.email,
       password: inp.password,
       name: inp.name,
     });
 
-    await this.emailQueueService.sendVerificationEmail(inp.email, inp.name);
+    await this.emailQueueService.sendVerificationEmail({
+      to: inp.email,
+      name: inp.name,
+      verificationUrl: this.createVerifyLink(result.userId, 'verify-email'),
+    });
     this.logger.info(`User ${inp.email} registered`);
     return { message: 'User registered successfully' };
   }
 
   async login(inp: UserCredentials): Promise<UserLoginOutput> {
     const user = await this.usersService.findByEmail(inp.email);
-    if (!user || !user.password || user.isActive === false) {
+
+    if (!user || !user.password) {
       this.logger.warn(`Login failed`, {
         email: inp.email,
         userId: user?.id ?? null,
@@ -62,6 +68,14 @@ export class AuthService implements IAuthService {
       this.logger.warn(`Login failed for ${inp.email}: invalid password`);
       throw new BadRequestError('Invalid credentials');
     }
+
+    if (!user.isActive) {
+      throw new BadRequestError('Invalid credentials');
+    }
+
+    // if (!user.isEmailVerified) {
+    //   throw new ForbiddenError('Email not verified');
+    // }
 
     const session = await this.sessionsService.getSessionByUserIdAndDeviceId(user.id, inp.deviceId);
     const sessionId = session ? session.sessionId : uuidv4();
@@ -119,5 +133,65 @@ export class AuthService implements IAuthService {
   async logoutAll(userId: string): Promise<void> {
     await this.sessionsService.deleteAllSessions(userId);
     this.logger.info(`All sessions logged out for user ${userId}`);
+  }
+  // TODO: Implement real email verification logic
+  async resendEmailVerification(email: string): Promise<MessageResponse> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      this.logger.warn(`Resend verification failed: user with email ${email} not found`);
+      throw new BadRequestError('User not found');
+    }
+    if (user.isEmailVerified) {
+      this.logger.warn(`Resend verification failed: user with email ${email} is already verified`);
+      throw new BadRequestError('Email is already verified');
+    }
+
+    await this.emailQueueService.sendVerificationEmail({
+      to: email,
+      name: user.name,
+      verificationUrl: this.createVerifyLink(user.id, 'verify-email'),
+    });
+    this.logger.info(`Verification email resent to ${email}`);
+    return { message: 'Verification email resent successfully' };
+  }
+
+  async resendPasswordReset(email: string): Promise<MessageResponse> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      this.logger.warn(`Resend password reset failed: user with email ${email} not found`);
+      throw new BadRequestError('User not found');
+    }
+
+    // if (!user.isEmailVerified) {
+    //   this.logger.warn(`Resend password reset failed: user with email ${email} is not verified`);
+    //   throw new BadRequestError('Email is not verified');
+    // }
+
+    await this.emailQueueService.sendPasswordResetEmail({
+      to: email,
+      passwordResetUrl: this.createVerifyLink(user.id, 'set-password'),
+    });
+    this.logger.info(`Password reset email sent to ${email}`);
+    return { message: 'Password reset email sent successfully' };
+  }
+
+  async setPassword(uuid: string, inp: SetPassword): Promise<void> {
+    if (inp.password !== inp.confirmPassword) {
+      throw new BadRequestError('Passwords do not match');
+    }
+    await this.usersService.resetPasswordThroughEmail(inp.email, inp.password);
+  }
+
+  async verifyEmail(uuid: string): Promise<void> {
+    // TODO: Implement real email verification logic
+    this.logger.debug(`Verifying email with token: ${uuid}`);
+    const userId = 'userId extracted from token'; // TODO: Extract userId from token
+    await this.usersService.markEmailAsVerified(userId);
+  }
+
+  private createVerifyLink(userId: string, path: string): string {
+    this.logger.debug(`Creating email verification link for user ${userId}`);
+    // TODO implement real link generation with token
+    return `http://localhost:3001/api/v1/auth/${path}/${uuidv4()}`;
   }
 }

@@ -19,4 +19,9 @@ export interface IAppConfig {
   session: {
     expiresInMs: number;
   };
+
+  email: {
+    resendApiKey: string;
+    from: string;
+  };
 }

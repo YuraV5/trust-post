@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Res, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body, Res, UseGuards, Req, Get, Param } from '@nestjs/common';
 import { AuthService } from './services/auth.service';
 import { LoginDto, RegisterDto } from './dtos';
 import type { MessageResponse } from '../../common/types';
@@ -8,6 +8,8 @@ import { PublicRoute } from '../../common/decorators';
 import { RefreshTokenGuard } from '../../common/guards';
 import type { RefreshTokenRequest } from '../../common/interfaces';
 import { AuthCookiesService } from './services';
+import { ResendVerificationDto, VerifyEmailParamsDto } from './dtos/emailVerify.dto';
+import { SetPasswordDto } from './dtos/setPassword.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -65,5 +67,38 @@ export class AuthController {
     await this.authService.logoutAll(req.user.userId);
     this.cookieService.clear(resp);
     return { message: 'Logged out from all sessions successfully' };
+  }
+
+  @Get('verify-email/:uuid')
+  @PublicRoute()
+  async verifyEmail(@Param() params: VerifyEmailParamsDto, @Res() res: Response): Promise<void> {
+    // TODO: Implement email verification logic
+    await this.authService.verifyEmail(params.uuid);
+    res.redirect('http://localhost:3001/login#verified');
+  }
+
+  @Post('resend-verification')
+  @PublicRoute()
+  async resendVerification(@Body() inp: ResendVerificationDto): Promise<MessageResponse> {
+    await this.authService.resendEmailVerification(inp.email);
+    return { message: 'Verification email resent successfully' };
+  }
+
+  @Post('reset-password')
+  @PublicRoute()
+  async resetPassword(@Body() inp: ResendVerificationDto): Promise<MessageResponse> {
+    await this.authService.resendPasswordReset(inp.email);
+    return { message: 'Password reset email sent successfully' };
+  }
+
+  @Post('set-password/:uuid')
+  @PublicRoute()
+  async newPassword(
+    @Param() params: VerifyEmailParamsDto,
+    @Body() body: SetPasswordDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.authService.setPassword(params.uuid, body);
+    res.redirect('http://localhost:3001/login#passwordReset');
   }
 }

@@ -25,3 +25,9 @@ export type AuthResponse = {
 export type UserLoginOutput = AuthResponse & {
   refreshToken: string;
 };
+
+export type SetPassword = {
+  email: string;
+  password: string;
+  confirmPassword: string;
+};

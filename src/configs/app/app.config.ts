@@ -25,4 +25,9 @@ export default (): IAppConfig => ({
   session: {
     expiresInMs: parseInt(process.env.SESSION_EXPIRES_IN_MS!, 10) || 604800000, // Default to 7 days
   },
+
+  email: {
+    resendApiKey: process.env.EMAIL_RESEND_API_KEY!,
+    from: process.env.EMAIL_FROM || 'trust_post@example.com',
+  },
 });

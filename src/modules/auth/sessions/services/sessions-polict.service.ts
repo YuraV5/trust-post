@@ -30,8 +30,6 @@ export class SessionsPolicy implements ISessionsPolicy {
         .map((s) => s.id);
 
       await this.repo.deleteByIds(idsToDelete);
-
-      this.logger.info(`Deleted ${idsToDelete.length} excess sessions for user ${userId}`);
     } catch (e) {
       this.logger.error(`Session cleanup failed for user ${userId}. Will retry on next login.`, { error: e as Error });
     }

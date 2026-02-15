@@ -4,7 +4,7 @@ import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logge
 import { UsersService } from '../../users/users.service';
 import { SetPassword, UserCredentials, UserLoginOutput, UserRegistration } from '../types';
 import { MessageResponse } from '../../../common/types';
-import { BadRequestError, ForbiddenError } from '../../../shared/errors/app-errors';
+import { BadRequestError } from '../../../shared/errors/app-errors';
 import { PasswordService, TokensService } from '../../security/services';
 import { v4 as uuidv4 } from 'uuid';
 import { SessionsService } from '../sessions/services';
@@ -36,7 +36,7 @@ export class AuthService implements IAuthService {
   async register(inp: UserRegistration): Promise<MessageResponse> {
     const user = await this.usersService.findByEmail(inp.email);
     if (user) {
-      this.logger.warn(`Registration failed: user with email ${inp.email} already exists`);
+      this.logger.warn('Registration failed: user already exists');
       throw new UserAlreadyExistsError();
     }
 
@@ -46,14 +46,12 @@ export class AuthService implements IAuthService {
       name: inp.name,
     });
 
-    this.logger.debug(`User created with ID ${result.userId}, sending verification email...`);
-
     await this.emailQueueService.sendVerificationEmail({
       to: inp.email,
       name: inp.name,
       verificationUrl: await this.linkService.generateTemporaryLink(result.userId, REDIS_KEYS.EMAIL_VERIFY, 3600),
     });
-    this.logger.info(`User ${inp.email} registered`);
+    this.logger.info(`User ${result.userId} registered`);
     return { message: 'User registered successfully' };
   }
 
@@ -61,27 +59,24 @@ export class AuthService implements IAuthService {
     const user = await this.usersService.findByEmail(inp.email);
 
     if (!user || !user.password) {
-      this.logger.warn(`Login failed`, {
-        email: inp.email,
-        userId: user?.id ?? null,
-        isActive: user?.isActive ?? null,
-        passwordProvided: Boolean(user?.password),
-      });
+      this.logger.warn('Login failed: invalid credentials');
       throw new BadRequestError('Invalid credentials');
     }
 
     const isPasswordValid = await this.passwordService.verify(inp.password, user.password);
     if (!isPasswordValid) {
-      this.logger.warn(`Login failed for ${inp.email}: invalid password`);
+      this.logger.warn('Login failed: invalid credentials');
       throw new BadRequestError('Invalid credentials');
     }
 
     if (!user.isActive) {
+      this.logger.warn('Login failed: user not active');
       throw new BadRequestError('Invalid credentials');
     }
 
     if (!user.isEmailVerified) {
-      throw new ForbiddenError('Email not verified');
+      this.logger.warn('Login failed: email not verified');
+      throw new BadRequestError('Invalid credentials');
     }
 
     const session = await this.sessionsService.getSessionByUserIdAndDeviceId(user.id, inp.deviceId);
@@ -124,35 +119,34 @@ export class AuthService implements IAuthService {
   async refresh(userId: string): Promise<{ accessToken: string }> {
     const user = await this.usersService.findAuthUserbyId(userId);
     if (!user) {
-      this.logger.warn(`Token refresh failed: user ${userId} not found`);
+      this.logger.warn('Token refresh failed: user not found');
       throw new BadRequestError('Invalid credentials');
     }
     const accessToken = await this.tokensService.generateAccess({ sub: user.id, role: user.role });
-    this.logger.debug(`Access token refreshed for user ${user.email}`);
     return { accessToken };
   }
 
   async logout(sessionId: string): Promise<MessageResponse> {
     await this.sessionsService.deleteBySessionId(sessionId);
-    this.logger.info(`Session ${sessionId} logged out`);
     return { message: 'Logged out successfully' };
   }
 
   async logoutAll(userId: string): Promise<MessageResponse> {
     await this.sessionsService.deleteAllSessions(userId);
-    this.logger.info(`All sessions logged out for user ${userId}`);
     return { message: 'Logged out from all sessions successfully' };
   }
 
   async resendEmailVerification(email: string): Promise<MessageResponse> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      this.logger.warn(`Resend verification failed: user with email ${email} not found`);
-      throw new BadRequestError('User not found');
+      this.logger.warn('Resend verification failed: user not found');
+      // Return success to prevent email enumeration
+      return { message: 'If the email exists, a verification link has been sent' };
     }
     if (user.isEmailVerified) {
-      this.logger.warn(`Resend verification failed: user with email ${email} is already verified`);
-      throw new BadRequestError('Email is already verified');
+      this.logger.warn('Resend verification failed: user already verified');
+      // Return success to prevent email enumeration
+      return { message: 'If the email exists, a verification link has been sent' };
     }
 
     await this.emailQueueService.sendVerificationEmail({
@@ -161,28 +155,28 @@ export class AuthService implements IAuthService {
       verificationUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.EMAIL_VERIFY, 3600),
     });
 
-    this.logger.info(`Verification email resent to ${user.id}`);
-    return { message: 'Verification email resent successfully' };
+    return { message: 'If the email exists, a verification link has been sent' };
   }
 
   async resendPasswordReset(email: string): Promise<MessageResponse> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      this.logger.warn(`Resend password reset failed: user with email ${email} not found`);
-      throw new BadRequestError('User not found');
+      this.logger.warn('Password reset failed: user not found');
+      // Return success to prevent email enumeration
+      return { message: 'If the email exists and is verified, a password reset link has been sent' };
     }
 
     if (!user.isEmailVerified) {
-      this.logger.warn(`Resend password reset failed: user with email ${email} is not verified`);
-      throw new BadRequestError('Email is not verified');
+      this.logger.warn('Password reset failed: user email not verified');
+      // Return success to prevent email enumeration
+      return { message: 'If the email exists and is verified, a password reset link has been sent' };
     }
 
     await this.emailQueueService.sendPasswordResetEmail({
       to: email,
       passwordResetUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.PASSWORD_RESET, 3600),
     });
-    this.logger.info(`Password reset email sent to ${user.id}`);
-    return { message: 'Password reset email sent successfully' };
+    return { message: 'If the email exists and is verified, a password reset link has been sent' };
   }
 
   async setPassword(uuid: string, inp: SetPassword): Promise<void> {
@@ -196,10 +190,10 @@ export class AuthService implements IAuthService {
     }
     await this.usersService.resetPasswordThroughEmail(inp.email, inp.password);
     await this.redisService.del(`${REDIS_KEYS.PASSWORD_RESET}:${uuid}`);
+    this.logger.info('Password reset completed successfully');
   }
 
   async verifyEmail(uuid: string): Promise<void> {
-    this.logger.debug(`Verifying email with: ${uuid}`);
     const userId = await this.redisService.get(`${REDIS_KEYS.EMAIL_VERIFY}:${uuid}`);
 
     if (!userId) {
@@ -208,5 +202,6 @@ export class AuthService implements IAuthService {
     }
     await this.usersService.markEmailAsVerified(userId);
     await this.redisService.del(`${REDIS_KEYS.EMAIL_VERIFY}:${uuid}`);
+    this.logger.info('Email verified successfully');
   }
 }

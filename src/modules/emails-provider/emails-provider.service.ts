@@ -26,7 +26,6 @@ export class EmailsProviderService implements IEmailProvider {
         throw new InvalidEmailConfigError(undefined, ['Resend API key is not configured']);
       }
       this.resendClient = new Resend(apiKey);
-      this.logger.debug('Resend client initialized');
     }
     return this.resendClient;
   }

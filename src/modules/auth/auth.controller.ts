@@ -11,6 +11,7 @@ import { AuthCookiesService } from './services';
 import { ResendVerificationDto, VerifyEmailParamsDto } from './dtos/emailVerify.dto';
 import { SetPasswordDto } from './dtos/setPassword.dto';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -22,12 +23,14 @@ export class AuthController {
 
   @Post('register')
   @PublicRoute()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async register(@Body() inp: RegisterDto): Promise<MessageResponse> {
     return this.authService.register(inp);
   }
 
   @Post('login')
   @PublicRoute()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async login(@Body() inp: LoginDto, @Res({ passthrough: true }) resp: Response): Promise<AuthResponse> {
     const { accessToken, refreshToken, user } = await this.authService.login(inp);
 
@@ -80,6 +83,7 @@ export class AuthController {
 
   @Post('resend/verification')
   @PublicRoute()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async resendVerification(@Body() inp: ResendVerificationDto): Promise<MessageResponse> {
     const result = await this.authService.resendEmailVerification(inp.email);
     return result;
@@ -87,6 +91,7 @@ export class AuthController {
 
   @Post('reset-password')
   @PublicRoute()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async resetPassword(@Body() inp: ResendVerificationDto): Promise<MessageResponse> {
     const result = await this.authService.resendPasswordReset(inp.email);
     return result;

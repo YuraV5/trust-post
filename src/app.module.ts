@@ -16,6 +16,7 @@ import { HttpContextInterceptor } from './infrastructure/http/interceptors/http-
 import { QueuesModule } from './modules/queues/queues.module';
 import { EmailsModule } from './modules/emails/emails.module';
 import { EmailsProviderModule } from './modules/emails-provider/emails-provider.module';
+import { CacheModule } from './modules/cache/cache.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { EmailsProviderModule } from './modules/emails-provider/emails-provider.
     QueuesModule,
     EmailsModule,
     EmailsProviderModule,
+    CacheModule,
   ],
   controllers: [],
   providers: [

@@ -6,7 +6,6 @@ import { UpdatePasswordDto, UpdateUserDto } from './dtos';
 import { CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/interfaces';
 
-// TODO add auth guards and decorators
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from '../../src/modules/auth/services';
+import { AuthService, LinkService } from '../../src/modules/auth/services';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { HashingService, PasswordService, TokensService } from '../../src/modules/security/services';
 import { UsersService } from '../../src/modules/users/users.service';
@@ -12,6 +12,8 @@ import { SessionsService } from '../../src/modules/auth/sessions/services';
 import { SessionsPolicy } from '../../src/modules/auth/sessions/services/sessions-polict.service';
 import { SessionsRepo } from '../../src/modules/auth/sessions/repo/session-repo';
 import { EmailQueueService } from '../../src/modules/emails/email-queue.service';
+import { RedisService } from '../../src/modules/cache/services';
+import { RedisConnectionManager } from '../../src/modules/cache/factories/redis-connection.manager';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -30,6 +32,9 @@ describe('AuthService', () => {
         SessionsPolicy,
         SessionsRepo,
         HashingService,
+        LinkService,
+        RedisService,
+        { provide: RedisConnectionManager, useValue: { getClient: jest.fn() } },
         {
           provide: EmailQueueService,
           useValue: { sendVerificationEmail: jest.fn(), sendPasswordResetEmail: jest.fn() },

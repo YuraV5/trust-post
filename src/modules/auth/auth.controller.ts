@@ -10,12 +10,14 @@ import type { RefreshTokenRequest } from '../../common/interfaces';
 import { AuthCookiesService } from './services';
 import { ResendVerificationDto, VerifyEmailParamsDto } from './dtos/emailVerify.dto';
 import { SetPasswordDto } from './dtos/setPassword.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly cookieService: AuthCookiesService,
+    private readonly config: ConfigService,
   ) {}
 
   @Post('register')
@@ -71,13 +73,12 @@ export class AuthController {
 
   @Get('verify-email/:uuid')
   @PublicRoute()
-  async verifyEmail(@Param() params: VerifyEmailParamsDto, @Res() res: Response): Promise<void> {
-    // TODO: Implement email verification logic
+  async verifyEmail(@Param() params: VerifyEmailParamsDto, @Res({ passthrough: true }) res: Response): Promise<void> {
     await this.authService.verifyEmail(params.uuid);
-    res.redirect('http://localhost:3001/login#verified');
+    res.status(302).redirect(`${this.config.get('FRONTEND_URL')}/login#verified`);
   }
 
-  @Post('resend-verification')
+  @Post('resend/verification')
   @PublicRoute()
   async resendVerification(@Body() inp: ResendVerificationDto): Promise<MessageResponse> {
     await this.authService.resendEmailVerification(inp.email);
@@ -96,9 +97,9 @@ export class AuthController {
   async newPassword(
     @Param() params: VerifyEmailParamsDto,
     @Body() body: SetPasswordDto,
-    @Res() res: Response,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
     await this.authService.setPassword(params.uuid, body);
-    res.redirect('http://localhost:3001/login#passwordReset');
+    res.status(302).redirect(`${this.config.get('FRONTEND_URL')}/login#passwordReset`);
   }
 }

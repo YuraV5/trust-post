@@ -4,8 +4,19 @@ export interface IAppConfig {
   corsAllowOrigin: string;
   serviceName: string;
   loggerLevel: string;
+  frontUrl: string;
 
-  redis: { host: string; port: number; password: string; ttl: number };
+  redis: {
+    host: string;
+    port: number;
+    password: string;
+    ttl: number;
+    dbCache: number;
+    dbQueue: number;
+    maxRetries: number;
+    retryDelayMs: number;
+    gracefulShutdownTimeoutMs: number;
+  };
 
   jwt: {
     accessSecret: string;

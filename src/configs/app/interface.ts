@@ -11,9 +11,11 @@ export interface IAppConfig {
     port: number;
     password: string;
     ttl: number;
-    dbAuth: number;
     dbCache: number;
     dbQueue: number;
+    maxRetries: number;
+    retryDelayMs: number;
+    gracefulShutdownTimeoutMs: number;
   };
 
   jwt: {

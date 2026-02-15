@@ -51,7 +51,7 @@ export class AuthService implements IAuthService {
     await this.emailQueueService.sendVerificationEmail({
       to: inp.email,
       name: inp.name,
-      verificationUrl: await this.linkService.generateTemporaryLink(result.userId, 'verify-email', 3600),
+      verificationUrl: await this.linkService.generateTemporaryLink(result.userId, REDIS_KEYS.EMAIL_VERIFY, 3600),
     });
     this.logger.info(`User ${inp.email} registered`);
     return { message: 'User registered successfully' };
@@ -156,7 +156,7 @@ export class AuthService implements IAuthService {
     await this.emailQueueService.sendVerificationEmail({
       to: email,
       name: user.name,
-      verificationUrl: await this.linkService.generateTemporaryLink(user.id, 'verify-email', 3600),
+      verificationUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.EMAIL_VERIFY, 3600),
     });
 
     this.logger.info(`Verification email resent to ${user.id}`);
@@ -175,11 +175,9 @@ export class AuthService implements IAuthService {
       throw new BadRequestError('Email is not verified');
     }
 
-    await this.redisService.set(`${REDIS_KEYS.PASSWORD_RESET}:${user.id}`, user.id, 3600); // Store a token in Redis to validate the password reset request
-
     await this.emailQueueService.sendPasswordResetEmail({
       to: email,
-      passwordResetUrl: await this.linkService.generateTemporaryLink(user.id, 'set-password', 3600),
+      passwordResetUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.PASSWORD_RESET, 3600),
     });
     this.logger.info(`Password reset email sent to ${user.id}`);
     return { message: 'Password reset email sent successfully' };
@@ -201,6 +199,7 @@ export class AuthService implements IAuthService {
   async verifyEmail(uuid: string): Promise<void> {
     this.logger.debug(`Verifying email with: ${uuid}`);
     const userId = await this.redisService.get(`${REDIS_KEYS.EMAIL_VERIFY}:${uuid}`);
+
     if (!userId) {
       this.logger.warn(`Email verification failed: invalid or expired token ${uuid}`);
       throw new BadRequestError('Invalid or expired verification link');

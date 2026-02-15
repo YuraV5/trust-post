@@ -132,14 +132,16 @@ export class AuthService implements IAuthService {
     return { accessToken };
   }
 
-  async logout(sessionId: string): Promise<void> {
+  async logout(sessionId: string): Promise<MessageResponse> {
     await this.sessionsService.deleteBySessionId(sessionId);
     this.logger.info(`Session ${sessionId} logged out`);
+    return { message: 'Logged out successfully' };
   }
 
-  async logoutAll(userId: string): Promise<void> {
+  async logoutAll(userId: string): Promise<MessageResponse> {
     await this.sessionsService.deleteAllSessions(userId);
     this.logger.info(`All sessions logged out for user ${userId}`);
+    return { message: 'Logged out from all sessions successfully' };
   }
 
   async resendEmailVerification(email: string): Promise<MessageResponse> {

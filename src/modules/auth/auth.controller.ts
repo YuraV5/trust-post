@@ -71,10 +71,10 @@ export class AuthController {
 
   @Get('verify-email/:uuid')
   @PublicRoute()
-  async verifyEmail(@Param() params: VerifyEmailParamsDto, @Res() res: Response): Promise<void> {
-    // TODO: Implement email verification logic
+  async verifyEmail(@Param() params: VerifyEmailParamsDto, @Res({ passthrough: true }) res: Response): Promise<void> {
     await this.authService.verifyEmail(params.uuid);
-    res.redirect('http://localhost:3001/login#verified');
+    console.log(`Email verified for token ${params.uuid}`);
+    res.status(302).redirect('http://localhost:3001/login#verified');
   }
 
   @Post('resend-verification')
@@ -96,9 +96,9 @@ export class AuthController {
   async newPassword(
     @Param() params: VerifyEmailParamsDto,
     @Body() body: SetPasswordDto,
-    @Res() res: Response,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
     await this.authService.setPassword(params.uuid, body);
-    res.redirect('http://localhost:3001/login#passwordReset');
+    res.status(302).redirect('http://localhost:3001/login#passwordReset');
   }
 }

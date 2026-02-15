@@ -6,12 +6,16 @@ export default (): IAppConfig => ({
   corsAllowOrigin: process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001',
   serviceName: process.env.SERVICE_NAME || 'work-link-service',
   loggerLevel: process.env.LOGGER_LEVEL || 'info',
+  frontUrl: process.env.FRONTEND_URL!,
 
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     password: process.env.REDIS_PASSWORD || '12345',
     port: parseInt(process.env.REDIS_PORT!, 10) || 6379,
     ttl: parseInt(process.env.REDIS_TTL!, 10) || 300,
+    dbAuth: parseInt(process.env.REDIS_DB_AUTH!, 10) || 0,
+    dbCache: parseInt(process.env.REDIS_DB_CACHE!, 10) || 1,
+    dbQueue: parseInt(process.env.REDIS_DB_QUEUE!, 10) || 2,
   },
 
   jwt: {

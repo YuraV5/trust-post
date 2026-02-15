@@ -6,6 +6,7 @@ export const configValidation = Joi.object({
   CORS_ALLOW_ORIGIN: Joi.string().required(),
   SERVICE_NAME: Joi.string().default('work-link-service'),
   LOGGER_LEVEL: Joi.string().default('info'),
+  FRONTEND_URL: Joi.string().uri().required(),
 
   DB_USER: Joi.string().required(),
   DB_PASSWORD: Joi.string().required(),
@@ -16,6 +17,9 @@ export const configValidation = Joi.object({
   REDIS_PORT: Joi.number().required(),
   REDIS_PASSWORD: Joi.string().required(),
   REDIS_TTL: Joi.number().default(300),
+  REDIS_DB_AUTH: Joi.number().default(0), // For authentication tokens
+  REDIS_DB_CACHE: Joi.number().default(1), // For caching frequently accessed data
+  REDIS_DB_QUEUE: Joi.number().default(2), // For managing background job queues
 
   JWT_ACCESS_SECRET: Joi.string().required(),
   JWT_ACCESS_EXPIRATION: Joi.string().default('15m'),

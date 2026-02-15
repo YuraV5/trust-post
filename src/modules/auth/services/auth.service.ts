@@ -4,7 +4,7 @@ import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logge
 import { UsersService } from '../../users/users.service';
 import { SetPassword, UserCredentials, UserLoginOutput, UserRegistration } from '../types';
 import { MessageResponse } from '../../../common/types';
-import { BadRequestError } from '../../../shared/errors/app-errors';
+import { BadRequestError, ForbiddenError } from '../../../shared/errors/app-errors';
 import { PasswordService, TokensService } from '../../security/services';
 import { v4 as uuidv4 } from 'uuid';
 import { SessionsService } from '../sessions/services';
@@ -14,6 +14,9 @@ import { ConfigService } from '@nestjs/config';
 import { parseDuration } from '../../../common/utils/expiration.util';
 import { EmailQueueService } from '../../emails/email-queue.service';
 import { UserAlreadyExistsError } from '../../users/errors';
+import { RedisService } from '../../cache/services';
+import { LinkService } from './link.service';
+import { REDIS_KEYS } from '../const';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -26,6 +29,8 @@ export class AuthService implements IAuthService {
     private readonly sessionsService: SessionsService,
     private readonly sessionsPolicy: SessionsPolicy,
     private readonly config: ConfigService,
+    private readonly linkService: LinkService,
+    private readonly redisService: RedisService,
   ) {}
 
   async register(inp: UserRegistration): Promise<MessageResponse> {
@@ -41,10 +46,12 @@ export class AuthService implements IAuthService {
       name: inp.name,
     });
 
+    this.logger.debug(`User created with ID ${result.userId}, sending verification email...`);
+
     await this.emailQueueService.sendVerificationEmail({
       to: inp.email,
       name: inp.name,
-      verificationUrl: this.createVerifyLink(result.userId, 'verify-email'),
+      verificationUrl: await this.linkService.generateTemporaryLink(result.userId, 'verify-email', 3600),
     });
     this.logger.info(`User ${inp.email} registered`);
     return { message: 'User registered successfully' };
@@ -73,9 +80,9 @@ export class AuthService implements IAuthService {
       throw new BadRequestError('Invalid credentials');
     }
 
-    // if (!user.isEmailVerified) {
-    //   throw new ForbiddenError('Email not verified');
-    // }
+    if (!user.isEmailVerified) {
+      throw new ForbiddenError('Email not verified');
+    }
 
     const session = await this.sessionsService.getSessionByUserIdAndDeviceId(user.id, inp.deviceId);
     const sessionId = session ? session.sessionId : uuidv4();
@@ -134,7 +141,7 @@ export class AuthService implements IAuthService {
     await this.sessionsService.deleteAllSessions(userId);
     this.logger.info(`All sessions logged out for user ${userId}`);
   }
-  // TODO: Implement real email verification logic
+
   async resendEmailVerification(email: string): Promise<MessageResponse> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
@@ -149,9 +156,10 @@ export class AuthService implements IAuthService {
     await this.emailQueueService.sendVerificationEmail({
       to: email,
       name: user.name,
-      verificationUrl: this.createVerifyLink(user.id, 'verify-email'),
+      verificationUrl: await this.linkService.generateTemporaryLink(user.id, 'verify-email', 3600),
     });
-    this.logger.info(`Verification email resent to ${email}`);
+
+    this.logger.info(`Verification email resent to ${user.id}`);
     return { message: 'Verification email resent successfully' };
   }
 
@@ -162,16 +170,18 @@ export class AuthService implements IAuthService {
       throw new BadRequestError('User not found');
     }
 
-    // if (!user.isEmailVerified) {
-    //   this.logger.warn(`Resend password reset failed: user with email ${email} is not verified`);
-    //   throw new BadRequestError('Email is not verified');
-    // }
+    if (!user.isEmailVerified) {
+      this.logger.warn(`Resend password reset failed: user with email ${email} is not verified`);
+      throw new BadRequestError('Email is not verified');
+    }
+
+    await this.redisService.set(`${REDIS_KEYS.PASSWORD_RESET}:${user.id}`, user.id, 3600); // Store a token in Redis to validate the password reset request
 
     await this.emailQueueService.sendPasswordResetEmail({
       to: email,
-      passwordResetUrl: this.createVerifyLink(user.id, 'set-password'),
+      passwordResetUrl: await this.linkService.generateTemporaryLink(user.id, 'set-password', 3600),
     });
-    this.logger.info(`Password reset email sent to ${email}`);
+    this.logger.info(`Password reset email sent to ${user.id}`);
     return { message: 'Password reset email sent successfully' };
   }
 
@@ -179,19 +189,23 @@ export class AuthService implements IAuthService {
     if (inp.password !== inp.confirmPassword) {
       throw new BadRequestError('Passwords do not match');
     }
+    const userId = await this.redisService.get(`${REDIS_KEYS.PASSWORD_RESET}:${uuid}`);
+    if (!userId) {
+      this.logger.warn(`Password reset failed: invalid or expired token ${uuid}`);
+      throw new BadRequestError('Invalid or expired password reset link');
+    }
     await this.usersService.resetPasswordThroughEmail(inp.email, inp.password);
+    await this.redisService.del(`${REDIS_KEYS.PASSWORD_RESET}:${uuid}`);
   }
 
   async verifyEmail(uuid: string): Promise<void> {
-    // TODO: Implement real email verification logic
-    this.logger.debug(`Verifying email with token: ${uuid}`);
-    const userId = 'userId extracted from token'; // TODO: Extract userId from token
+    this.logger.debug(`Verifying email with: ${uuid}`);
+    const userId = await this.redisService.get(`${REDIS_KEYS.EMAIL_VERIFY}:${uuid}`);
+    if (!userId) {
+      this.logger.warn(`Email verification failed: invalid or expired token ${uuid}`);
+      throw new BadRequestError('Invalid or expired verification link');
+    }
     await this.usersService.markEmailAsVerified(userId);
-  }
-
-  private createVerifyLink(userId: string, path: string): string {
-    this.logger.debug(`Creating email verification link for user ${userId}`);
-    // TODO implement real link generation with token
-    return `http://localhost:3001/api/v1/auth/${path}/${uuidv4()}`;
+    await this.redisService.del(`${REDIS_KEYS.EMAIL_VERIFY}:${uuid}`);
   }
 }

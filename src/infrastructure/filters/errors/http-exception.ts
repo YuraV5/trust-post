@@ -5,22 +5,27 @@ import {
   HttpException,
   BadRequestException,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Context } from '../../../shared/contex/context.service';
 import { AppError } from '../../../shared/errors/basic-app-error';
 import { ErrorCode } from '../../../shared/errors/error-codes';
+import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
-  constructor(private readonly adapterHost: HttpAdapterHost) {}
+  constructor(
+    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    private readonly adapterHost: HttpAdapterHost,
+  ) {}
 
   catch(exception: HttpException, host: ArgumentsHost): void {
     const { httpAdapter } = this.adapterHost;
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<Response>();
 
-    const requestId = Context.getRequired().requestId;
+    const requestId = Context.get()?.requestId || 'no-rid';
 
     let status = exception.getStatus();
     let code = ErrorCode.INTERNAL;
@@ -47,6 +52,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       code = ErrorCode.NOT_FOUND;
       message = 'Resource not found';
     }
+
+    this.logger.error('HTTP exception occurred', {
+      requestId,
+      status,
+      code,
+      message,
+      details,
+    });
 
     httpAdapter.reply(
       res,

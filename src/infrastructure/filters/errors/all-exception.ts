@@ -17,7 +17,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
 
-    const requestId = Context.getRequired().requestId;
+    const requestId = Context.get()?.requestId || 'no-rid';
 
     this.logger.error('Unhandled exception', {
       error: exception instanceof Error ? exception : undefined,

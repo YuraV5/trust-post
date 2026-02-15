@@ -5,7 +5,6 @@ import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
 import { RefreshTokenRequest } from '../interfaces';
 import { SessionsService } from '../../modules/auth/sessions/services';
 
-// TODO add check sessions in db, if session is invalidated, reject the token
 @Injectable()
 export class RefreshTokenGuard implements CanActivate {
   constructor(

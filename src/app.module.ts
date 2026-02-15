@@ -17,6 +17,7 @@ import { QueuesModule } from './modules/queues/queues.module';
 import { EmailsModule } from './modules/emails/emails.module';
 import { EmailsProviderModule } from './modules/emails-provider/emails-provider.module';
 import { CacheModule } from './modules/cache/cache.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -25,6 +26,12 @@ import { CacheModule } from './modules/cache/cache.module';
       load: [appConfig],
       validationSchema: configValidation,
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 10,
+      },
+    ]),
     AppLoggerModule,
     ExceptionFiltersModule,
     HealthModule,

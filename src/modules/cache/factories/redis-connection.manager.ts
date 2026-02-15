@@ -129,7 +129,10 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
         })
         .catch((err) => {
           clearTimeout(timeoutHandle);
-          this.logger.error('Redis graceful shutdown error', { error: err, context: 'RedisConnectionManager' });
+          this.logger.error('Redis graceful shutdown error', {
+            error: err as Error,
+            context: 'RedisConnectionManager',
+          });
           resolve();
         });
     });

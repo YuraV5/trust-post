@@ -43,16 +43,10 @@ export default tseslint.config(
       // Prevent unhandled promises (runtime safety)
       '@typescript-eslint/no-floating-promises': 'error',
 
-      // Warn about unsafe arguments without blocking development
+      // Allow unsafe operations for error handling (error: any is OK), warn for others
       '@typescript-eslint/no-unsafe-argument': 'warn',
-
-      // Warn about unsafe assignments to keep type safety visible
       '@typescript-eslint/no-unsafe-assignment': 'warn',
-
-      // Warn when returning unsafe values from functions
       '@typescript-eslint/no-unsafe-return': 'warn',
-
-      // Warn about unsafe method calls and member access (for any types)
       '@typescript-eslint/no-unsafe-call': 'warn',
       '@typescript-eslint/no-unsafe-member-access': 'warn',
 

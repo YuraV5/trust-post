@@ -8,4 +8,5 @@ export interface IUserRepo {
   remove(id: string): Promise<void>;
   update(id: string, inp: UpdateUserInput): Promise<User>;
   updatePassword(id: string, newPassword: string): Promise<void>;
+  markEmailAsVerified(userId: string): Promise<void>;
 }

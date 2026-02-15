@@ -42,7 +42,7 @@ export async function executeWithRetry<T>(
 
   try {
     return await Promise.race([fn(), createTimeoutPromise(config.timeoutMs)]);
-  } catch (error: any) {
+  } catch (error) {
     if (retryCount < config.maxRetries && isRetryableError(error, config)) {
       const delayMs = config.exponentialBackoff ? 1000 * Math.pow(2, retryCount) : 1000;
 
@@ -50,8 +50,8 @@ export async function executeWithRetry<T>(
       return executeWithRetry(fn, options, retryCount + 1);
     }
 
-    const isTimeout = error.message?.toLowerCase().includes('timeout');
-    throw new RetryError(error.message || 'Request failed after retries', error, isTimeout);
+    const isTimeout = (error as Error).message?.toLowerCase().includes('timeout');
+    throw new RetryError((error as Error).message || 'Request failed after retries', error, isTimeout);
   }
 }
 
@@ -68,7 +68,7 @@ function createTimeoutPromise(timeoutMs: number): Promise<never> {
 function isRetryableError(error: any, config: Required<RetryOptions>): boolean {
   return (
     config.retryableStatuses.includes(error?.status) ||
-    config.retryableMessages.some((msg) => error.message?.toLowerCase().includes(msg))
+    config.retryableMessages.some((msg) => (error as Error).message?.toLowerCase().includes(msg))
   );
 }
 

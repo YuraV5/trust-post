@@ -18,15 +18,13 @@ export class EmailProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job): Promise<void> {
-    this.logger.info(`Processing job ${job.name} with data: ${JSON.stringify(job.data)}`);
-
+  async process(job: Job<unknown>): Promise<void> {
     switch (job.name as EMAIL_JOB) {
       case EMAIL_JOB.VERIFICATION_EMAIL:
-        await this.processSendVerificationEmail(job);
+        await this.processSendVerificationEmail(job as Job<EmailVerificationTask>);
         break;
       case EMAIL_JOB.PASSWORD_RESET_EMAIL:
-        await this.processSendPasswordResetEmail(job);
+        await this.processSendPasswordResetEmail(job as Job<PasswordResetTask>);
         break;
       default:
         this.logger.warn(`No processor defined for job ${job.name}`);
@@ -36,6 +34,7 @@ export class EmailProcessor extends WorkerHost {
   private async processSendVerificationEmail(job: Job<EmailVerificationTask>) {
     const { data }: { data: EmailVerificationTask } = job;
     this.logger.debug('Processing verification email', { data });
+
     await this.emailProvider.sendEmail({
       to: data.to,
       from: this.config.get<string>('email.from') || 'onboarding@resend.dev',
@@ -45,8 +44,8 @@ export class EmailProcessor extends WorkerHost {
     this.logger.info(`Verification email sent to ${data.to}`);
   }
 
-  private async processSendPasswordResetEmail(job: Job) {
-    const { data }: { data: PasswordResetTask } = job;
+  private async processSendPasswordResetEmail(job: Job<PasswordResetTask>) {
+    const { data } = job;
     this.logger.debug('Processing password reset email', { data });
 
     await this.emailProvider.sendEmail({

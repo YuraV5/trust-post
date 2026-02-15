@@ -50,17 +50,15 @@ export class UsersService implements IUserService {
 
   async remove(id: string): Promise<MessageResponse> {
     await this.repo.remove(id);
-    this.logger.info(`User with id ${id} removed successfully`);
     return { message: `User removed successfully` };
   }
 
-  async update(id: string, inp: UpdateUserInput): Promise<MessageResponse> {
+  async updateProfile(id: string, inp: UpdateUserInput): Promise<MessageResponse> {
     if (!hasUpdatableFields(inp)) {
       throw new BadRequestError('No fields to update');
     }
     const name = inp?.name?.toLowerCase();
     await this.repo.update(id, { ...inp, name });
-    this.logger.info(`User with id ${id} updated successfully`);
     return { message: `User updated successfully` };
   }
 
@@ -79,7 +77,6 @@ export class UsersService implements IUserService {
 
     await this.repo.updatePassword(id, newPassword);
 
-    this.logger.info(`User with id ${user.id} updated password successfully`);
     return { message: `User password updated successfully` };
   }
 
@@ -97,11 +94,9 @@ export class UsersService implements IUserService {
     }
     const hashedPassword = await this.passwordService.createHash(newPassword);
     await this.repo.updatePassword(user.id, hashedPassword);
-    this.logger.info(`User with email ${email} reset password successfully through email`);
   }
 
   async markEmailAsVerified(userId: string): Promise<void> {
     await this.repo.markEmailAsVerified(userId);
-    this.logger.info(`User with id ${userId} marked email as verified`);
   }
 }

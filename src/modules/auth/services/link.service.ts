@@ -22,10 +22,8 @@ export class LinkService {
     const token = uuidv4();
 
     await this.redisService.set(`${keyPrefix}:${token}`, userId, ttlSeconds);
-    this.logger.debug(`Creating temporary link for user ${userId} with token ${token}`);
 
     const baseUrl = this.config.get<string>('frontUrl');
-    this.logger.debug(`Generated temporary link: ${baseUrl}/${keyPrefix}/${token}`);
     return `${baseUrl}/${keyPrefix}/${token}`;
   }
 }

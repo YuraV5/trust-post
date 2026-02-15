@@ -27,7 +27,6 @@ export class SessionsService implements ISessionService {
 
   async createOrUpdate(data: UserSession): Promise<void> {
     await this.sessionRepo.upsert(data);
-    this.logger.debug(`Session upserted for user ${data.userId} on device ${data.deviceId}`);
   }
 
   async deleteAllExceptCurrentSession(userId: string, sessionId: string): Promise<MessageResponse> {
@@ -41,7 +40,6 @@ export class SessionsService implements ISessionService {
 
   async setLastUsedTimestamp(sessionId: string): Promise<void> {
     await this.sessionRepo.update(sessionId, { lastUsedAt: new Date() });
-    this.logger.debug(`Updated last used timestamp for session ${sessionId}`);
   }
 
   async deleteBySessionId(sessionId: string): Promise<MessageResponse> {
@@ -50,6 +48,7 @@ export class SessionsService implements ISessionService {
       this.logger.warn(`No session deleted with ID ${sessionId}`);
       return { message: 'No session deleted' };
     }
+    this.logger.info('Session deleted');
     return { message: 'Session deleted' };
   }
 
@@ -61,6 +60,7 @@ export class SessionsService implements ISessionService {
       return { message: 'No sessions deleted' };
     }
 
+    this.logger.info(`${deletedCount} sessions deleted`);
     return { message: `${deletedCount} sessions deleted` };
   }
 

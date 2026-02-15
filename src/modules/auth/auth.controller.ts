@@ -1,16 +1,17 @@
 import { Controller, Post, Body, Res, UseGuards, Req, Get, Param } from '@nestjs/common';
 import { AuthService } from './services/auth.service';
 import { LoginDto, RegisterDto } from './dtos';
-import type { MessageResponse } from '../../common/types';
+import { type MessageResponse } from '../../common/types';
 import { AuthResponse } from './types';
-import type { Response } from 'express';
+import { type Response } from 'express';
 import { PublicRoute } from '../../common/decorators';
 import { RefreshTokenGuard } from '../../common/guards';
-import type { RefreshTokenRequest } from '../../common/interfaces';
+import { type RefreshTokenRequest } from '../../common/interfaces';
 import { AuthCookiesService } from './services';
 import { ResendVerificationDto, VerifyEmailParamsDto } from './dtos/emailVerify.dto';
 import { SetPasswordDto } from './dtos/setPassword.dto';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -22,12 +23,14 @@ export class AuthController {
 
   @Post('register')
   @PublicRoute()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async register(@Body() inp: RegisterDto): Promise<MessageResponse> {
     return this.authService.register(inp);
   }
 
   @Post('login')
   @PublicRoute()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async login(@Body() inp: LoginDto, @Res({ passthrough: true }) resp: Response): Promise<AuthResponse> {
     const { accessToken, refreshToken, user } = await this.authService.login(inp);
 
@@ -55,9 +58,9 @@ export class AuthController {
   @Post('logout')
   @UseGuards(RefreshTokenGuard)
   async logout(@Req() req: RefreshTokenRequest, @Res({ passthrough: true }) resp: Response): Promise<MessageResponse> {
-    await this.authService.logout(req.user.sessionId);
+    const result = await this.authService.logout(req.user.sessionId);
     this.cookieService.clear(resp);
-    return { message: 'Logged out successfully' };
+    return result;
   }
 
   @Post('logout-all')
@@ -66,9 +69,9 @@ export class AuthController {
     @Req() req: RefreshTokenRequest,
     @Res({ passthrough: true }) resp: Response,
   ): Promise<MessageResponse> {
-    await this.authService.logoutAll(req.user.userId);
+    const result = await this.authService.logoutAll(req.user.userId);
     this.cookieService.clear(resp);
-    return { message: 'Logged out from all sessions successfully' };
+    return result;
   }
 
   @Get('verify-email/:uuid')
@@ -80,16 +83,18 @@ export class AuthController {
 
   @Post('resend/verification')
   @PublicRoute()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async resendVerification(@Body() inp: ResendVerificationDto): Promise<MessageResponse> {
-    await this.authService.resendEmailVerification(inp.email);
-    return { message: 'Verification email resent successfully' };
+    const result = await this.authService.resendEmailVerification(inp.email);
+    return result;
   }
 
   @Post('reset-password')
   @PublicRoute()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async resetPassword(@Body() inp: ResendVerificationDto): Promise<MessageResponse> {
-    await this.authService.resendPasswordReset(inp.email);
-    return { message: 'Password reset email sent successfully' };
+    const result = await this.authService.resendPasswordReset(inp.email);
+    return result;
   }
 
   @Post('set-password/:uuid')

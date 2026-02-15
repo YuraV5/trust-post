@@ -57,7 +57,6 @@ export class TokensService {
   private async signToken(type: TokenType, payload: AccessPayload | RefreshPayload): Promise<string> {
     try {
       const token = await this.jwt.signAsync(payload, this.options(type));
-      this.logger.debug(`${type} token generated for subject: ${payload.sub}`);
       return token;
     } catch (err) {
       this.logger.error(`Token generation failed for type: ${type}`, { error: err as Error });
@@ -71,7 +70,6 @@ export class TokensService {
         secret: this.secrets[type],
         issuer: this.issuer,
       });
-      this.logger.debug(`${type} token verified successfully`);
       return payload;
     } catch (err) {
       this.logger.error(`${type} token verification failed`, {
@@ -92,9 +90,9 @@ export class TokensService {
   private mapJwtError(err: unknown): UnauthorizedError {
     if (this.nodeEnv !== APP_NODE_MODE.PROD) {
       if (err instanceof TokenExpiredError) {
-        this.logger.debug('JWT expired');
+        // JWT expired
       } else if (err instanceof JsonWebTokenError) {
-        this.logger.debug('JWT invalid');
+        // JWT invalid
       } else {
         this.logger.error('JWT verification failed', { error: err as Error });
       }

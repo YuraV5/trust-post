@@ -54,7 +54,7 @@ export class UsersService implements IUserService {
     return { message: `User removed successfully` };
   }
 
-  async update(id: string, inp: UpdateUserInput): Promise<MessageResponse> {
+  async updateProfile(id: string, inp: UpdateUserInput): Promise<MessageResponse> {
     if (!hasUpdatableFields(inp)) {
       throw new BadRequestError('No fields to update');
     }

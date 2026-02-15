@@ -4,7 +4,7 @@ import { MessageResponse } from '../../common/types';
 import { UserProfileOutput } from './types';
 import { UpdatePasswordDto, UpdateUserDto } from './dtos';
 import { CurrentUser } from '../../common/decorators';
-import type { AuthenticatedUser } from '../../common/interfaces';
+import { type AuthenticatedUser } from '../../common/interfaces';
 
 @Controller('users')
 export class UsersController {
@@ -17,7 +17,7 @@ export class UsersController {
 
   @Patch('/me')
   async updateMe(@CurrentUser() user: AuthenticatedUser, @Body() inp: UpdateUserDto): Promise<MessageResponse> {
-    return this.usersService.update(user.userId, inp);
+    return this.usersService.updateProfile(user.userId, inp);
   }
 
   @Patch('/me/password')

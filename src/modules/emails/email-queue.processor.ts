@@ -19,8 +19,6 @@ export class EmailProcessor extends WorkerHost {
   }
 
   async process(job: Job): Promise<void> {
-    this.logger.info(`Processing job ${job.name} with data: ${JSON.stringify(job.data)}`);
-
     switch (job.name as EMAIL_JOB) {
       case EMAIL_JOB.VERIFICATION_EMAIL:
         await this.processSendVerificationEmail(job);
@@ -36,6 +34,7 @@ export class EmailProcessor extends WorkerHost {
   private async processSendVerificationEmail(job: Job<EmailVerificationTask>) {
     const { data }: { data: EmailVerificationTask } = job;
     this.logger.debug('Processing verification email', { data });
+
     await this.emailProvider.sendEmail({
       to: data.to,
       from: this.config.get<string>('email.from') || 'onboarding@resend.dev',

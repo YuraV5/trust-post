@@ -3,7 +3,7 @@ import { Job } from 'bullmq';
 import { EMAIL_NOTIFICATION_QUEUE, EMAIL_JOB } from './const';
 import { Inject } from '@nestjs/common';
 import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
-import { EmailsProviderService } from '../emails-provider/emails-provider.service';
+import { EmailsProviderService } from '../emails-provider/services/emails-provider.service';
 import { resetPasswordEmailTemplate, verificationEmailPattern } from '../emails-provider/patterns';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { EmailVerificationTask, PasswordResetTask } from './types';

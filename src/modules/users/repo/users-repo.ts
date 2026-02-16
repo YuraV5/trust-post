@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IUserRepo } from '../interfaces';
-import { User } from '@prisma/client';
+import { User, UserRoles } from '@prisma/client';
 import { NewUserInput, UpdateUserInput } from '../types';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -35,5 +35,15 @@ export class UsersRepo implements IUserRepo {
 
   async markEmailAsVerified(userId: string): Promise<void> {
     await this.db.user.update({ where: { id: userId }, data: { isEmailVerified: true } });
+  }
+
+  async updateStatus(id: string, isActive: boolean): Promise<number> {
+    const result = await this.db.user.updateMany({ where: { id }, data: { isActive } });
+    return result.count;
+  }
+
+  async updateRoles(id: string, role: UserRoles): Promise<number> {
+    const result = await this.db.user.updateMany({ where: { id }, data: { role } });
+    return result.count;
   }
 }

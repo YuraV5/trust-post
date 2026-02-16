@@ -1,3 +1,4 @@
+import { UserRoles } from '@prisma/client';
 import { MessageResponse } from '../../../common/types';
 import { NewUserInput, UpdatePasswordInput, UpdateUserInput, UserOutput, UserSecyredOutput } from '../types';
 
@@ -11,4 +12,9 @@ export interface IUserService {
   findAuthUserbyId(id: string): Promise<UserSecyredOutput | null>;
   markEmailAsVerified(userId: string): Promise<void>;
   resetPasswordThroughEmail(email: string, newPassword: string): Promise<void>;
+
+  // Admin methods
+  findByIdForAdmin(id: string): Promise<UserSecyredOutput>;
+  updateStatus(id: string, isActive: boolean): Promise<{ id: string; isActive: boolean }>;
+  changeRoles(id: string, role: UserRoles): Promise<{ id: string; role: UserRoles }>;
 }

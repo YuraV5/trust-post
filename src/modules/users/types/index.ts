@@ -27,9 +27,12 @@ export type UserSecyredOutput = UserOutput & {
   role: 'USER' | 'ADMIN' | 'MODERATOR';
   isActive: boolean;
   isEmailVerified: boolean;
+  updatedAt: Date;
 };
 
 export type UpdatePasswordInput = {
   newPassword: string;
   currentPassword: string;
 };
+
+export type UserAdminOutput = Omit<UserSecyredOutput, 'password'>;

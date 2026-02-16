@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IAuthService } from '../interfaces';
 import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
-import { UsersService } from '../../users/users.service';
 import { SetPassword, UserCredentials, UserLoginOutput, UserRegistration } from '../types';
 import { MessageResponse } from '../../../common/types';
 import { BadRequestError } from '../../../shared/errors/app-errors';
@@ -17,6 +16,7 @@ import { UserAlreadyExistsError } from '../../users/errors';
 import { RedisService } from '../../cache/services';
 import { LinkService } from './link.service';
 import { REDIS_KEYS } from '../const';
+import { UsersService } from '../../users/services';
 
 @Injectable()
 export class AuthService implements IAuthService {

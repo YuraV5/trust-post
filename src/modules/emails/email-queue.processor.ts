@@ -4,9 +4,9 @@ import { EMAIL_NOTIFICATION_QUEUE, EMAIL_JOB } from './const';
 import { Inject } from '@nestjs/common';
 import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
 import { EmailsProviderService } from '../emails-provider/services/emails-provider.service';
-import { resetPasswordEmailTemplate, verificationEmailPattern } from '../emails-provider/patterns';
+import { accountActivationEmailPattern, resetPasswordEmailTemplate, verificationEmailPattern } from './patterns';
 import { ConfigService } from '@nestjs/config/dist/config.service';
-import { EmailVerificationTask, PasswordResetTask } from './types';
+import { AccountActivationTask, EmailVerificationTask, PasswordResetTask } from './types';
 
 @Processor(EMAIL_NOTIFICATION_QUEUE, { limiter: { max: 20, duration: 1000 } }) // Limit to 20 jobs per second
 export class EmailProcessor extends WorkerHost {
@@ -25,6 +25,9 @@ export class EmailProcessor extends WorkerHost {
         break;
       case EMAIL_JOB.PASSWORD_RESET_EMAIL:
         await this.processSendPasswordResetEmail(job as Job<PasswordResetTask>);
+        break;
+      case EMAIL_JOB.ACCOUNT_ACTIVATION_EMAIL:
+        await this.processSendAccountActivationEmail(job as Job<AccountActivationTask>);
         break;
       default:
         this.logger.warn(`No processor defined for job ${job.name}`);
@@ -55,5 +58,18 @@ export class EmailProcessor extends WorkerHost {
       html: resetPasswordEmailTemplate(data.passwordResetUrl), // You would define this template function similar to verificationEmailPattern
     });
     this.logger.info(`Password reset email sent to ${data.to}`);
+  }
+
+  private async processSendAccountActivationEmail(job: Job<AccountActivationTask>) {
+    const { data } = job;
+    this.logger.debug('Processing account activation email', { data });
+
+    await this.emailProvider.sendEmail({
+      to: data.to,
+      from: this.config.get<string>('email.from') || 'onboarding@resend.dev',
+      subject: 'Account Activation Email',
+      html: accountActivationEmailPattern(data.activationUrl), // You would define this template function similar to verificationEmailPattern
+    });
+    this.logger.debug(`Account activation email sent to ${data.to}`);
   }
 }

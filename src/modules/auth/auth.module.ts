@@ -7,11 +7,11 @@ import { SecurityModule } from '../security/security.module';
 import { AuthCookiesService } from './services';
 import { SessionsModule } from './sessions/sessions.module';
 import { EmailsModule } from '../emails/emails.module';
-import { LinkService } from './services/link.service';
+import { LinksModule } from '../links/links.module';
 
 @Module({
-  imports: [UsersModule, AppLoggerModule, SecurityModule, SessionsModule, SessionsModule, EmailsModule],
+  imports: [UsersModule, AppLoggerModule, SecurityModule, SessionsModule, SessionsModule, EmailsModule, LinksModule],
   controllers: [AuthController],
-  providers: [AuthService, AuthCookiesService, LinkService],
+  providers: [AuthService, AuthCookiesService],
 })
 export class AuthModule {}

@@ -1,8 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService, LinkService } from '../../src/modules/auth/services';
+import { AuthService } from '../../src/modules/auth/services';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { HashingService, PasswordService, TokensService } from '../../src/modules/security/services';
-import { UsersService } from '../../src/modules/users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersRepo } from '../../src/modules/users/repo/users-repo';
@@ -14,6 +13,8 @@ import { SessionsRepo } from '../../src/modules/auth/sessions/repo/session-repo'
 import { EmailQueueService } from '../../src/modules/emails/email-queue.service';
 import { RedisService } from '../../src/modules/cache/services';
 import { RedisConnectionManager } from '../../src/modules/cache/factories/redis-connection.manager';
+import { UsersService } from '../../src/modules/users/services';
+import { LinksService } from '../../src/modules/links/links.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -32,7 +33,7 @@ describe('AuthService', () => {
         SessionsPolicy,
         SessionsRepo,
         HashingService,
-        LinkService,
+        LinksService,
         RedisService,
         { provide: RedisConnectionManager, useValue: { getClient: jest.fn() } },
         {

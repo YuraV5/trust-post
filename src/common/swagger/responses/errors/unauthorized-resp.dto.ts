@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ErrorCode } from '../../../../shared/errors/error-codes';
+import { AppErrorCode } from '../../../../shared/errors/error-codes';
 
 export class UnauthorizedErrorResponse {
   @ApiProperty({ example: 'rid', description: 'Request ID' })
@@ -9,7 +9,7 @@ export class UnauthorizedErrorResponse {
   statusCode: number;
 
   @ApiProperty({
-    example: ErrorCode.UNAUTHORIZED,
+    example: AppErrorCode.UNAUTHORIZED,
   })
   error: string;
 

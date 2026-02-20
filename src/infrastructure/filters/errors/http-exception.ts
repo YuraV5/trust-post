@@ -10,7 +10,7 @@ import {
 import { HttpAdapterHost } from '@nestjs/core';
 import { Context } from '../../../shared/contex/context.service';
 import { AppError } from '../../../shared/errors/basic-app-error';
-import { ErrorCode } from '../../../shared/errors/error-codes';
+import { AppErrorCode } from '../../../shared/errors/error-codes';
 import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
 
 @Catch(HttpException)
@@ -29,7 +29,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const requestId = Context.get()?.requestId || 'no-rid';
 
     let status = exception.getStatus();
-    let code = ErrorCode.INTERNAL;
+    let code = AppErrorCode.INTERNAL;
     let message = exception.message;
     let details: unknown;
 
@@ -39,7 +39,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message = exception.message;
       details = exception.details;
     } else if (exception instanceof BadRequestException) {
-      code = ErrorCode.VALIDATION;
+      code = AppErrorCode.VALIDATION;
       const r = exception.getResponse() as { message?: string | string[] };
 
       if (Array.isArray(r.message)) {
@@ -50,7 +50,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     } else if (exception instanceof NotFoundException) {
       status = 404;
-      code = ErrorCode.NOT_FOUND;
+      code = AppErrorCode.NOT_FOUND;
       message = 'Resource not found';
     }
 

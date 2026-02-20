@@ -19,6 +19,10 @@ import {
 } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
 import { UserRoles } from '@prisma/client';
+import { EmailQueueService } from '../../emails/email-queue.service';
+import { REDIS_KEYS } from '../../auth/const';
+import { LinksService } from '../../links/links.service';
+import { generateRandomUsername } from '../../../common/utils/generate-name.util';
 
 @Injectable()
 export class UsersService implements IUserService {
@@ -28,6 +32,8 @@ export class UsersService implements IUserService {
     @Inject(APP_LOGGER) private readonly logger: AppLogger,
     private readonly repo: UsersRepo,
     private readonly passwordService: PasswordService,
+    private readonly emailQueueService: EmailQueueService,
+    private readonly linksService: LinksService,
   ) {}
 
   async findByEmail(email: string): Promise<UserSecyredOutput | null> {
@@ -54,7 +60,7 @@ export class UsersService implements IUserService {
 
     const hashedPassword = await this.passwordService.createHash(inp.password);
     inp.password = hashedPassword;
-    inp.name = inp.name.toLowerCase();
+    inp.name = inp.name ? inp.name.toLowerCase() : generateRandomUsername();
 
     const user = await this.repo.create(inp);
 
@@ -123,6 +129,42 @@ export class UsersService implements IUserService {
     return userAdminMapper(user);
   }
 
+  async createUserByAdmin(inp: { email: string; password: string }): Promise<MessageResponse | void> {
+    const result = await this.findByEmail(inp.email);
+    if (result) {
+      this.logger.warn(`User with email ${inp.email} already exists for admin creation`);
+      throw new UserAlreadyExistsError();
+    }
+
+    const name = generateRandomUsername();
+
+    const hashedPassword = await this.passwordService.createHash(inp.password);
+    inp.password = hashedPassword;
+    const user = await this.repo.createByAdmin({ ...inp, name });
+
+    try {
+      await this.emailQueueService.sendAccountActivationEmail({
+        to: inp.email,
+        activationUrl: await this.linksService.generateTemporaryLink(user.id, REDIS_KEYS.ACTIVATE_ACCOUNT, 3600),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to send account activation email to ${inp.email} for user ${user.id}`, { error });
+    }
+
+    return { message: `User created successfully, need verification` };
+  }
+
+  async activateAccount(userId: string, newPassword: string): Promise<void> {
+    const user = await this.repo.findById(userId);
+    if (!user) {
+      this.logger.warn(`User with id ${userId} not found for account activation`);
+
+      throw new UserNotFoundError();
+    }
+    const hashedPassword = await this.passwordService.createHash(newPassword);
+    await this.repo.activateAccount(userId, hashedPassword);
+  }
+
   async updateStatus(id: string): Promise<{ id: string; isActive: boolean }> {
     const user = await this.repo.findById(id);
     if (!user) {
@@ -155,7 +197,7 @@ export class UsersService implements IUserService {
       throw new UserNotFoundError();
     }
 
-    this.logger.debug(`Deleted ${result} users with ids: ${ids.join(', ')}`);
+    this.logger.debug(`Deleted users ${result}`);
   }
 
   async findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<UserAdminOutput>> {

@@ -1,7 +1,7 @@
 import { ExceptionFilter, Catch, ArgumentsHost, Inject, HttpServer } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Prisma } from '@prisma/client';
-import { ErrorCode } from '../../../shared/errors/error-codes';
+import { AppErrorCode } from '../../../shared/errors/error-codes';
 import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
 import { Context } from '../../../shared/contex/context.service';
 
@@ -48,33 +48,33 @@ export class PrismaExceptionFilter implements ExceptionFilter {
 
     // Map Prisma error codes to HTTP status and error codes
     let status = 500;
-    let errorCode = ErrorCode.INTERNAL;
+    let errorCode = AppErrorCode.INTERNAL;
     let message = 'Internal server error';
 
     switch (error.code) {
       case 'P2025': // Record not found
         status = 404;
-        errorCode = ErrorCode.NOT_FOUND;
+        errorCode = AppErrorCode.NOT_FOUND;
         message = 'Record not found';
         break;
       case 'P2002': // Unique constraint violation
         status = 409;
-        errorCode = ErrorCode.CONFLICT;
+        errorCode = AppErrorCode.CONFLICT;
         message = 'Resource already exists';
         break;
       case 'P2014': // Relation constraint violation
         status = 400;
-        errorCode = ErrorCode.BAD_REQUEST;
+        errorCode = AppErrorCode.BAD_REQUEST;
         message = 'Invalid reference or relation';
         break;
       case 'P2003': // Foreign key constraint failure
         status = 400;
-        errorCode = ErrorCode.BAD_REQUEST;
+        errorCode = AppErrorCode.BAD_REQUEST;
         message = 'Invalid reference';
         break;
       case 'P2019': // Input error
         status = 400;
-        errorCode = ErrorCode.VALIDATION;
+        errorCode = AppErrorCode.VALIDATION;
         message = 'Invalid input';
         break;
     }

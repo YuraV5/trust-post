@@ -8,3 +8,8 @@ export type PasswordResetTask = {
   to: string;
   passwordResetUrl: string;
 };
+
+export type AccountActivationTask = {
+  to: string;
+  activationUrl: string;
+};

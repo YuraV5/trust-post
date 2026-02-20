@@ -14,9 +14,9 @@ import { parseDuration } from '../../../common/utils/expiration.util';
 import { EmailQueueService } from '../../emails/email-queue.service';
 import { UserAlreadyExistsError } from '../../users/errors';
 import { RedisService } from '../../cache/services';
-import { LinkService } from './link.service';
 import { REDIS_KEYS } from '../const';
 import { UsersService } from '../../users/services';
+import { LinksService } from '../../links/links.service';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -29,7 +29,7 @@ export class AuthService implements IAuthService {
     private readonly sessionsService: SessionsService,
     private readonly sessionsPolicy: SessionsPolicy,
     private readonly config: ConfigService,
-    private readonly linkService: LinkService,
+    private readonly linkService: LinksService,
     private readonly redisService: RedisService,
   ) {}
 
@@ -46,11 +46,19 @@ export class AuthService implements IAuthService {
       name: inp.name,
     });
 
-    await this.emailQueueService.sendVerificationEmail({
-      to: inp.email,
-      name: inp.name,
-      verificationUrl: await this.linkService.generateTemporaryLink(result.userId, REDIS_KEYS.EMAIL_VERIFY, 3600),
-    });
+    try {
+      await this.emailQueueService.sendVerificationEmail({
+        to: inp.email,
+        name: inp.name,
+        verificationUrl: await this.linkService.generateTemporaryLink(result.userId, REDIS_KEYS.EMAIL_VERIFY, 3600),
+      });
+    } catch (error) {
+      this.logger.error('Failed to send verification email', {
+        context: 'AuthService.register',
+        error: error instanceof Error ? error.message : error,
+      });
+    }
+
     this.logger.info(`User ${result.userId} registered`);
     return { message: 'User registered successfully' };
   }
@@ -149,11 +157,15 @@ export class AuthService implements IAuthService {
       return { message: 'If the email exists, a verification link has been sent' };
     }
 
-    await this.emailQueueService.sendVerificationEmail({
-      to: email,
-      name: user.name,
-      verificationUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.EMAIL_VERIFY, 3600),
-    });
+    try {
+      await this.emailQueueService.sendVerificationEmail({
+        to: email,
+        name: user.name,
+        verificationUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.EMAIL_VERIFY, 3600),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to send verification email to ${email} for user ${user.id}`, { error });
+    }
 
     return { message: 'If the email exists, a verification link has been sent' };
   }
@@ -172,10 +184,14 @@ export class AuthService implements IAuthService {
       return { message: 'If the email exists and is verified, a password reset link has been sent' };
     }
 
-    await this.emailQueueService.sendPasswordResetEmail({
-      to: email,
-      passwordResetUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.PASSWORD_RESET, 3600),
-    });
+    try {
+      await this.emailQueueService.sendPasswordResetEmail({
+        to: email,
+        passwordResetUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.PASSWORD_RESET, 3600),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to send password reset email to ${email} for user ${user.id}`, { error });
+    }
     return { message: 'If the email exists and is verified, a password reset link has been sent' };
   }
 
@@ -203,5 +219,22 @@ export class AuthService implements IAuthService {
     await this.usersService.markEmailAsVerified(userId);
     await this.redisService.del(`${REDIS_KEYS.EMAIL_VERIFY}:${uuid}`);
     this.logger.info('Email verified successfully');
+  }
+
+  async activateAccount(uuid: string, inp: SetPassword): Promise<MessageResponse> {
+    if (inp.password !== inp.confirmPassword) {
+      throw new BadRequestError('Passwords do not match');
+    }
+    const userId = await this.redisService.get(`${REDIS_KEYS.ACTIVATE_ACCOUNT}:${uuid}`);
+    if (!userId) {
+      this.logger.warn(`Account activation failed: invalid or expired token ${uuid}`);
+      throw new BadRequestError('Invalid or expired account activation link');
+    }
+
+    await this.usersService.activateAccount(userId, inp.password);
+    await this.redisService.del(`${REDIS_KEYS.ACTIVATE_ACCOUNT}:${uuid}`);
+    this.logger.info('Account activated successfully');
+
+    return { message: 'Account activated successfully, you can now log in' };
   }
 }

@@ -20,6 +20,13 @@ export class AdminUsersController {
   }
 
   @Roles(UserRoles.ADMIN)
+  @Post()
+  async createUser(@Body() inp: CreateUserDto): Promise<MessageResponse> {
+    await this.usersService.createUserByAdmin(inp);
+    return { message: `User created successfully` };
+  }
+
+  @Roles(UserRoles.ADMIN)
   @Get(':id')
   async getUserById(@Param() params: IdParamDto): Promise<UserAdminOutput> {
     return await this.usersService.findByIdForAdmin(params.id);
@@ -30,14 +37,6 @@ export class AdminUsersController {
   async updateStatus(@Param() params: IdParamDto): Promise<MessageResponse> {
     const status = await this.usersService.updateStatus(params.id);
     return { message: `Status ${status.isActive ? 'enabled' : 'disabled'} successfully` };
-  }
-
-  @Roles(UserRoles.ADMIN)
-  @Post()
-  // TODO need send leater with active and change password
-  async createUser(@Body() inp: CreateUserDto): Promise<MessageResponse> {
-    await this.usersService.create(inp);
-    return { message: `User created successfully` };
   }
 
   @Roles(UserRoles.ADMIN)

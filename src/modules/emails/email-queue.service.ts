@@ -4,8 +4,8 @@ import { Queue } from 'bullmq';
 import { BaseQueueService } from '../queues/base-queue.service';
 import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
 import { EMAIL_NOTIFICATION_QUEUE, EMAIL_JOB } from './const';
-import { VERIFY_EMAIL_JOB_OPTIONS } from './configs';
-import { EmailVerificationTask, PasswordResetTask } from './types';
+import { EMAIL_JOB_OPTIONS } from './configs';
+import { AccountActivationTask, EmailVerificationTask, PasswordResetTask } from './types';
 
 @Injectable()
 export class EmailQueueService extends BaseQueueService {
@@ -22,7 +22,7 @@ export class EmailQueueService extends BaseQueueService {
         name: data.name,
         verificationUrl: data.verificationUrl, // verification link
       },
-      { ...VERIFY_EMAIL_JOB_OPTIONS, jobId: `verification-email-${data.to}`, priority: 2 }, // High priority
+      { ...EMAIL_JOB_OPTIONS, jobId: `${EMAIL_JOB.VERIFICATION_EMAIL}-${data.to}`, priority: 2 }, // High priority
     );
   }
 
@@ -34,7 +34,18 @@ export class EmailQueueService extends BaseQueueService {
         to: data.to,
         passwordResetUrl: data.passwordResetUrl, // password reset link
       },
-      { ...VERIFY_EMAIL_JOB_OPTIONS, jobId: `reset-password-${data.to}`, priority: 2 }, // High priority
+      { ...EMAIL_JOB_OPTIONS, jobId: `${EMAIL_JOB.PASSWORD_RESET_EMAIL}-${data.to}`, priority: 2 }, // High priority
+    );
+  }
+
+  async sendAccountActivationEmail(data: AccountActivationTask): Promise<void> {
+    return this.add(
+      EMAIL_JOB.ACCOUNT_ACTIVATION_EMAIL,
+      {
+        to: data.to,
+        activationUrl: data.activationUrl, // account activation link
+      },
+      { ...EMAIL_JOB_OPTIONS, jobId: `${EMAIL_JOB.ACCOUNT_ACTIVATION_EMAIL}-${data.to}`, priority: 2 }, // High priority
     );
   }
 }

@@ -54,6 +54,17 @@ export class UsersRepo implements IUserRepo {
     return result.count;
   }
 
+  async createByAdmin(inp: NewUserInput): Promise<User> {
+    return await this.db.user.create({ data: { ...inp, createdByAdmin: true, isActive: false } });
+  }
+
+  async activateAccount(userId: string, newPassword: string): Promise<void> {
+    await this.db.user.update({
+      where: { id: userId },
+      data: { password: newPassword, isEmailVerified: true, isActive: true },
+    });
+  }
+
   async findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<User>> {
     const { page, limit, email, name, isActive, isEmailVerified, role, sortBy, sortOrder } = query;
 

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ErrorCode } from '../../../../shared/errors/error-codes';
+import { AppErrorCode } from '../../../../shared/errors/error-codes';
 
 export class InternalErrorResponse {
   @ApiProperty({ example: 'rid', description: 'Request ID' })
@@ -9,7 +9,7 @@ export class InternalErrorResponse {
   statusCode: number;
 
   @ApiProperty({
-    example: ErrorCode.INTERNAL,
+    example: AppErrorCode.INTERNAL,
   })
   error: string;
 

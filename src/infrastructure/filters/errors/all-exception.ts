@@ -1,6 +1,6 @@
 import { ExceptionFilter, Catch, ArgumentsHost, Inject, HttpServer } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import { ErrorCode } from '../../../shared/errors/error-codes';
+import { AppErrorCode } from '../../../shared/errors/error-codes';
 import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
 import { Context } from '../../../shared/contex/context.service';
 
@@ -30,7 +30,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       {
         requestId,
         statusCode: 500,
-        error: ErrorCode.INTERNAL,
+        error: AppErrorCode.INTERNAL,
         message: 'Internal server error',
         timestamp: new Date().toISOString(),
       },

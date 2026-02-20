@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ErrorCode } from '../../../../shared/errors/error-codes';
+import { AppErrorCode } from '../../../../shared/errors/error-codes';
 
 export class ValidationErrorResponse {
   @ApiProperty({ example: 'rid', description: 'Request ID' })
@@ -9,7 +9,7 @@ export class ValidationErrorResponse {
   statusCode: number;
 
   @ApiProperty({
-    example: ErrorCode.VALIDATION,
+    example: AppErrorCode.VALIDATION,
   })
   error: string;
 

@@ -1,12 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { Roles } from '../../../common/decorators';
 import { RolesGuard } from '../../../common/guards';
 import { UserRoles } from '@prisma/client';
 import { UsersService } from '../services';
 import { IdParamDto } from '../../../common/dtos/req-params.dto';
-import { UserAdminOutput } from '../types';
+import { UserAdminOutput, PaginatedResult } from '../types';
 import { MessageResponse } from '../../../common/types';
-import { CreateUserDto, UpdateRolesDto, UpdateStatusDto } from '../dtos';
+import { CreateUserDto, UpdateRolesDto, AdminUsersQueryDto, AdminDeleteDto } from '../dtos';
 
 @UseGuards(RolesGuard)
 @Controller('admin/users')
@@ -15,7 +15,9 @@ export class AdminUsersController {
 
   @Roles(UserRoles.ADMIN)
   @Get()
-  async getAllUsers() {}
+  async getAllUsers(@Query() query: AdminUsersQueryDto): Promise<PaginatedResult<UserAdminOutput>> {
+    return await this.usersService.findAllForAdmin(query);
+  }
 
   @Roles(UserRoles.ADMIN)
   @Get(':id')
@@ -24,14 +26,15 @@ export class AdminUsersController {
   }
 
   @Roles(UserRoles.ADMIN)
-  @Post(':id/status')
-  async updateStatus(@Param() params: IdParamDto, @Body() data: UpdateStatusDto): Promise<MessageResponse> {
-    await this.usersService.updateStatus(params.id, data.isActive);
-    return { message: `User ${data.isActive ? 'enabled' : 'disabled'} successfully` };
+  @Get(':id/toggle-status')
+  async updateStatus(@Param() params: IdParamDto): Promise<MessageResponse> {
+    const status = await this.usersService.updateStatus(params.id);
+    return { message: `Status ${status.isActive ? 'enabled' : 'disabled'} successfully` };
   }
 
   @Roles(UserRoles.ADMIN)
   @Post()
+  // TODO need send leater with active and change password
   async createUser(@Body() inp: CreateUserDto): Promise<MessageResponse> {
     await this.usersService.create(inp);
     return { message: `User created successfully` };
@@ -45,9 +48,9 @@ export class AdminUsersController {
   }
 
   @Roles(UserRoles.ADMIN)
-  @Delete(':id')
-  async deleteUser(@Param() params: IdParamDto): Promise<MessageResponse> {
-    await this.usersService.remove(params.id);
+  @Delete()
+  async deleteUser(@Body() data: AdminDeleteDto): Promise<MessageResponse> {
+    await this.usersService.deleteMany(data.ids);
     return { message: `User deleted successfully` };
   }
 }

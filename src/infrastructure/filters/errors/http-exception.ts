@@ -23,6 +23,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: HttpException, host: ArgumentsHost): void {
     const { httpAdapter } = this.adapterHost;
     const ctx = host.switchToHttp();
+    const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
 
     const requestId = Context.get()?.requestId || 'no-rid';
@@ -59,6 +60,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       code,
       message,
       details,
+      path: req.url,
+      method: req.method,
+      stack: exception instanceof Error ? exception.stack : undefined,
+      context: 'HttpExceptionFilter',
     });
 
     httpAdapter.reply(

@@ -1,3 +1,5 @@
+export * from './paginated';
+
 export type NewUserInput = {
   email: string;
   name: string;

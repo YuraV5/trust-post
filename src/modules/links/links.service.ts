@@ -1,13 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../shared/logger/services/app-logger';
 import { RedisService } from '../cache/services';
 import { v4 as uuidv4 } from 'uuid';
+import { type IAppLogger } from '../../shared/logger/intefaces/interface';
 
 @Injectable()
 export class LinksService {
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly redisService: RedisService,
     private readonly config: ConfigService,
   ) {}

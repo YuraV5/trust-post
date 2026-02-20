@@ -13,7 +13,9 @@ export interface IUserRepo {
 
   // Admin methods
   updateStatus(id: string, isActive: boolean): Promise<number>;
-  findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<User>>;
   updateRoles(id: string, role: UserRoles): Promise<number>;
   deleteMany(ids: string[]): Promise<number>;
+  createByAdmin(inp: NewUserInput): Promise<User>;
+  activateAccount(userId: string, newPassword: string): Promise<void>;
+  findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<User>>;
 }

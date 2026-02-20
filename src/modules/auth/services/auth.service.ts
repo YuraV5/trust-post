@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IAuthService } from '../interfaces';
-import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { SetPassword, UserCredentials, UserLoginOutput, UserRegistration } from '../types';
 import { MessageResponse } from '../../../common/types';
 import { BadRequestError } from '../../../shared/errors/app-errors';
@@ -17,11 +17,12 @@ import { RedisService } from '../../cache/services';
 import { REDIS_KEYS } from '../const';
 import { UsersService } from '../../users/services';
 import { LinksService } from '../../links/links.service';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
 @Injectable()
 export class AuthService implements IAuthService {
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly emailQueueService: EmailQueueService,
     private readonly usersService: UsersService,
     private readonly passwordService: PasswordService,
@@ -82,10 +83,10 @@ export class AuthService implements IAuthService {
       throw new BadRequestError('Invalid credentials');
     }
 
-    if (!user.isEmailVerified) {
-      this.logger.warn('Login failed: email not verified');
-      throw new BadRequestError('Invalid credentials');
-    }
+    // if (!user.isEmailVerified) {
+    //   this.logger.warn('Login failed: email not verified');
+    //   throw new BadRequestError('Verify your email before logging in');
+    // }
 
     const session = await this.sessionsService.getSessionByUserIdAndDeviceId(user.id, inp.deviceId);
     const sessionId = session ? session.sessionId : uuidv4();

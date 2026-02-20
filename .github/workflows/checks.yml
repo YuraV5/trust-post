@@ -28,11 +28,11 @@ jobs:
       - name: Format check
         run: npm run format -- --check
 
-      - name: Build
-        run: npm run build
-
       - name: Tests
         run: npm run test
+
+      - name: Build
+        run: npm run build
 
   docker-build:
     runs-on: ubuntu-latest

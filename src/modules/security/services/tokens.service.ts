@@ -4,8 +4,9 @@ import { ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
 import { APP_NODE_MODE } from '../../../common/consts/node-mode';
 import { InternalServerError, UnauthorizedError } from '../../../shared/errors/app-errors';
-import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { AccessPayload, RefreshPayload } from '../types';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
 enum TokenType {
   ACCESS = 'access',
@@ -20,7 +21,7 @@ export class TokensService {
   private readonly expires: Record<TokenType, StringValue | number>;
 
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly jwt: JwtService,
     readonly config: ConfigService,
   ) {

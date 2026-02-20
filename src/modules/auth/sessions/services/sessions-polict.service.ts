@@ -1,14 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { SessionsRepo } from '../repo/session-repo';
-import { APP_LOGGER, AppLogger } from '../../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { ISessionsPolicy } from '../interfaces/session-policy';
+import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
 
 @Injectable()
 export class SessionsPolicy implements ISessionsPolicy {
   private readonly MAX_DEVICES = 5;
 
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly repo: SessionsRepo,
   ) {}
 

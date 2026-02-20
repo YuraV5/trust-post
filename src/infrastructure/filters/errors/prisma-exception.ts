@@ -2,24 +2,20 @@ import { ExceptionFilter, Catch, ArgumentsHost, Inject, HttpServer } from '@nest
 import { HttpAdapterHost } from '@nestjs/core';
 import { Prisma } from '@prisma/client';
 import { AppErrorCode } from '../../../shared/errors/error-codes';
-import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Context } from '../../../shared/contex/context.service';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
 type PrismaError = Prisma.PrismaClientKnownRequestError;
 
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaExceptionFilter implements ExceptionFilter {
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly adapterHost: HttpAdapterHost,
   ) {}
 
   catch(exception: PrismaError, host: ArgumentsHost): void {
-    this.logger.error('Exception caught in PrismaExceptionFilter', {
-      exception,
-      context: 'PrismaExceptionFilter',
-    });
-
     const { httpAdapter }: { httpAdapter: HttpServer } = this.adapterHost;
     const ctx = host.switchToHttp();
     const req = ctx.getRequest<Request>();

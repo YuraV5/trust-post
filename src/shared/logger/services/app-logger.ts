@@ -24,11 +24,7 @@ export class AppLogger implements IAppLogger {
   }
 
   error(message: string, meta?: LogMeta): void {
-    if (meta?.error instanceof Error) {
-      this.logger.error(message, { error: meta.error, stack: meta.error.stack, context: meta.context });
-    } else {
-      this.logger.error(message, { error: meta?.error, context: meta?.context });
-    }
+    this.logger.error(message, { ...meta });
   }
 
   warn(message: string, meta?: LogMeta): void {
@@ -48,21 +44,46 @@ export class AppLogger implements IAppLogger {
       level: this.logLevel || 'info',
       format: format.combine(
         format.timestamp(),
-        format.printf((info) =>
-          JSON.stringify({
+        format.printf((info) => {
+          const ctx = Context.get();
+          const logData: Record<string, unknown> = {
             ts: info.timestamp,
             lvl: info.level,
             pid: process.pid,
-            rid: Context.get()?.requestId ?? 'no-rid',
-            method: Context.get()?.method ?? null,
-            path: Context.get()?.path ?? null,
-            status: Context.get()?.status ?? null,
-            duration: Context.get()?.duration ?? null,
+            rid: ctx?.requestId ?? info.rid ?? 'no-rid',
+            method: ctx?.method ?? info.method ?? null,
+            path: ctx?.path ?? info.path ?? null,
+            status: ctx?.status ?? info.status ?? null,
+            duration: ctx?.duration ?? info.duration ?? null,
             ctx: info.context ?? null,
             msg: info.message,
             stack: info.stack ?? null,
-          }),
-        ),
+          };
+
+          // Add all additional fields from meta
+          const metaFields = Object.keys(info).filter(
+            (key) =>
+              ![
+                'timestamp',
+                'level',
+                'message',
+                'stack',
+                'context',
+                'rid',
+                'method',
+                'path',
+                'status',
+                'duration',
+                'splat',
+                'label',
+              ].includes(key),
+          );
+          metaFields.forEach((key) => {
+            logData[key] = info[key];
+          });
+
+          return JSON.stringify(logData);
+        }),
       ),
       transports: [new transports.Console()],
       exceptionHandlers: [new transports.Console()],
@@ -78,13 +99,30 @@ export class AppLogger implements IAppLogger {
         format.timestamp({ format: 'HH:mm:ss' }),
         format.printf((info: LoggerInfo) => {
           const ctx = Context.get();
-          return (
+          let log =
             `[${info.timestamp}] [${info.level}] [pid:${process.pid}] [rid:${ctx?.requestId ?? 'no-rid'}]` +
             ` [${ctx?.method ?? '-'} ${ctx?.path ?? '-'}]` +
             ` [${ctx?.status ?? '-'} ${ctx?.duration ?? '-'}ms] ` +
-            `${info.message}` +
-            (info.stack ? `\n${info.stack}` : '')
+            `${info.message}`;
+
+          // Add all additional fields from meta
+          const metaFields = Object.keys(info).filter(
+            (key) => !['timestamp', 'level', 'message', 'stack', 'context', 'splat', 'label'].includes(key),
           );
+
+          if (metaFields.length > 0) {
+            const meta: Record<string, unknown> = {};
+            metaFields.forEach((key) => {
+              meta[key] = info[key];
+            });
+            log += `\nMeta: ${JSON.stringify(meta, null, 2)}`;
+          }
+
+          if (info.stack) {
+            log += `\n${info.stack}`;
+          }
+
+          return log;
         }),
       ),
       transports: [new transports.Console()],

@@ -1,10 +1,10 @@
-import { Body, Controller, Delete, Get, Patch } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { MessageResponse } from '../../common/types';
-import { UserProfileOutput } from './types';
-import { UpdatePasswordDto, UpdateUserDto } from './dtos';
-import { CurrentUser } from '../../common/decorators';
-import { type AuthenticatedUser } from '../../common/interfaces';
+import { Controller, Get, Patch, Body, Delete } from '@nestjs/common';
+import { CurrentUser } from '../../../common/decorators';
+import { type AuthenticatedUser } from '../../../common/interfaces';
+import { MessageResponse } from '../../../common/types';
+import { UpdateUserDto, UpdatePasswordDto } from '../dtos';
+import { UserProfileOutput } from '../types';
+import { UsersService } from '../services';
 
 @Controller('users')
 export class UsersController {

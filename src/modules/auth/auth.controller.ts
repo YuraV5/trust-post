@@ -107,4 +107,15 @@ export class AuthController {
     await this.authService.setPassword(params.uuid, body);
     res.status(302).redirect(`${this.config.get('FRONTEND_URL')}/login#passwordReset`);
   }
+
+  @Post('activate-account/:uuid')
+  @PublicRoute()
+  async activateAccount(
+    @Param() params: VerifyEmailParamsDto,
+    @Body() body: SetPasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    await this.authService.activateAccount(params.uuid, body);
+    res.status(302).redirect(`${this.config.get('FRONTEND_URL')}/login#activated`);
+  }
 }

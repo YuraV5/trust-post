@@ -24,6 +24,7 @@ model User {
   role            UserRoles @default(USER)
   isActive        Boolean   @default(true) @map("is_active")
   isEmailVerified Boolean   @default(false) @map("is_email_verified")
+  createdByAdmin  Boolean   @default(false) @map("created_by_admin")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   sessions        Session[]

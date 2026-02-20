@@ -1,5 +1,6 @@
-import { User } from '@prisma/client';
-import { NewUserInput, UpdateUserInput } from '../types';
+import { User, UserRoles } from '@prisma/client';
+import { NewUserInput, UpdateUserInput, PaginatedResult } from '../types';
+import { AdminUsersQueryDto } from '../dtos';
 
 export interface IUserRepo {
   findByEmail(email: string): Promise<User | null>;
@@ -9,4 +10,10 @@ export interface IUserRepo {
   update(id: string, inp: UpdateUserInput): Promise<User>;
   updatePassword(id: string, newPassword: string): Promise<void>;
   markEmailAsVerified(userId: string): Promise<void>;
+
+  // Admin methods
+  updateStatus(id: string, isActive: boolean): Promise<number>;
+  findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<User>>;
+  updateRoles(id: string, role: UserRoles): Promise<number>;
+  deleteMany(ids: string[]): Promise<number>;
 }

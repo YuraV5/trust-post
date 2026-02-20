@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { UserRoles } from '@prisma/client';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { AuthenticatedRequest } from '../interfaces';
-import { UnauthorizedError } from '../../shared/errors/app-errors';
+import { UnauthorizedError, ForbiddenError } from '../../shared/errors/app-errors';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -17,17 +17,19 @@ export class RolesGuard implements CanActivate {
 
   canActivate(ctx: ExecutionContext): boolean {
     const requiredRole = this.reflector.get<UserRoles>(ROLES_KEY, ctx.getHandler());
-
     if (!requiredRole) return true;
 
     const request = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
 
     const user = request.user;
-
     if (!user || !user.role) {
       throw new UnauthorizedError();
     }
 
-    return this.hierarchy[user.role] >= this.hierarchy[requiredRole];
+    if (this.hierarchy[user.role] < this.hierarchy[requiredRole]) {
+      throw new ForbiddenError('Insufficient permissions for this resource');
+    }
+
+    return true;
   }
 }

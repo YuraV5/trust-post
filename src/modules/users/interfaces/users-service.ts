@@ -1,5 +1,15 @@
+import { UserRoles } from '@prisma/client';
 import { MessageResponse } from '../../../common/types';
-import { NewUserInput, UpdatePasswordInput, UpdateUserInput, UserOutput, UserSecyredOutput } from '../types';
+import {
+  NewUserInput,
+  UpdatePasswordInput,
+  UpdateUserInput,
+  UserOutput,
+  UserSecyredOutput,
+  PaginatedResult,
+  UserAdminOutput,
+} from '../types';
+import { AdminUsersQueryDto } from '../dtos';
 
 export interface IUserService {
   findByEmail(email: string): Promise<UserSecyredOutput | null>;
@@ -11,4 +21,11 @@ export interface IUserService {
   findAuthUserbyId(id: string): Promise<UserSecyredOutput | null>;
   markEmailAsVerified(userId: string): Promise<void>;
   resetPasswordThroughEmail(email: string, newPassword: string): Promise<void>;
+
+  // Admin methods
+  findByIdForAdmin(id: string): Promise<UserAdminOutput>;
+  updateStatus(id: string, isActive: boolean): Promise<{ id: string; isActive: boolean }>;
+  changeRoles(id: string, role: UserRoles): Promise<{ id: string; role: UserRoles }>;
+  findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<UserAdminOutput>>;
+  deleteMany(ids: string[]): Promise<void>;
 }

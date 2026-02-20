@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
-import { RedisService } from '../../cache/services';
+import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
+import { RedisService } from '../cache/services';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
-export class LinkService {
+export class LinksService {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: AppLogger,
     private readonly redisService: RedisService,
@@ -24,6 +24,8 @@ export class LinkService {
     await this.redisService.set(`${keyPrefix}:${token}`, userId, ttlSeconds);
 
     const baseUrl = this.config.get<string>('frontUrl');
+    this.logger.debug(`Generated temporary link ${baseUrl}/${keyPrefix}/${token} for user ${userId}`);
+
     return `${baseUrl}/${keyPrefix}/${token}`;
   }
 }

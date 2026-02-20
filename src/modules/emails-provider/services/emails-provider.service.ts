@@ -27,6 +27,7 @@ export class EmailsProviderService implements IEmailProvider {
       return !!result;
     } catch (error) {
       this.logger.error('Email send failed', {
+        context: 'EmailsProviderService.sendEmail',
         error: error instanceof Error ? error.message : error,
       });
 

@@ -1,6 +1,6 @@
 import { JobOptions } from '../../queues/types';
 
-export const VERIFY_EMAIL_JOB_OPTIONS: JobOptions = {
+export const EMAIL_JOB_OPTIONS: JobOptions = {
   attempts: 3,
   backoff: {
     type: 'exponential',

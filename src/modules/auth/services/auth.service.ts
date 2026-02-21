@@ -60,7 +60,6 @@ export class AuthService implements IAuthService {
       });
     }
 
-    this.logger.info(`User ${result.userId} registered`);
     return { message: 'User registered successfully' };
   }
 
@@ -83,10 +82,10 @@ export class AuthService implements IAuthService {
       throw new BadRequestError('Invalid credentials');
     }
 
-    // if (!user.isEmailVerified) {
-    //   this.logger.warn('Login failed: email not verified');
-    //   throw new BadRequestError('Verify your email before logging in');
-    // }
+    if (!user.isEmailVerified) {
+      this.logger.warn('Login failed: email not verified');
+      throw new BadRequestError('Verify your email before logging in');
+    }
 
     const session = await this.sessionsService.getSessionByUserIdAndDeviceId(user.id, inp.deviceId);
     const sessionId = session ? session.sessionId : uuidv4();
@@ -146,29 +145,27 @@ export class AuthService implements IAuthService {
   }
 
   async resendEmailVerification(email: string): Promise<MessageResponse> {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) {
-      this.logger.warn('Resend verification failed: user not found');
-      // Return success to prevent email enumeration
-      return { message: 'If the email exists, a verification link has been sent' };
-    }
-    if (user.isEmailVerified) {
-      this.logger.warn('Resend verification failed: user already verified');
-      // Return success to prevent email enumeration
-      return { message: 'If the email exists, a verification link has been sent' };
-    }
+    const message = 'If the email exists, a verification link has been sent';
 
     try {
+      const user = await this.usersService.findByEmail(email);
+
+      if (!user || user.isEmailVerified) {
+        return { message };
+      }
+
+      const verificationUrl = await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.EMAIL_VERIFY, 3600);
+
       await this.emailQueueService.sendVerificationEmail({
         to: email,
         name: user.name,
-        verificationUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.EMAIL_VERIFY, 3600),
+        verificationUrl,
       });
     } catch (error) {
-      this.logger.error(`Failed to send verification email to ${email} for user ${user.id}`, { error });
+      this.logger.error('Resend verification failed', { error });
     }
 
-    return { message: 'If the email exists, a verification link has been sent' };
+    return { message };
   }
 
   async resendPasswordReset(email: string): Promise<MessageResponse> {

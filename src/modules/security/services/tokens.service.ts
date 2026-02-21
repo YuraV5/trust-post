@@ -7,6 +7,7 @@ import { InternalServerError, UnauthorizedError } from '../../../shared/errors/a
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { AccessPayload, RefreshPayload } from '../types';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { ITokensService } from '../interfaces';
 
 enum TokenType {
   ACCESS = 'access',
@@ -14,7 +15,7 @@ enum TokenType {
 }
 
 @Injectable()
-export class TokensService {
+export class TokensService implements ITokensService {
   private readonly issuer: string;
   private readonly nodeEnv: string;
   private readonly secrets: Record<TokenType, string>;

@@ -7,9 +7,9 @@ import { EmailQueueServiceMock, StubAppLogger } from '../__mock__';
 import { UsersService } from '../../src/modules/users/services';
 import { EmailQueueService } from '../../src/modules/emails/email-queue.service';
 import { LinksService } from '../../src/modules/links/links.service';
-import { mockCreateUserInput, mockUser, mockUserAdminOutput, mockUsersRepo } from './__mock__';
 import { mockPasswordService } from '../security/mock/password.mock';
 import { userAdminMapper, usersAdminMapper } from '../../src/modules/users/mappers';
+import { mockCreateUserInput, mockUser, mockUserAdminOutput, mockUsersRepo } from './__mock';
 
 describe('UsersService', () => {
   let service: UsersService;

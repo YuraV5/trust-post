@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IAuthService } from '../interfaces';
-import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { SetPassword, UserCredentials, UserLoginOutput, UserRegistration } from '../types';
 import { MessageResponse } from '../../../common/types';
 import { BadRequestError } from '../../../shared/errors/app-errors';
@@ -17,11 +17,12 @@ import { RedisService } from '../../cache/services';
 import { REDIS_KEYS } from '../const';
 import { UsersService } from '../../users/services';
 import { LinksService } from '../../links/links.service';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
 @Injectable()
 export class AuthService implements IAuthService {
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly emailQueueService: EmailQueueService,
     private readonly usersService: UsersService,
     private readonly passwordService: PasswordService,
@@ -59,7 +60,6 @@ export class AuthService implements IAuthService {
       });
     }
 
-    this.logger.info(`User ${result.userId} registered`);
     return { message: 'User registered successfully' };
   }
 
@@ -84,7 +84,7 @@ export class AuthService implements IAuthService {
 
     if (!user.isEmailVerified) {
       this.logger.warn('Login failed: email not verified');
-      throw new BadRequestError('Invalid credentials');
+      throw new BadRequestError('Verify your email before logging in');
     }
 
     const session = await this.sessionsService.getSessionByUserIdAndDeviceId(user.id, inp.deviceId);
@@ -145,29 +145,27 @@ export class AuthService implements IAuthService {
   }
 
   async resendEmailVerification(email: string): Promise<MessageResponse> {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) {
-      this.logger.warn('Resend verification failed: user not found');
-      // Return success to prevent email enumeration
-      return { message: 'If the email exists, a verification link has been sent' };
-    }
-    if (user.isEmailVerified) {
-      this.logger.warn('Resend verification failed: user already verified');
-      // Return success to prevent email enumeration
-      return { message: 'If the email exists, a verification link has been sent' };
-    }
+    const message = 'If the email exists, a verification link has been sent';
 
     try {
+      const user = await this.usersService.findByEmail(email);
+
+      if (!user || user.isEmailVerified) {
+        return { message };
+      }
+
+      const verificationUrl = await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.EMAIL_VERIFY, 3600);
+
       await this.emailQueueService.sendVerificationEmail({
         to: email,
         name: user.name,
-        verificationUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.EMAIL_VERIFY, 3600),
+        verificationUrl,
       });
     } catch (error) {
-      this.logger.error(`Failed to send verification email to ${email} for user ${user.id}`, { error });
+      this.logger.error('Resend verification failed', { error });
     }
 
-    return { message: 'If the email exists, a verification link has been sent' };
+    return { message };
   }
 
   async resendPasswordReset(email: string): Promise<MessageResponse> {

@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { MessageResponse } from '../../../common/types';
 import { hasUpdatableFields } from '../../../common/utils';
 import { BadRequestError } from '../../../shared/errors/app-errors';
-import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { PasswordService } from '../../security/services';
 import { UserNotFoundError, UserAlreadyExistsError } from '../errors';
 import { IUserService } from '../interfaces';
@@ -23,13 +23,14 @@ import { EmailQueueService } from '../../emails/email-queue.service';
 import { REDIS_KEYS } from '../../auth/const';
 import { LinksService } from '../../links/links.service';
 import { generateRandomUsername } from '../../../common/utils/generate-name.util';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
 @Injectable()
 export class UsersService implements IUserService {
   private readonly MAX_LIMIT = 100;
 
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly repo: UsersRepo,
     private readonly passwordService: PasswordService,
     private readonly emailQueueService: EmailQueueService,
@@ -45,7 +46,6 @@ export class UsersService implements IUserService {
   async findById(id: string): Promise<UserProfileOutput> {
     const user = await this.repo.findById(id);
     if (!user) {
-      this.logger.warn(`User with id ${id} not found`);
       throw new UserNotFoundError();
     }
     return userMapper(user);
@@ -54,7 +54,6 @@ export class UsersService implements IUserService {
   async create(inp: NewUserInput): Promise<{ userId: string }> {
     const existingUser = await this.repo.findByEmail(inp.email);
     if (existingUser) {
-      this.logger.warn(`User with email ${inp.email} already exists`);
       throw new UserAlreadyExistsError();
     }
 
@@ -69,7 +68,7 @@ export class UsersService implements IUserService {
 
   async remove(id: string): Promise<MessageResponse> {
     await this.repo.remove(id);
-    return { message: `User removed successfully` };
+    return { message: `Removed successfully` };
   }
 
   async updateProfile(id: string, inp: UpdateUserInput): Promise<MessageResponse> {
@@ -78,25 +77,23 @@ export class UsersService implements IUserService {
     }
     const name = inp?.name?.toLowerCase();
     await this.repo.update(id, { ...inp, name });
-    return { message: `User updated successfully` };
+    return { message: `Updated successfully` };
   }
 
   async updatePassword(id: string, inp: UpdatePasswordInput): Promise<MessageResponse> {
     const user = await this.repo.findById(id);
     if (!user) {
-      this.logger.warn(`User with id ${id} not found for password update`);
       throw new UserNotFoundError();
     }
     const isCurrentPasswordValid = await this.passwordService.verify(inp.currentPassword, user.password!);
     if (!isCurrentPasswordValid) {
-      this.logger.warn(`Invalid current password for user with id ${id}`);
-      throw new UserNotFoundError('Invalid current password');
+      throw new BadRequestError('Invalid credentials');
     }
     const newPassword = await this.passwordService.createHash(inp.newPassword);
 
     await this.repo.updatePassword(id, newPassword);
 
-    return { message: `User password updated successfully` };
+    return { message: `Password updated successfully` };
   }
 
   async findAuthUserbyId(id: string): Promise<UserSecyredOutput | null> {
@@ -108,7 +105,6 @@ export class UsersService implements IUserService {
   async resetPasswordThroughEmail(email: string, newPassword: string): Promise<void> {
     const user = await this.repo.findByEmail(email);
     if (!user) {
-      this.logger.warn(`User with email ${email} not found for password reset`);
       throw new UserNotFoundError();
     }
     const hashedPassword = await this.passwordService.createHash(newPassword);
@@ -123,7 +119,6 @@ export class UsersService implements IUserService {
   async findByIdForAdmin(id: string): Promise<UserAdminOutput> {
     const user = await this.repo.findById(id);
     if (!user) {
-      this.logger.warn(`User with id ${id} not found for admin retrieval`);
       throw new UserNotFoundError();
     }
     return userAdminMapper(user);
@@ -132,7 +127,6 @@ export class UsersService implements IUserService {
   async createUserByAdmin(inp: { email: string; password: string }): Promise<MessageResponse | void> {
     const result = await this.findByEmail(inp.email);
     if (result) {
-      this.logger.warn(`User with email ${inp.email} already exists for admin creation`);
       throw new UserAlreadyExistsError();
     }
 
@@ -168,14 +162,12 @@ export class UsersService implements IUserService {
   async updateStatus(id: string): Promise<{ id: string; isActive: boolean }> {
     const user = await this.repo.findById(id);
     if (!user) {
-      this.logger.warn(`User with id ${id} not found for status change`);
       throw new UserNotFoundError();
     }
 
     const isActive = !user.isActive;
     const result = await this.repo.updateStatus(id, isActive);
     if (result === 0) {
-      this.logger.warn(`User with id ${id} not found for status change`);
       throw new UserNotFoundError();
     }
     return { id, isActive };
@@ -184,7 +176,6 @@ export class UsersService implements IUserService {
   async changeRoles(id: string, role: UserRoles): Promise<{ id: string; role: UserRoles }> {
     const result = await this.repo.updateRoles(id, role);
     if (result === 0) {
-      this.logger.warn(`User with id ${id} not found for role change`);
       throw new UserNotFoundError();
     }
     return { id, role };
@@ -193,11 +184,9 @@ export class UsersService implements IUserService {
   async deleteMany(ids: string[]): Promise<void> {
     const result = await this.repo.deleteMany(ids);
     if (result === 0) {
-      this.logger.warn(`No users found for deletion`);
       throw new UserNotFoundError();
     }
-
-    this.logger.debug(`Deleted users ${result}`);
+    this.logger.info(`Deleted ${result}`);
   }
 
   async findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<UserAdminOutput>> {

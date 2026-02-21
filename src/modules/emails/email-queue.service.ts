@@ -2,14 +2,15 @@ import { Injectable, Inject } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { BaseQueueService } from '../queues/base-queue.service';
-import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../shared/logger/services/app-logger';
 import { EMAIL_NOTIFICATION_QUEUE, EMAIL_JOB } from './const';
 import { EMAIL_JOB_OPTIONS } from './configs';
 import { AccountActivationTask, EmailVerificationTask, PasswordResetTask } from './types';
+import { type IAppLogger } from '../../shared/logger/intefaces/interface';
 
 @Injectable()
 export class EmailQueueService extends BaseQueueService {
-  constructor(@Inject(APP_LOGGER) logger: AppLogger, @InjectQueue(EMAIL_NOTIFICATION_QUEUE) queue: Queue) {
+  constructor(@Inject(APP_LOGGER) logger: IAppLogger, @InjectQueue(EMAIL_NOTIFICATION_QUEUE) queue: Queue) {
     super(logger, queue);
   }
 

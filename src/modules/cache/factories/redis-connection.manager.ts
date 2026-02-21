@@ -1,9 +1,10 @@
 import { Inject, Injectable, OnModuleInit, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
-import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { APP_NODE_MODE } from '../../../common/consts';
 import { RedisConnectionConfig, RedisHealth } from '../interfaces';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
 @Injectable()
 export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdown {
@@ -15,7 +16,7 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
   private connectedAt: Date | null = null;
 
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly config: ConfigService,
   ) {
     this.loadConfig();

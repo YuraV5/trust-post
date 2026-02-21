@@ -11,12 +11,13 @@ import { HttpAdapterHost } from '@nestjs/core';
 import { Context } from '../../../shared/contex/context.service';
 import { AppError } from '../../../shared/errors/basic-app-error';
 import { AppErrorCode } from '../../../shared/errors/error-codes';
-import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly adapterHost: HttpAdapterHost,
   ) {}
 

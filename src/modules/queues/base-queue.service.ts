@@ -1,12 +1,13 @@
 import { Inject } from '@nestjs/common';
 import { IQueueService } from './interfaces';
 import { Queue } from 'bullmq';
-import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../shared/logger/services/app-logger';
 import { JobOptions } from './types';
+import { type IAppLogger } from '../../shared/logger/intefaces/interface';
 
 export abstract class BaseQueueService implements IQueueService {
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly queue: Queue,
   ) {}
 

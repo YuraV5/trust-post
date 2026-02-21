@@ -1,13 +1,14 @@
 import { ExceptionFilter, Catch, ArgumentsHost, Inject, HttpServer } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { AppErrorCode } from '../../../shared/errors/error-codes';
-import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Context } from '../../../shared/contex/context.service';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly adapterHost: HttpAdapterHost,
   ) {}
 

@@ -1,16 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ISessionService } from '../interfaces';
 import { SessionMapping, UserSession } from '../types';
-import { APP_LOGGER, AppLogger } from '../../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { SessionsRepo } from '../repo/session-repo';
 import { mapSessions } from '../mappers';
 import { HashingService } from '../../../security/services';
 import { MessageResponse } from '../../../../common/types';
+import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
 
 @Injectable()
 export class SessionsService implements ISessionService {
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly sessionRepo: SessionsRepo,
     private readonly hashService: HashingService,
   ) {}

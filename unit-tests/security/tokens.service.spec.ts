@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TokensService } from '../../src/modules/security/services/tokens.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UnauthorizedError } from '../../src/shared/errors/app-errors';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { mockJwtService } from './mock/token.mock';
 import { StubAppLogger } from '../__mock__';
+import { TokensService } from '../../src/modules/security/services';
 
 describe('TokensService', () => {
   let service: TokensService;
@@ -36,7 +36,7 @@ describe('TokensService', () => {
           provide: ConfigService,
           useValue: mockConfigService,
         },
-        { provide: APP_LOGGER, useClass: StubAppLogger },
+        { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();
 

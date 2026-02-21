@@ -23,7 +23,6 @@ export class UsersRepo implements IUserRepo {
 
   async remove(id: string): Promise<void> {
     await this.db.user.delete({ where: { id } });
-    return;
   }
 
   async update(id: string, inp: UpdateUserInput): Promise<User> {

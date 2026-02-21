@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PublicRoute } from '../../common/decorators';
 
 @ApiTags('health')
 @Controller('health')
@@ -8,6 +9,7 @@ export class HealthController {
   constructor(private readonly health: HealthCheckService) {}
 
   @Get()
+  @PublicRoute()
   @HealthCheck()
   @ApiOperation({ summary: 'Health check' })
   @ApiOkResponse({

@@ -1,12 +1,13 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
 import { Context } from '../../../shared/contex/context.service';
-import { APP_LOGGER, AppLogger } from '../../../shared/logger/services/app-logger';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Response, Request } from 'express';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
 @Injectable()
 export class HttpContextInterceptor implements NestInterceptor {
-  constructor(@Inject(APP_LOGGER) private readonly logger: AppLogger) {}
+  constructor(@Inject(APP_LOGGER) private readonly logger: IAppLogger) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     if (context.getType() !== 'http') {

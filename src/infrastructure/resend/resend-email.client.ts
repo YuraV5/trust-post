@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
-import { InvalidEmailConfigError } from '../../modules/emails-provider/errors';
-import { EmailData } from '../../modules/emails-provider/types';
-import { EmailClient } from '../../modules/emails-provider/interfaces/email-client';
+import { InvalidEmailConfigError } from '../../modules/emails/emails-provider/errors';
+import { EmailClient } from '../../modules/emails/emails-provider/interfaces/email-client';
+import { EmailData } from '../../modules/emails/emails-provider/types';
 
 @Injectable()
 export class ResendEmailClient implements EmailClient {

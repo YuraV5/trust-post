@@ -3,11 +3,11 @@ import { Job } from 'bullmq';
 import { EMAIL_NOTIFICATION_QUEUE, EMAIL_JOB } from './const';
 import { Inject } from '@nestjs/common';
 import { APP_LOGGER } from '../../shared/logger/services/app-logger';
-import { EmailsProviderService } from '../emails-provider/services/emails-provider.service';
 import { accountActivationEmailPattern, resetPasswordEmailTemplate, verificationEmailPattern } from './patterns';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { AccountActivationTask, EmailVerificationTask, PasswordResetTask } from './types';
 import { type IAppLogger } from '../../shared/logger/intefaces/interface';
+import { EmailsProviderService } from './emails-provider/services';
 
 @Processor(EMAIL_NOTIFICATION_QUEUE, { limiter: { max: 20, duration: 1000 } }) // Limit to 20 jobs per second
 export class EmailProcessor extends WorkerHost {

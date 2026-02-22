@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EmailTimeoutError, EmailSendFailedError } from '../errors';
 import { IEmailProvider } from '../interfaces/email-provider';
-import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { executeWithRetry, RetryError } from '../../../common/utils/retry.util';
 import { EmailData } from '../types';
 import { type EmailClient, EMAIL_CLIENT } from '../interfaces/email-client';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
+import { executeWithRetry, RetryError } from '../../../../common/utils';
 
 @Injectable()
 export class EmailsProviderService implements IEmailProvider {

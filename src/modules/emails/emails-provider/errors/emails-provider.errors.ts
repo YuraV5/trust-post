@@ -1,6 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
-import { AppError } from '../../../shared/errors/basic-app-error';
-import { AppErrorCode } from '../../../shared/errors/error-codes';
+import { AppError } from '../../../../shared/errors/basic-app-error';
+import { AppErrorCode } from '../../../../shared/errors/error-codes';
 
 export class EmailServiceUnavailableError extends AppError {
   constructor(message = 'Email service is temporarily unavailable. Please try again later.', details?: string[]) {

@@ -15,7 +15,6 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { HttpContextInterceptor } from './infrastructure/http/interceptors/http-context.interceptor';
 import { QueuesModule } from './modules/queues/queues.module';
 import { EmailsModule } from './modules/emails/emails.module';
-import { EmailsProviderModule } from './modules/emails-provider/emails-provider.module';
 import { CacheModule } from './modules/cache/cache.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LinksModule } from './modules/links/links.module';
@@ -42,7 +41,6 @@ import { LinksModule } from './modules/links/links.module';
     AuthModule,
     QueuesModule,
     EmailsModule,
-    EmailsProviderModule,
     CacheModule,
     LinksModule,
   ],

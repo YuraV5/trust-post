@@ -14,7 +14,6 @@ import {
   NewUserInput,
   UpdateUserInput,
   UpdatePasswordInput,
-  PaginatedResult,
   UserAdminOutput,
 } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
@@ -24,6 +23,7 @@ import { REDIS_KEYS } from '../../auth/const';
 import { LinksService } from '../../links/links.service';
 import { generateRandomUsername } from '../../../common/utils/generate-name.util';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { PaginatedResult } from '../types/paginated';
 
 @Injectable()
 export class UsersService implements IUserService {
@@ -124,7 +124,7 @@ export class UsersService implements IUserService {
     return userAdminMapper(user);
   }
 
-  async createUserByAdmin(inp: { email: string; password: string }): Promise<MessageResponse | void> {
+  async createUserByAdmin(inp: { email: string; password: string; role?: UserRoles }): Promise<MessageResponse | void> {
     const result = await this.findByEmail(inp.email);
     if (result) {
       throw new UserAlreadyExistsError();
@@ -142,7 +142,9 @@ export class UsersService implements IUserService {
         activationUrl: await this.linksService.generateTemporaryLink(user.id, REDIS_KEYS.ACTIVATE_ACCOUNT, 3600),
       });
     } catch (error) {
-      this.logger.error(`Failed to send account activation email to ${inp.email} for user ${user.id}`, { error });
+      this.logger.error(`Failed to send account activation email to ${inp.email} for user ${user.id}`, {
+        error: error as Error,
+      });
     }
 
     return { message: `User created successfully, need verification` };

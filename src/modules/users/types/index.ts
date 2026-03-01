@@ -1,9 +1,10 @@
-export * from './paginated';
+import { UserRoles } from '@prisma/client/index-browser';
 
 export type NewUserInput = {
   email: string;
   name: string;
   password: string;
+  role?: UserRoles;
 };
 
 export type UpdateUserInput = {

@@ -18,6 +18,7 @@ import { EmailsModule } from './modules/emails/emails.module';
 import { CacheModule } from './modules/cache/cache.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LinksModule } from './modules/links/links.module';
+import { PostsModule } from './modules/posts/posts.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { LinksModule } from './modules/links/links.module';
     EmailsModule,
     CacheModule,
     LinksModule,
+    PostsModule,
   ],
   controllers: [],
   providers: [

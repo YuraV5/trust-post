@@ -132,9 +132,8 @@ model PostReview {
   post       Post  @relation(fields: [postId], references: [id])
 
   @@index([postId])
-  @@index([status])
   @@index([reviewedById])
   @@index([createdAt])
-  @@index([postId, status])
+  @@unique([postId, status])
   @@map("post_reviews")
 }

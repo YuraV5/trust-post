@@ -2,7 +2,7 @@ import { Inject, Injectable, OnModuleInit, OnApplicationShutdown } from '@nestjs
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { APP_NODE_MODE } from '../../../common/consts';
+import { APP_MODE } from '../../../common/consts';
 import { RedisConnectionConfig, RedisHealth } from '../interfaces';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
@@ -32,7 +32,7 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
 
   private loadConfig(): void {
     const nodeEnv = this.config.get<string>('nodeEnv');
-    const isProd = nodeEnv === APP_NODE_MODE.PROD;
+    const isProd = nodeEnv === APP_MODE.PRODUCTION;
 
     this.redisConfig = {
       host: this.config.get<string>('redis.host', 'localhost'),

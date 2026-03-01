@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { IUserRepo } from '../interfaces';
 import { User, UserRoles, Prisma } from '@prisma/client';
-import { NewUserInput, UpdateUserInput, PaginatedResult } from '../types';
+import { NewUserInput, UpdateUserInput } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PaginatedResult } from '../types/paginated';
 
 @Injectable()
 export class UsersRepo implements IUserRepo {
@@ -54,7 +55,7 @@ export class UsersRepo implements IUserRepo {
   }
 
   async createByAdmin(inp: NewUserInput): Promise<User> {
-    return await this.db.user.create({ data: { ...inp, createdByAdmin: true, isActive: false } });
+    return await this.db.user.create({ data: { ...inp, createdByAdmin: true, isActive: false, role: inp.role } });
   }
 
   async activateAccount(userId: string, newPassword: string): Promise<void> {

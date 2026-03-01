@@ -1,6 +1,7 @@
 import { User, UserRoles } from '@prisma/client';
-import { NewUserInput, UpdateUserInput, PaginatedResult } from '../types';
+import { NewUserInput, UpdateUserInput } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
+import { PaginatedResult } from '../types/paginated';
 
 export interface IUserRepo {
   findByEmail(email: string): Promise<User | null>;

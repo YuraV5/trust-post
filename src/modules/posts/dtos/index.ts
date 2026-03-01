@@ -1,0 +1,3 @@
+export * from './update-post-status.dto';
+export * from './create-post.dto';
+export * from './update-post.dto';

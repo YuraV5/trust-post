@@ -6,10 +6,10 @@ import {
   UpdateUserInput,
   UserOutput,
   UserSecyredOutput,
-  PaginatedResult,
   UserAdminOutput,
 } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
+import { PaginatedResult } from '../types/paginated';
 
 export interface IUserService {
   findByEmail(email: string): Promise<UserSecyredOutput | null>;

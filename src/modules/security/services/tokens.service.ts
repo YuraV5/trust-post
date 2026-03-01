@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { JwtService, JsonWebTokenError, TokenExpiredError, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
-import { APP_NODE_MODE } from '../../../common/consts/node-mode';
+import { APP_MODE } from '../../../common/consts/node-mode';
 import { InternalServerError, UnauthorizedError } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { AccessPayload, RefreshPayload } from '../types';
@@ -90,7 +90,7 @@ export class TokensService implements ITokensService {
   }
 
   private mapJwtError(err: unknown): UnauthorizedError {
-    if (this.nodeEnv !== APP_NODE_MODE.PROD) {
+    if (this.nodeEnv !== APP_MODE.PRODUCTION) {
       if (err instanceof TokenExpiredError) {
         // JWT expired
       } else if (err instanceof JsonWebTokenError) {

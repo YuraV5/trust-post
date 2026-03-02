@@ -3,9 +3,14 @@ import { Job } from 'bullmq';
 import { EMAIL_NOTIFICATION_QUEUE, EMAIL_JOB } from './const';
 import { Inject } from '@nestjs/common';
 import { APP_LOGGER } from '../../shared/logger/services/app-logger';
-import { accountActivationEmailPattern, resetPasswordEmailTemplate, verificationEmailPattern } from './patterns';
+import {
+  accountActivationEmailPattern,
+  rejectPostEmailTemplate,
+  resetPasswordEmailTemplate,
+  verificationEmailPattern,
+} from './patterns';
 import { ConfigService } from '@nestjs/config/dist/config.service';
-import { AccountActivationTask, EmailVerificationTask, PasswordResetTask } from './types';
+import { AccountActivationTask, EmailVerificationTask, PasswordResetTask, RejectPostEmailTask } from './types';
 import { type IAppLogger } from '../../shared/logger/intefaces/interface';
 import { EmailsProviderService } from './emails-provider/services';
 
@@ -29,6 +34,9 @@ export class EmailProcessor extends WorkerHost {
         break;
       case EMAIL_JOB.ACCOUNT_ACTIVATION_EMAIL:
         await this.processSendAccountActivationEmail(job as Job<AccountActivationTask>);
+        break;
+      case EMAIL_JOB.REJECT_POST_EMAIL:
+        await this.processSendRejectPostEmail(job as Job<RejectPostEmailTask>);
         break;
       default:
         this.logger.warn(`No processor defined for job ${job.name}`);
@@ -72,5 +80,18 @@ export class EmailProcessor extends WorkerHost {
       html: accountActivationEmailPattern(data.activationUrl), // You would define this template function similar to verificationEmailPattern
     });
     this.logger.debug(`Account activation email sent to ${data.to}`);
+  }
+
+  private async processSendRejectPostEmail(job: Job<RejectPostEmailTask>) {
+    const { data } = job;
+    this.logger.debug('Processing post rejection email', { data });
+
+    await this.emailProvider.sendEmail({
+      to: data.to,
+      from: this.config.get<string>('email.from') || 'onboarding@resend.dev',
+      subject: 'Post Review',
+      html: rejectPostEmailTemplate(data.postTitle, data.reason), // You would define this template function similar to verificationEmailPattern
+    });
+    this.logger.info(`Post rejection email sent to ${data.to}`);
   }
 }

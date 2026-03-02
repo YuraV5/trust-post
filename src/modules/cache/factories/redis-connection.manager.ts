@@ -2,9 +2,10 @@ import { Inject, Injectable, OnModuleInit, OnApplicationShutdown } from '@nestjs
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { APP_NODE_MODE } from '../../../common/consts';
+import { APP_MODE } from '../../../common/consts';
 import { RedisConnectionConfig, RedisHealth } from '../interfaces';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { REDIS_DB } from '../../../configs/redis/redis-db';
 
 @Injectable()
 export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdown {
@@ -32,13 +33,13 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
 
   private loadConfig(): void {
     const nodeEnv = this.config.get<string>('nodeEnv');
-    const isProd = nodeEnv === APP_NODE_MODE.PROD;
+    const isProd = nodeEnv === APP_MODE.PRODUCTION;
 
     this.redisConfig = {
       host: this.config.get<string>('redis.host', 'localhost'),
       port: this.config.get<number>('redis.port', 6379),
       password: isProd ? this.config.get('redis.password', undefined) : undefined,
-      db: this.config.get<number>('redis.dbCache', 0),
+      db: REDIS_DB.DEFAULT,
     };
 
     this.maxRetries = this.config.get<number>('redis.maxRetries', 3);

@@ -5,6 +5,7 @@ import { EmailProcessor } from './email-queue.processor';
 import { EmailQueueService } from './email-queue.service';
 import { QueuesModule } from '../queues/queues.module';
 import { EmailsProviderModule } from './emails-provider/emails-provider.module';
+import { REDIS_DB } from '../../configs/redis/redis-db';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { EmailsProviderModule } from './emails-provider/emails-provider.module';
     BullModule.registerQueue({
       name: EMAIL_NOTIFICATION_QUEUE,
       connection: {
-        db: 1,
+        db: REDIS_DB.EMAIL,
       },
     }),
   ],

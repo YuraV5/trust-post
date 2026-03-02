@@ -12,7 +12,7 @@ export class UsersController {
 
   @Get('/me')
   async getMe(@CurrentUser() user: AuthenticatedUser): Promise<UserProfileOutput> {
-    return this.usersService.findById(user.userId);
+    return this.usersService.getUserById(user.userId);
   }
 
   @Patch('/me')

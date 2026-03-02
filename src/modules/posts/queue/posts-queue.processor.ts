@@ -1,0 +1,37 @@
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { POSTS_JOB, POSTS_QUEUE } from '../consts';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
+import { Inject } from '@nestjs/common/decorators/core/inject.decorator';
+import { PostsReviewService } from '../services';
+import { Job } from 'bullmq';
+import { AssignReviewerJobData } from '../types';
+
+@Processor(POSTS_QUEUE, { limiter: { max: 10, duration: 1000 } }) // Limit to 10 jobs per second to prevent overwhelming the system
+export class PostsQueueProcessor extends WorkerHost {
+  constructor(
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
+    private readonly postReviewService: PostsReviewService,
+  ) {
+    super();
+  }
+  async process(job: Job<unknown>): Promise<void> {
+    switch (job.name as POSTS_JOB) {
+      case POSTS_JOB.ASSIGN_REVIWER:
+        await this.handleAssignReviewer(job as Job<AssignReviewerJobData>);
+        break;
+      default:
+        this.logger.warn(`No processor defined for job ${job.name}`);
+    }
+  }
+
+  private async handleAssignReviewer(job: Job<AssignReviewerJobData>) {
+    const { data } = job;
+    this.logger.debug('Processing assign reviewer job', { postId: data.postId });
+    try {
+      await this.postReviewService.assignReviewer(data.postId);
+    } catch (error) {
+      this.logger.error('Failed to assign reviewer', { error: error as Error, postId: data.postId });
+    }
+  }
+}

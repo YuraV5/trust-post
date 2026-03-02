@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IRedisService } from '../interfaces';
-import { APP_NODE_MODE } from '../../../common/consts';
+import { APP_MODE } from '../../../common/consts';
 import { RedisConnectionManager } from '../factories/redis-connection.manager';
 
 @Injectable()
@@ -36,7 +36,7 @@ export class RedisService implements IRedisService {
   }
 
   async flushDb(): Promise<void> {
-    if (this.config.get('nodeEnv') === APP_NODE_MODE.PROD) {
+    if (this.config.get('nodeEnv') === APP_MODE.PRODUCTION) {
       return;
     }
     await this.connectionManager.getClient().flushdb();

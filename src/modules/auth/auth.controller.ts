@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Res, UseGuards, Req, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, Res, UseGuards, Req, Get, Param, HttpCode } from '@nestjs/common';
 import { AuthService } from './services/auth.service';
 import { LoginDto, RegisterDto } from './dtos';
 import { type MessageResponse } from '../../common/types';
@@ -29,6 +29,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @HttpCode(200)
   @PublicRoute()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async login(@Body() inp: LoginDto, @Res({ passthrough: true }) resp: Response): Promise<AuthResponse> {

@@ -14,8 +14,8 @@ import {
   NewUserInput,
   UpdateUserInput,
   UpdatePasswordInput,
-  PaginatedResult,
   UserAdminOutput,
+  ModeratorsListOutput,
 } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
 import { UserRoles } from '@prisma/client';
@@ -24,6 +24,7 @@ import { REDIS_KEYS } from '../../auth/const';
 import { LinksService } from '../../links/links.service';
 import { generateRandomUsername } from '../../../common/utils/generate-name.util';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { PaginatedResult } from '../types/paginated';
 
 @Injectable()
 export class UsersService implements IUserService {
@@ -43,7 +44,7 @@ export class UsersService implements IUserService {
     return user;
   }
 
-  async findById(id: string): Promise<UserProfileOutput> {
+  async getUserById(id: string): Promise<UserProfileOutput> {
     const user = await this.repo.findById(id);
     if (!user) {
       throw new UserNotFoundError();
@@ -124,7 +125,7 @@ export class UsersService implements IUserService {
     return userAdminMapper(user);
   }
 
-  async createUserByAdmin(inp: { email: string; password: string }): Promise<MessageResponse | void> {
+  async createUserByAdmin(inp: { email: string; password: string; role?: UserRoles }): Promise<MessageResponse | void> {
     const result = await this.findByEmail(inp.email);
     if (result) {
       throw new UserAlreadyExistsError();
@@ -142,7 +143,9 @@ export class UsersService implements IUserService {
         activationUrl: await this.linksService.generateTemporaryLink(user.id, REDIS_KEYS.ACTIVATE_ACCOUNT, 3600),
       });
     } catch (error) {
-      this.logger.error(`Failed to send account activation email to ${inp.email} for user ${user.id}`, { error });
+      this.logger.error(`Failed to send account activation email to ${inp.email} for user ${user.id}`, {
+        error: error as Error,
+      });
     }
 
     return { message: `User created successfully, need verification` };
@@ -202,6 +205,15 @@ export class UsersService implements IUserService {
     const result = await this.repo.findAllForAdmin(cleanQuery);
 
     return { ...result, data: usersAdminMapper(result.data) };
+  }
+
+  async fetchAllModerators(): Promise<ModeratorsListOutput[]> {
+    const moderators = await this.repo.fetchAllModerators();
+    if (moderators.length === 0) {
+      this.logger.warn('No moderators found in the system');
+      return [];
+    }
+    return moderators;
   }
 
   private normalizeAdminQuery(query: AdminUsersQueryDto): AdminUsersQueryDto {

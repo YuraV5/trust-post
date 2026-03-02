@@ -3,10 +3,11 @@ import { Roles } from '../../../common/decorators';
 import { RolesGuard } from '../../../common/guards';
 import { UserRoles } from '@prisma/client';
 import { UsersService } from '../services';
-import { IdParamDto } from '../../../common/dtos/req-params.dto';
-import { UserAdminOutput, PaginatedResult } from '../types';
+import { UUIDParamDto } from '../../../common/dtos/req-params.dto';
+import { UserAdminOutput } from '../types';
 import { MessageResponse } from '../../../common/types';
-import { CreateUserDto, UpdateRolesDto, AdminUsersQueryDto, AdminDeleteDto } from '../dtos';
+import { UpdateRolesDto, AdminUsersQueryDto, AdminDeleteDto, AdminUserCreationDto } from '../dtos';
+import { PaginatedResult } from '../types/paginated';
 
 @UseGuards(RolesGuard)
 @Controller('admin/users')
@@ -21,27 +22,27 @@ export class AdminUsersController {
 
   @Roles(UserRoles.ADMIN)
   @Post()
-  async createUser(@Body() inp: CreateUserDto): Promise<MessageResponse> {
+  async createUser(@Body() inp: AdminUserCreationDto): Promise<MessageResponse> {
     await this.usersService.createUserByAdmin(inp);
     return { message: `User created successfully` };
   }
 
   @Roles(UserRoles.ADMIN)
-  @Get(':id')
-  async getUserById(@Param() params: IdParamDto): Promise<UserAdminOutput> {
+  @Get('/:id')
+  async getUserById(@Param() params: UUIDParamDto): Promise<UserAdminOutput> {
     return await this.usersService.findByIdForAdmin(params.id);
   }
 
   @Roles(UserRoles.ADMIN)
-  @Get(':id/toggle-status')
-  async updateStatus(@Param() params: IdParamDto): Promise<MessageResponse> {
+  @Get('/:id/toggle-status')
+  async updateStatus(@Param() params: UUIDParamDto): Promise<MessageResponse> {
     const status = await this.usersService.updateStatus(params.id);
     return { message: `Status ${status.isActive ? 'enabled' : 'disabled'} successfully` };
   }
 
   @Roles(UserRoles.ADMIN)
-  @Patch(':id/roles')
-  async updateUserRoles(@Param() params: IdParamDto, @Body() data: UpdateRolesDto): Promise<MessageResponse> {
+  @Patch('/:id/roles')
+  async updateUserRoles(@Param() params: UUIDParamDto, @Body() data: UpdateRolesDto): Promise<MessageResponse> {
     await this.usersService.changeRoles(params.id, data.role);
     return { message: `User roles updated successfully` };
   }

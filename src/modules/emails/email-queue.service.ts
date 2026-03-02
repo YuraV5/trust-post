@@ -23,7 +23,7 @@ export class EmailQueueService extends BaseQueueService {
         name: data.name,
         verificationUrl: data.verificationUrl, // verification link
       },
-      { ...EMAIL_JOB_OPTIONS, jobId: `${EMAIL_JOB.VERIFICATION_EMAIL}-${data.to}`, priority: 2 }, // High priority
+      { ...EMAIL_JOB_OPTIONS, jobId: `${EMAIL_JOB.VERIFICATION_EMAIL}-${data.to}`, priority: 1 }, // High priority
     );
   }
 
@@ -35,7 +35,7 @@ export class EmailQueueService extends BaseQueueService {
         to: data.to,
         passwordResetUrl: data.passwordResetUrl, // password reset link
       },
-      { ...EMAIL_JOB_OPTIONS, jobId: `${EMAIL_JOB.PASSWORD_RESET_EMAIL}-${data.to}`, priority: 2 }, // High priority
+      { ...EMAIL_JOB_OPTIONS, jobId: `${EMAIL_JOB.PASSWORD_RESET_EMAIL}-${data.to}`, priority: 1 }, // High priority
     );
   }
 
@@ -46,7 +46,19 @@ export class EmailQueueService extends BaseQueueService {
         to: data.to,
         activationUrl: data.activationUrl, // account activation link
       },
-      { ...EMAIL_JOB_OPTIONS, jobId: `${EMAIL_JOB.ACCOUNT_ACTIVATION_EMAIL}-${data.to}`, priority: 2 }, // High priority
+      { ...EMAIL_JOB_OPTIONS, jobId: `${EMAIL_JOB.ACCOUNT_ACTIVATION_EMAIL}-${data.to}`, priority: 1 }, // High priority
+    );
+  }
+
+  async enqueuePostRejectedEmail(to: string, data: { postTitle: string; reason: string }): Promise<void> {
+    return this.add(
+      EMAIL_JOB.REJECT_POST_EMAIL,
+      {
+        to,
+        postTitle: data.postTitle,
+        reason: data.reason,
+      },
+      { ...EMAIL_JOB_OPTIONS, jobId: `${EMAIL_JOB.REJECT_POST_EMAIL}-${to}`, priority: 2 }, // High priority
     );
   }
 }

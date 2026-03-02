@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { APP_LOGGER, AppLogger } from '../../shared/logger/services/app-logger';
 
 @Injectable()
@@ -39,5 +39,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnAppli
     } catch (e) {
       this.logger.error('Database disconnect failed', { error: e as Error });
     }
+  }
+
+  /**
+   * Helper method for executing code within a transaction
+   * Usage: await this.prisma.transaction(async (tx) => { ... })
+   */
+  async transaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.$transaction(fn);
   }
 }

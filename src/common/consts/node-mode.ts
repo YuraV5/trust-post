@@ -1,7 +1,7 @@
-export const APP_NODE_MODE = {
-  DEV: 'development',
+export const APP_MODE = {
+  DEVELOPMENT: 'development',
   TEST: 'test',
-  PROD: 'production',
+  PRODUCTION: 'production',
 } as const;
 
-export type APP_NODE_MODE = (typeof APP_NODE_MODE)[keyof typeof APP_NODE_MODE];
+export type APP_MODE = (typeof APP_MODE)[keyof typeof APP_MODE];

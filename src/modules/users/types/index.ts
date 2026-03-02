@@ -39,3 +39,8 @@ export type UpdatePasswordInput = {
 };
 
 export type UserAdminOutput = Omit<UserSecyredOutput, 'password'>;
+
+export type ModeratorsListOutput = {
+  id: string;
+  name: string;
+};

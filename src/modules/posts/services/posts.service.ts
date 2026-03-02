@@ -1,22 +1,34 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PostsRepo } from '../repos';
 import { MessageResponse } from '../../../common/types';
-import { CreatePost, StaffPostUpdate, PostLifecycleStatus, PaginatedResult, SortBy } from '../types';
+import { CreatePost, StaffPostUpdate, PaginatedResult, SortBy, EditUserPostStatus } from '../types';
 import { Post } from '@prisma/client';
 import { BadRequestError, NotFoundError } from '../../../shared/errors/app-errors';
 import { hasUpdatableFields } from '../../../common/utils';
 import { IPostsService } from '../interfaces';
 import { PostsQueryDto, PostsStaffQueryDto, UserPostsQueryDto } from '../dtos';
 import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from '../types';
+import { PostsQueueService } from '../queue';
+import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
+import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 
 @Injectable()
 export class PostsService implements IPostsService {
   private readonly MAX_LIMIT = 100;
 
-  constructor(private readonly postsRepo: PostsRepo) {}
+  constructor(
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
+    private readonly postsRepo: PostsRepo,
+    private readonly postQueue: PostsQueueService,
+  ) {}
 
   async create(authorId: string, data: CreatePost): Promise<MessageResponse> {
-    await this.postsRepo.create(authorId, data);
+    const post = await this.postsRepo.create(authorId, data);
+    try {
+      await this.postQueue.assignReviewerToPost(post.id);
+    } catch (error) {
+      this.logger.error('Error creating post', { authorId, error: error as Error });
+    }
     return { message: 'Post created successfully' };
   }
 
@@ -36,35 +48,68 @@ export class PostsService implements IPostsService {
   }
 
   async findById(id: number): Promise<Post> {
-    const post = await this.postsRepo.findById(id);
+    const post = await this.postsRepo.getPostById(id);
     if (!post) {
-      throw new NotFoundError('Post not found');
+      throw new NotFoundError('No posts found');
     }
     return post;
   }
 
-  async update(postId: number, authorId: string, data: StaffPostUpdate): Promise<MessageResponse> {
+  async editUserPostStatus(postId: number, data: EditUserPostStatus): Promise<MessageResponse> {
+    const result = await this.postsRepo.updateStatus(postId, {
+      postStatus: data.status,
+      statusReason: data.statusReason,
+    });
+    if (!result) {
+      throw new NotFoundError('No posts were updated');
+    }
+    return { message: 'Post status updated successfully' };
+  }
+
+  async update(postIds: number[], authorId: string, data: StaffPostUpdate): Promise<MessageResponse> {
     if (!hasUpdatableFields(data)) {
       throw new BadRequestError('At least one field must be provided for update');
     }
-    await this.postsRepo.update([postId], data);
+
+    const result = await this.postsRepo.update(postIds, data);
+
+    if (result.count === 0) {
+      throw new NotFoundError('No posts were updated');
+    }
+
+    // Fire-and-log queue operations safely
+    const queueResults = await Promise.allSettled(postIds.map((postId) => this.postQueue.assignReviewerToPost(postId)));
+
+    // Log failed queue jobs but do not fail request
+    queueResults.forEach((res, index) => {
+      if (res.status === 'rejected') {
+        this.logger.error('Failed to enqueue reviewer assignment', {
+          postId: postIds[index],
+          authorId,
+          error: res.reason,
+        });
+      }
+    });
+
     return { message: 'Post updated successfully' };
   }
 
-  async delete(postId: number, authorId: string): Promise<MessageResponse> {
-    const result = await this.postsRepo.delete([postId]);
+  async delete(postIds: number[], statusReason?: string): Promise<MessageResponse> {
+    const result = await this.postsRepo.delete(postIds, statusReason);
     if (result.count === 0) {
-      throw new NotFoundError('Post not found');
+      throw new NotFoundError('No posts were deleted');
     }
     return { message: 'Post deleted successfully' };
   }
 
-  async updatePostStatus(postId: number, reviewerId: string, data: PostLifecycleStatus): Promise<MessageResponse> {
-    if (!hasUpdatableFields(data)) {
-      throw new BadRequestError('At least one field must be provided for update');
+  async deleteManyByAdmin(postIds: number[], adminId: string): Promise<MessageResponse> {
+    const result = await this.postsRepo.deleteByAdmin(postIds);
+    if (result.count === 0) {
+      throw new NotFoundError('No posts were deleted');
     }
-    await this.postsRepo.updateStatus(postId, reviewerId, data);
-    return { message: 'Post status updated successfully' };
+
+    this.logger.info(`Admin id: ${adminId} deleted posts ${postIds.join(', ')}`);
+    return { message: 'Posts deleted successfully' };
   }
 
   private normalizePublicQuery(query: PostsQueryDto): NormalizedPublicQuery {

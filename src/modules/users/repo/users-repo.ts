@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IUserRepo } from '../interfaces';
 import { User, UserRoles, Prisma } from '@prisma/client';
-import { NewUserInput, UpdateUserInput } from '../types';
+import { ModeratorsListOutput, NewUserInput, UpdateUserInput } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginatedResult } from '../types/paginated';
@@ -62,6 +62,13 @@ export class UsersRepo implements IUserRepo {
     await this.db.user.update({
       where: { id: userId },
       data: { password: newPassword, isEmailVerified: true, isActive: true },
+    });
+  }
+
+  async fetchAllModerators(): Promise<ModeratorsListOutput[]> {
+    return this.db.user.findMany({
+      where: { role: UserRoles.MODERATOR },
+      select: { id: true, name: true },
     });
   }
 

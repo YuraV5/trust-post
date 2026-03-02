@@ -85,10 +85,12 @@ enum PostStatus {
   COMPLETED      @map("completed")
 }
 
-enum VersionStatus {
+enum PostReviewStatus {
   PENDING  @map("pending")
   APPROVED @map("approved")
   REJECTED @map("rejected")
+
+  @@map("post_review_statuses")
 }
 
 enum Currencies {
@@ -105,10 +107,11 @@ model Post {
   referencePaymentId String     @unique @map("reference_payment_id") @db.VarChar(255)
   targetDate         DateTime   @map("target_date")
   status             PostStatus @default(DRAFT)
-  statusReason       String?    @map("status_reason") @db.Text
+  statusReason       String?    @map("status_reason") @db.Text // chenge field name to better reflect its purpose
   authorId           String     @map("author_id")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
+  deletedAt          DateTime?  @map("deleted_at")
 
   author      User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
   postReviews PostReview[]
@@ -121,12 +124,13 @@ model Post {
 }
 
 model PostReview {
-  id           Int           @id @default(autoincrement())
-  postId       Int           @map("post_id")
-  reviewedById String        @map("reviewed_by_id")
-  status       VersionStatus @default(PENDING)
-  reviewReason String?       @map("review_reason") @db.Text
-  createdAt    DateTime      @default(now()) @map("created_at")
+  id           Int              @id @default(autoincrement())
+  postId       Int              @map("post_id")
+  reviewedById String           @map("reviewed_by_id")
+  status       PostReviewStatus @default(PENDING)
+  isActive     Boolean          @default(true) @map("is_active")
+  reviewReason String?          @map("review_reason") @db.Text
+  createdAt    DateTime         @default(now()) @map("created_at")
 
   reviewedBy User? @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
   post       Post  @relation(fields: [postId], references: [id])
@@ -134,6 +138,5 @@ model PostReview {
   @@index([postId])
   @@index([reviewedById])
   @@index([createdAt])
-  @@unique([postId, status])
   @@map("post_reviews")
 }

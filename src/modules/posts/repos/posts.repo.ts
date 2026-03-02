@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IPostsRepo } from '../interfaces';
 import { Post, PostStatus, Prisma } from '@prisma/client';
-import { CreatePost, PaginatedResult, PostCount, PostId, StaffPostUpdate, PostLifecycleStatus } from '../types';
+import { CreatePost, PaginatedResult, PostCount, PostId, StaffPostUpdate, PostStatusUpdate } from '../types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from '../types';
@@ -26,7 +26,7 @@ export class PostsRepo implements IPostsRepo {
     });
   }
 
-  async findById(id: number): Promise<Post | null> {
+  async getPostById(id: number): Promise<Post | null> {
     return await this.db.post.findUnique({
       where: {
         id,
@@ -187,13 +187,30 @@ export class PostsRepo implements IPostsRepo {
       },
       data: {
         ...data,
+        status: PostStatus.PENDING_REVIEW, // Set status to PENDING_REVIEW on any update
       },
     });
     return { count: result.count };
   }
 
-  async delete(ids: number[]): Promise<PostCount> {
-    const result = await this.db.post.deleteMany({
+  async delete(ids: number[], statusReason?: string): Promise<PostCount> {
+    const result = await this.db.post.updateMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      data: {
+        status: PostStatus.ARCHIVED, // Set status to ARCHIVED on delete
+        deletedAt: new Date(), // Set deletedAt timestamp
+        statusReason: statusReason ?? 'Post marked to delete', // Use provided reason for archival
+      },
+    });
+    return { count: result.count };
+  }
+
+  async deleteByAdmin(ids: number[], tx?: Prisma.TransactionClient): Promise<PostCount> {
+    const result = await (tx ?? this.db).post.deleteMany({
       where: {
         id: {
           in: ids,
@@ -203,27 +220,13 @@ export class PostsRepo implements IPostsRepo {
     return { count: result.count };
   }
 
-  async updateStatus(postId: number, reviewerId: string, data: PostLifecycleStatus): Promise<Post> {
-    const reuslt = await this.db.$transaction([
-      this.db.post.update({
-        where: {
-          id: postId,
-        },
-        data: {
-          status: data.postStatus,
-          statusReason: data.statusReason,
-        },
-      }),
-      this.db.postReview.create({
-        data: {
-          postId,
-          reviewedById: reviewerId,
-          status: data.reviewStatus,
-          reviewReason: data.reviewReason,
-        },
-      }),
-    ]);
-
-    return reuslt[0];
+  async updateStatus(postId: number, data: PostStatusUpdate, tx?: Prisma.TransactionClient): Promise<Post> {
+    return await (tx ?? this.db).post.update({
+      where: { id: postId },
+      data: {
+        status: data.postStatus,
+        statusReason: data.statusReason,
+      },
+    });
   }
 }

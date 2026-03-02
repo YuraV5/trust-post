@@ -15,6 +15,7 @@ import {
   UpdateUserInput,
   UpdatePasswordInput,
   UserAdminOutput,
+  ModeratorsListOutput,
 } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
 import { UserRoles } from '@prisma/client';
@@ -43,7 +44,7 @@ export class UsersService implements IUserService {
     return user;
   }
 
-  async findById(id: string): Promise<UserProfileOutput> {
+  async getUserById(id: string): Promise<UserProfileOutput> {
     const user = await this.repo.findById(id);
     if (!user) {
       throw new UserNotFoundError();
@@ -204,6 +205,15 @@ export class UsersService implements IUserService {
     const result = await this.repo.findAllForAdmin(cleanQuery);
 
     return { ...result, data: usersAdminMapper(result.data) };
+  }
+
+  async fetchAllModerators(): Promise<ModeratorsListOutput[]> {
+    const moderators = await this.repo.fetchAllModerators();
+    if (moderators.length === 0) {
+      this.logger.warn('No moderators found in the system');
+      return [];
+    }
+    return moderators;
   }
 
   private normalizeAdminQuery(query: AdminUsersQueryDto): AdminUsersQueryDto {

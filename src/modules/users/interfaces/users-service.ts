@@ -13,7 +13,7 @@ import { PaginatedResult } from '../types/paginated';
 
 export interface IUserService {
   findByEmail(email: string): Promise<UserSecyredOutput | null>;
-  findById(id: string): Promise<UserOutput>;
+  getUserById(id: string): Promise<UserOutput>;
   create(inp: NewUserInput): Promise<{ userId: string }>;
   remove(id: string): Promise<MessageResponse>;
   updateProfile(id: string, inp: UpdateUserInput): Promise<MessageResponse>;

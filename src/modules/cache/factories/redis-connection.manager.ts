@@ -5,6 +5,7 @@ import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { APP_MODE } from '../../../common/consts';
 import { RedisConnectionConfig, RedisHealth } from '../interfaces';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { REDIS_DB } from '../../../configs/redis/redis-db';
 
 @Injectable()
 export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdown {
@@ -38,7 +39,7 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
       host: this.config.get<string>('redis.host', 'localhost'),
       port: this.config.get<number>('redis.port', 6379),
       password: isProd ? this.config.get('redis.password', undefined) : undefined,
-      db: this.config.get<number>('redis.dbCache', 0),
+      db: REDIS_DB.DEFAULT,
     };
 
     this.maxRetries = this.config.get<number>('redis.maxRetries', 3);

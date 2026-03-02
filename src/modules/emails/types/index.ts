@@ -13,3 +13,9 @@ export type AccountActivationTask = {
   to: string;
   activationUrl: string;
 };
+
+export type RejectPostEmailTask = {
+  to: string;
+  postTitle: string;
+  reason: string;
+};

@@ -27,22 +27,30 @@ async function main() {
     });
 
     // Create admin user
-    const admin = await prisma.user.create({
-      data: {
-        email: 'admin@mail.com',
-        name: 'admin',
-        password: hashedPassword,
-        role: UserRoles.ADMIN,
-        isActive: true,
-        isEmailVerified: true,
-        createdByAdmin: true,
-      },
+    const admin = await prisma.user.createMany({
+      data: [
+        {
+          email: 'admin@mail.com',
+          name: 'admin',
+          password: hashedPassword,
+          role: UserRoles.ADMIN,
+          isActive: true,
+          isEmailVerified: true,
+          createdByAdmin: true,
+        },
+        {
+          email: 'moderator@mail.com',
+          name: 'moderator',
+          password: hashedPassword,
+          role: UserRoles.MODERATOR,
+          isActive: true,
+          isEmailVerified: true,
+          createdByAdmin: true,
+        },
+      ],
     });
 
-    console.log('✅ Admin user created successfully');
-    console.log(`   Email: ${admin.email}`);
-    console.log(`   Name: ${admin.name}`);
-    console.log(`   Role: ${admin.role}`);
+    console.log('✅ Admin and Moderator users created successfully');
   } catch (error) {
     console.error('❌ Seed error:', error);
     process.exit(1);

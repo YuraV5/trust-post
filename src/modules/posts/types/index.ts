@@ -36,3 +36,6 @@ export type PostCount = {
 export type PostId = {
   id: number;
 };
+
+export * from './paginated';
+export * from './query-params';

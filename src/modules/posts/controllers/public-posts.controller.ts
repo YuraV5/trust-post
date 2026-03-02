@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { PostsService } from '../services';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { CurrentUser } from '../../../common/decorators';
@@ -6,7 +6,8 @@ import { MessageResponse } from '../../../common/types';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { Post as Publication } from '@prisma/client';
-import { UpdatePostDto } from '../dtos';
+import { UpdatePostDto, PostsQueryDto, UserPostsQueryDto } from '../dtos';
+import { PaginatedResult } from '../types';
 
 @Controller('posts')
 export class PublicPostsController {
@@ -18,13 +19,16 @@ export class PublicPostsController {
   }
 
   @Get()
-  async getAllPosts(): Promise<Publication[]> {
-    return await this.postsService.getAllPosts();
+  async getAllPosts(@Query() query: PostsQueryDto): Promise<PaginatedResult<Publication>> {
+    return await this.postsService.getAllPublicPosts(query);
   }
 
   @Get('my')
-  async getUserPosts(@CurrentUser() user: AuthenticatedUser): Promise<Publication[]> {
-    return await this.postsService.getUserPosts(user.userId);
+  async getUserPosts(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: UserPostsQueryDto,
+  ): Promise<PaginatedResult<Publication>> {
+    return await this.postsService.getUserPosts(user.userId, query);
   }
 
   @Get('/:id')

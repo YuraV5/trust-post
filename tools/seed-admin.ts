@@ -1,11 +1,18 @@
+#!/usr/bin/env ts-node
+
+/**
+ * Manual seeding script for creating admin and moderator users
+ * Run with: npm run seed:admin
+ */
+
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { PrismaClient, UserRoles } from '@prisma/client';
 import argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('🌱 Starting seed...');
+async function seedAdmin() {
+  console.log('🌱 Starting manual seed...');
 
   try {
     // Check if admin already exists
@@ -27,7 +34,7 @@ async function main() {
     });
 
     // Create admin and moderator users
-     await prisma.user.createMany({
+    const createdUsers = await prisma.user.createMany({
       data: [
         {
           email: 'admin@mail.com',
@@ -50,7 +57,12 @@ async function main() {
       ],
     });
 
-    console.log('✅ Admin and Moderator users created successfully');
+    console.log(
+      `✅ Successfully created ${createdUsers.count} users (admin and moderator)`,
+    );
+    console.log('\n📝 Default credentials:');
+    console.log('   Admin: admin@mail.com / Qwert!123');
+    console.log('   Moderator: moderator@mail.com / Qwert!123');
   } catch (error) {
     console.error('❌ Seed error:', error);
     process.exit(1);
@@ -59,4 +71,4 @@ async function main() {
   }
 }
 
-main();
+seedAdmin();

@@ -36,7 +36,6 @@ CREATE TABLE "sessions" (
     "user_id" TEXT NOT NULL,
     "refresh_token_hash" VARCHAR(255) NOT NULL,
     "device_id" VARCHAR(255) NOT NULL,
-    "device_name" VARCHAR(128),
     "user_agent" VARCHAR(512) NOT NULL,
     "ip" VARCHAR(45) NOT NULL,
     "last_used_at" TIMESTAMP(3),

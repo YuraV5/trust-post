@@ -61,7 +61,6 @@ describe('AuthService', () => {
       requestId: 'req-123',
       ip: '127.0.0.1',
       userAgent: 'Mozilla/5.0',
-      deviceName: 'Test Device',
     });
   });
 

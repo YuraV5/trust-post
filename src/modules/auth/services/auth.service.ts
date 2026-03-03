@@ -106,7 +106,6 @@ export class AuthService implements IAuthService {
       refreshTokenHash,
       userAgent: ctx.userAgent,
       ip: ctx.ip,
-      deviceName: ctx.deviceName,
       expiresAt: new Date(Date.now() + parseDuration(this.config.get<string>('session.expiresInMs')!)),
     });
 

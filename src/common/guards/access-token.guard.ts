@@ -1,7 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { TokensService } from '../../modules/security/services';
-import { UnauthorizedError } from '../../shared/errors/app-errors';
+import { AppUnauthorizedException } from '../../shared/errors/app-errors';
 import { IS_PUBLIC_KEY } from '../decorators';
 import { AuthenticatedRequest } from '../interfaces';
 import { UserRoles } from '@prisma/client';
@@ -24,13 +24,13 @@ export class AccessTokenGuard implements CanActivate {
     const auth = req.headers['authorization'];
 
     if (!auth?.startsWith('Bearer ')) {
-      throw new UnauthorizedError();
+      throw new AppUnauthorizedException();
     }
     const token = auth.split(' ')[1];
     const payload = await this.tokenService.verifyAccess(token);
 
     if (!payload) {
-      throw new UnauthorizedError();
+      throw new AppUnauthorizedException();
     }
     req.user = {
       userId: payload.sub,

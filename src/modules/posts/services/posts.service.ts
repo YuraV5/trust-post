@@ -3,7 +3,7 @@ import { PostsLikeRepo, PostsRepo } from '../repos';
 import { MessageResponse } from '../../../common/types';
 import { CreatePost, StaffPostUpdate, PaginatedResult, SortBy, EditUserPostStatus } from '../types';
 import { Post } from '@prisma/client';
-import { BadRequestError, NotFoundError } from '../../../shared/errors/app-errors';
+import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { hasUpdatableFields } from '../../../common/utils';
 import { IPostsService } from '../interfaces';
 import { PostsQueryDto, PostsStaffQueryDto, UserPostsQueryDto } from '../dtos';
@@ -51,7 +51,7 @@ export class PostsService implements IPostsService {
   async findById(id: number): Promise<Post> {
     const post = await this.postsRepo.getPostById(id);
     if (!post) {
-      throw new NotFoundError('No posts found');
+      throw new AppNotFoundException('No posts found');
     }
     return post;
   }
@@ -62,20 +62,20 @@ export class PostsService implements IPostsService {
       statusReason: data.statusReason,
     });
     if (!result) {
-      throw new NotFoundError('No posts were updated');
+      throw new AppNotFoundException('No posts were updated');
     }
     return { message: 'Post status updated successfully' };
   }
 
   async update(postIds: number[], authorId: string, data: StaffPostUpdate): Promise<MessageResponse> {
     if (!hasUpdatableFields(data)) {
-      throw new BadRequestError('At least one field must be provided for update');
+      throw new AppBadRequestException('At least one field must be provided for update');
     }
 
     const result = await this.postsRepo.update(postIds, data);
 
     if (result.count === 0) {
-      throw new NotFoundError('No posts were updated');
+      throw new AppNotFoundException('No posts were updated');
     }
 
     // Fire-and-log queue operations safely
@@ -98,7 +98,7 @@ export class PostsService implements IPostsService {
   async delete(postIds: number[], statusReason?: string): Promise<MessageResponse> {
     const result = await this.postsRepo.delete(postIds, statusReason);
     if (result.count === 0) {
-      throw new NotFoundError('No posts were deleted');
+      throw new AppNotFoundException('No posts were deleted');
     }
     return { message: 'Post deleted successfully' };
   }
@@ -106,7 +106,7 @@ export class PostsService implements IPostsService {
   async deleteManyByAdmin(postIds: number[], adminId: string): Promise<MessageResponse> {
     const result = await this.postsRepo.deleteByAdmin(postIds);
     if (result.count === 0) {
-      throw new NotFoundError('No posts were deleted');
+      throw new AppNotFoundException('No posts were deleted');
     }
 
     this.logger.info(`Admin id: ${adminId} deleted posts ${postIds.join(', ')}`);

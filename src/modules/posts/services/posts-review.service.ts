@@ -4,7 +4,7 @@ import { UsersService } from '../../users/services';
 import { PostsRepo } from '../repos';
 import { PostsReviewRepo } from './../repos/posts-review.repo';
 import { Inject, Injectable } from '@nestjs/common';
-import { BadRequestError, NotFoundError } from '../../../shared/errors/app-errors';
+import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 import { PostLifecycleStatus } from '../types/common';
@@ -25,7 +25,7 @@ export class PostsReviewService {
   async assignReviewer(postId: number): Promise<MessageResponse> {
     const reviewer = await this.usersService.fetchAllModerators();
     if (reviewer.length === 0) {
-      throw new NotFoundError('No reviewers available');
+      throw new AppNotFoundException('No reviewers available');
     }
     const randomIndex = Math.floor(Math.random() * reviewer.length);
     const reviewerId = reviewer[randomIndex].id;
@@ -57,22 +57,22 @@ export class PostsReviewService {
     // --- VALIDATION ---
     if (reviewStatus === PostReviewStatus.REJECTED) {
       if (!this.allowedPostStatus(postStatus)) {
-        throw new BadRequestError('When reviewStatus is REJECTED, postStatus must be REJECTED or BLOCKED');
+        throw new AppBadRequestException('When reviewStatus is REJECTED, postStatus must be REJECTED or BLOCKED');
       }
 
       if (!reviewReason) {
-        throw new BadRequestError('Review reason is required for rejected reviews');
+        throw new AppBadRequestException('Review reason is required for rejected reviews');
       }
     }
 
     // --- LOAD REQUIRED DATA ONCE ---
     const post = await this.postsRepo.getPostById(postId);
     if (!post) {
-      throw new NotFoundError('Post not found');
+      throw new AppNotFoundException('Post not found');
     }
     const user = await this.usersService.getUserById(post.authorId);
     if (!user) {
-      throw new NotFoundError('User not found');
+      throw new AppNotFoundException('User not found');
     }
 
     const finalStatusReason =
@@ -104,7 +104,7 @@ export class PostsReviewService {
   async getPostStatusHistory(postId: number): Promise<PostReview[]> {
     const history = await this.postsReviewRepo.findByPostId(postId);
     if (!history || history.length === 0) {
-      throw new NotFoundError('Post review history not found');
+      throw new AppNotFoundException('Post review history not found');
     }
     return history;
   }

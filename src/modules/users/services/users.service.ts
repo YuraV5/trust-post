@@ -1,10 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { MessageResponse } from '../../../common/types';
 import { hasUpdatableFields } from '../../../common/utils';
-import { BadRequestError } from '../../../shared/errors/app-errors';
+import { AppBadRequestException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { PasswordService } from '../../security/services';
-import { UserNotFoundError, UserAlreadyExistsError } from '../errors';
+import { AppUserNotFoundException, AppUserAlreadyExistsException } from '../errors';
 import { IUserService } from '../interfaces';
 import { userAdminMapper, userMapper, usersAdminMapper } from '../mappers';
 import { UsersRepo } from '../repo/users-repo';
@@ -47,7 +47,7 @@ export class UsersService implements IUserService {
   async getUserById(id: string): Promise<UserProfileOutput> {
     const user = await this.repo.findById(id);
     if (!user) {
-      throw new UserNotFoundError();
+      throw new AppUserNotFoundException();
     }
     return userMapper(user);
   }
@@ -55,7 +55,7 @@ export class UsersService implements IUserService {
   async create(inp: NewUserInput): Promise<{ userId: string }> {
     const existingUser = await this.repo.findByEmail(inp.email);
     if (existingUser) {
-      throw new UserAlreadyExistsError();
+      throw new AppUserAlreadyExistsException();
     }
 
     const hashedPassword = await this.passwordService.createHash(inp.password);
@@ -74,7 +74,7 @@ export class UsersService implements IUserService {
 
   async updateProfile(id: string, inp: UpdateUserInput): Promise<MessageResponse> {
     if (!hasUpdatableFields(inp)) {
-      throw new BadRequestError('No fields to update');
+      throw new AppBadRequestException('No fields to update');
     }
     const name = inp?.name?.toLowerCase();
     await this.repo.update(id, { ...inp, name });
@@ -84,11 +84,11 @@ export class UsersService implements IUserService {
   async updatePassword(id: string, inp: UpdatePasswordInput): Promise<MessageResponse> {
     const user = await this.repo.findById(id);
     if (!user) {
-      throw new UserNotFoundError();
+      throw new AppUserNotFoundException();
     }
     const isCurrentPasswordValid = await this.passwordService.verify(inp.currentPassword, user.password!);
     if (!isCurrentPasswordValid) {
-      throw new BadRequestError('Invalid credentials');
+      throw new AppBadRequestException('Invalid credentials');
     }
     const newPassword = await this.passwordService.createHash(inp.newPassword);
 
@@ -99,14 +99,14 @@ export class UsersService implements IUserService {
 
   async findAuthUserbyId(id: string): Promise<UserSecyredOutput | null> {
     const user = await this.repo.findById(id);
-    if (!user) throw new UserNotFoundError();
+    if (!user) throw new AppUserNotFoundException();
     return user;
   }
 
   async resetPasswordThroughEmail(email: string, newPassword: string): Promise<void> {
     const user = await this.repo.findByEmail(email);
     if (!user) {
-      throw new UserNotFoundError();
+      throw new AppUserNotFoundException();
     }
     const hashedPassword = await this.passwordService.createHash(newPassword);
     await this.repo.updatePassword(user.id, hashedPassword);
@@ -120,7 +120,7 @@ export class UsersService implements IUserService {
   async findByIdForAdmin(id: string): Promise<UserAdminOutput> {
     const user = await this.repo.findById(id);
     if (!user) {
-      throw new UserNotFoundError();
+      throw new AppUserNotFoundException();
     }
     return userAdminMapper(user);
   }
@@ -128,7 +128,7 @@ export class UsersService implements IUserService {
   async createUserByAdmin(inp: { email: string; password: string; role?: UserRoles }): Promise<MessageResponse | void> {
     const result = await this.findByEmail(inp.email);
     if (result) {
-      throw new UserAlreadyExistsError();
+      throw new AppUserAlreadyExistsException();
     }
 
     const name = generateRandomUsername();
@@ -156,7 +156,7 @@ export class UsersService implements IUserService {
     if (!user) {
       this.logger.warn(`User with id ${userId} not found for account activation`);
 
-      throw new UserNotFoundError();
+      throw new AppUserNotFoundException();
     }
     const hashedPassword = await this.passwordService.createHash(newPassword);
     await this.repo.activateAccount(userId, hashedPassword);
@@ -165,13 +165,13 @@ export class UsersService implements IUserService {
   async updateStatus(id: string): Promise<{ id: string; isActive: boolean }> {
     const user = await this.repo.findById(id);
     if (!user) {
-      throw new UserNotFoundError();
+      throw new AppUserNotFoundException();
     }
 
     const isActive = !user.isActive;
     const result = await this.repo.updateStatus(id, isActive);
     if (result === 0) {
-      throw new UserNotFoundError();
+      throw new AppUserNotFoundException();
     }
     return { id, isActive };
   }
@@ -179,7 +179,7 @@ export class UsersService implements IUserService {
   async changeRoles(id: string, role: UserRoles): Promise<{ id: string; role: UserRoles }> {
     const result = await this.repo.updateRoles(id, role);
     if (result === 0) {
-      throw new UserNotFoundError();
+      throw new AppUserNotFoundException();
     }
     return { id, role };
   }
@@ -187,7 +187,7 @@ export class UsersService implements IUserService {
   async deleteMany(ids: string[]): Promise<void> {
     const result = await this.repo.deleteMany(ids);
     if (result === 0) {
-      throw new UserNotFoundError();
+      throw new AppUserNotFoundException();
     }
     this.logger.info(`Deleted ${result}`);
   }

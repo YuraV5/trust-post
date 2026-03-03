@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, Inject, ExecutionContext } from '@nestjs/common';
 import { TokensService } from '../../modules/security/services';
-import { UnauthorizedError } from '../../shared/errors/app-errors';
+import { AppUnauthorizedException } from '../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../shared/logger/services/app-logger';
 import { RefreshTokenRequest } from '../interfaces';
 import { SessionsService } from '../../modules/auth/sessions/services';
@@ -20,19 +20,19 @@ export class RefreshTokenGuard implements CanActivate {
 
     if (!refreshToken) {
       this.logger.debug('No refresh token found in cookies');
-      throw new UnauthorizedError();
+      throw new AppUnauthorizedException();
     }
 
     const payload = await this.tokenService.verifyRefresh(refreshToken);
     if (!payload) {
       this.logger.debug('Invalid payload in token');
-      throw new UnauthorizedError();
+      throw new AppUnauthorizedException();
     }
 
     const isSessionValid = await this.sessionsService.validateSession(payload.sessionId, refreshToken);
     if (!isSessionValid) {
       this.logger.debug('Session is invalidated');
-      throw new UnauthorizedError();
+      throw new AppUnauthorizedException();
     }
 
     req.user = {

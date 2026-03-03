@@ -9,6 +9,7 @@ import { REDIS_DB } from '../../configs/redis/redis-db';
 import { PostsQueueProcessor, PostsQueueService } from './queue';
 import { PostsReviewService } from './services';
 import { EmailsModule } from '../emails/emails.module';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { EmailsModule } from '../emails/emails.module';
     }),
     UsersModule,
     EmailsModule,
+    CommentsModule,
   ],
   controllers: [PublicPostsController, StaffPostsController],
   providers: [PostsService, PostsReviewService, PostsRepo, PostsReviewRepo, PostsQueueService, PostsQueueProcessor],

@@ -15,7 +15,7 @@ export class PublicPostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
-  async create(@CurrentUser() user: AuthenticatedUser, @Body() inp: CreatePostDto): Promise<MessageResponse> {
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() inp: CreatePostDto): Promise<Publication> {
     return await this.postsService.create(user.userId, inp);
   }
 

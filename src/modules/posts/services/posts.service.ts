@@ -11,6 +11,7 @@ import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from
 import { PostsQueueService } from '../queue';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { CommentsService } from '../comments/comments.service';
 
 @Injectable()
 export class PostsService implements IPostsService {
@@ -20,16 +21,17 @@ export class PostsService implements IPostsService {
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly postsRepo: PostsRepo,
     private readonly postQueue: PostsQueueService,
+    private readonly commentService: CommentsService,
   ) {}
 
-  async create(authorId: string, data: CreatePost): Promise<MessageResponse> {
+  async create(authorId: string, data: CreatePost): Promise<Post> {
     const post = await this.postsRepo.create(authorId, data);
     try {
       await this.postQueue.assignReviewerToPost(post.id);
     } catch (error) {
       this.logger.error('Error creating post', { authorId, error: error as Error });
     }
-    return { message: 'Post created successfully' };
+    return post;
   }
 
   async getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<Post>> {

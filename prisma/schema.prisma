@@ -31,6 +31,8 @@ model User {
   posts           Post[]
   userRolePeriods UserRolePeriod[]
   postReviews     PostReview[]
+  comments        Comment[]
+  commentLikes    CommentLike[]
 
   @@index([createdAt])
   @@index([role])
@@ -109,12 +111,14 @@ model Post {
   status             PostStatus @default(DRAFT)
   statusReason       String?    @map("status_reason") @db.Text // chenge field name to better reflect its purpose
   authorId           String     @map("author_id")
+  totalComments      Int        @default(0) @map("total_comments")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
   deletedAt          DateTime?  @map("deleted_at")
 
   author      User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
   postReviews PostReview[]
+  comments    Comment[]
 
   @@index([status])
   @@index([authorId])
@@ -139,4 +143,43 @@ model PostReview {
   @@index([reviewedById])
   @@index([createdAt])
   @@map("post_reviews")
+}
+
+enum CommentStatus {
+  VISIBLE
+  DELETED
+}
+
+model Comment {
+  id         Int           @id @default(autoincrement())
+  postId     Int           @map("post_id")
+  authorId   String        @map("author_id")
+  content    String        @db.Text
+  status     CommentStatus @default(VISIBLE)
+  totalLikes Int           @default(0) @map("total_likes")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  author User          @relation(fields: [authorId], references: [id])
+  post   Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  likes  CommentLike[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@map("comments")
+}
+
+model CommentLike {
+  id        Int      @id @default(autoincrement())
+  commentId Int      @map("comment_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("comment_likes")
 }

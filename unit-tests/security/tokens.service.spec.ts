@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UnauthorizedError } from '../../src/shared/errors/app-errors';
+import { AppUnauthorizedException  } from '../../src/shared/errors/app-errors';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { mockJwtService } from './mock/token.mock';
 import { StubAppLogger } from '../__mock__';
@@ -102,7 +102,7 @@ describe('TokensService', () => {
 
       mockJwtService.verifyAsync.mockRejectedValue(new Error('JWT verification failed'));
 
-      await expect(service.verifyAccess(token)).rejects.toThrow(UnauthorizedError);
+      await expect(service.verifyAccess(token)).rejects.toThrow(AppUnauthorizedException );
     });
   });
 
@@ -123,7 +123,7 @@ describe('TokensService', () => {
 
       mockJwtService.verifyAsync.mockRejectedValue(new Error('JWT invalid'));
 
-      await expect(service.verifyRefresh(token)).rejects.toThrow(UnauthorizedError);
+      await expect(service.verifyRefresh(token)).rejects.toThrow(AppUnauthorizedException );
     });
   });
 });

@@ -3,7 +3,7 @@ import { JwtService, JsonWebTokenError, TokenExpiredError, JwtSignOptions } from
 import { ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
 import { APP_MODE } from '../../../common/consts/node-mode';
-import { InternalServerError, UnauthorizedError } from '../../../shared/errors/app-errors';
+import { AppInternalServerException, AppUnauthorizedException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { AccessPayload, RefreshPayload } from '../types';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
@@ -62,7 +62,7 @@ export class TokensService implements ITokensService {
       return token;
     } catch (err) {
       this.logger.error(`Token generation failed for type: ${type}`, { error: err as Error });
-      throw new InternalServerError('Token generation failed');
+      throw new AppInternalServerException('Token generation failed');
     }
   }
 
@@ -89,7 +89,7 @@ export class TokensService implements ITokensService {
     };
   }
 
-  private mapJwtError(err: unknown): UnauthorizedError {
+  private mapJwtError(err: unknown): AppUnauthorizedException {
     if (this.nodeEnv !== APP_MODE.PRODUCTION) {
       if (err instanceof TokenExpiredError) {
         // JWT expired
@@ -100,6 +100,6 @@ export class TokensService implements ITokensService {
       }
     }
 
-    return new UnauthorizedError('Unauthorized');
+    return new AppUnauthorizedException('Unauthorized');
   }
 }

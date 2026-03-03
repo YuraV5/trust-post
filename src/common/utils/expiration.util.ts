@@ -1,4 +1,4 @@
-import { InternalServerError } from '../../shared/errors/app-errors';
+import { AppInternalServerException } from '../../shared/errors/app-errors';
 
 const MULTIPLIERS: Record<string, number> = {
   ms: 1,
@@ -18,7 +18,9 @@ export function parseDuration(input: string | number): number {
 
   const match = input.match(/^(\d+)(ms|s|m|h|d)$/);
   if (!match) {
-    throw new InternalServerError(`Invalid duration format: ${input}`, [`Bad format for parseDuration: ${input}`]);
+    throw new AppInternalServerException(`Invalid duration format: ${input}`, [
+      `Bad format for parseDuration: ${input}`,
+    ]);
   }
 
   const [, value, unit] = match;

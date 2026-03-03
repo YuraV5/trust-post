@@ -3,7 +3,7 @@ import { CommentsRepo, LikeRepo } from './repo';
 import { MessageResponse } from '../../../common/types';
 import { CreateCommentInput, UpdateCommentInput, PaginatedResult, NormalizedCommentsQuery } from './types';
 import { Comment } from '@prisma/client';
-import { BadRequestError, NotFoundError, ForbiddenError } from '../../../shared/errors/app-errors';
+import { AppBadRequestException, AppNotFoundException, AppForbiddenException } from '../../../shared/errors/app-errors';
 import { ICommentsService } from './interfaces';
 import { CommentsQueryDto } from './dtos';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
@@ -37,16 +37,16 @@ export class CommentsService implements ICommentsService {
 
   async update(id: number, authorId: string, data: UpdateCommentInput): Promise<MessageResponse> {
     if (!data.content?.trim()) {
-      throw new BadRequestError('Content cannot be empty');
+      throw new AppBadRequestException('Content cannot be empty');
     }
 
     const comment = await this.commentsRepo.getById(id);
     if (!comment) {
-      throw new NotFoundError('Comment not found');
+      throw new AppNotFoundException('Comment not found');
     }
 
     if (comment.authorId !== authorId) {
-      throw new ForbiddenError('You can only edit your own comments');
+      throw new AppForbiddenException('You can only edit your own comments');
     }
 
     await this.commentsRepo.update(id, data);
@@ -59,11 +59,11 @@ export class CommentsService implements ICommentsService {
   async delete(id: number, authorId: string): Promise<MessageResponse> {
     const comment = await this.commentsRepo.getById(id);
     if (!comment) {
-      throw new NotFoundError('Comment not found');
+      throw new AppNotFoundException('Comment not found');
     }
 
     if (comment.authorId !== authorId) {
-      throw new ForbiddenError('You can only delete your own comments');
+      throw new AppForbiddenException('You can only delete your own comments');
     }
 
     await this.commentsRepo.delete(id);
@@ -75,13 +75,13 @@ export class CommentsService implements ICommentsService {
 
   async deleteByModerator(ids: number[]): Promise<MessageResponse> {
     if (!ids || ids.length === 0) {
-      throw new BadRequestError('At least one comment ID must be provided');
+      throw new AppBadRequestException('At least one comment ID must be provided');
     }
 
     const result = await this.commentsRepo.hardDeleteMany(ids);
 
     if (result.count === 0) {
-      throw new NotFoundError('No comments were deleted');
+      throw new AppNotFoundException('No comments were deleted');
     }
 
     this.logger.info(`${result.count} comment(s) permanently deleted by moderator`, { deletedIds: ids });

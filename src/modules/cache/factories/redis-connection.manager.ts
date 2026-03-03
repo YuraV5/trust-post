@@ -86,7 +86,11 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
     });
     this.client.on('ready', () => {
       this.connectedAt = new Date();
-      this.logger.info('Redis ready', { context: 'RedisConnectionManager', db: this.redisConfig.db, connectedAt: this.connectedAt });
+      this.logger.info('Redis ready', {
+        context: 'RedisConnectionManager',
+        db: this.redisConfig.db,
+        connectedAt: this.connectedAt,
+      });
     });
     this.client.on('connect', () => {
       this.logger.info('Redis connected', { context: 'RedisConnectionManager', db: this.redisConfig.db });

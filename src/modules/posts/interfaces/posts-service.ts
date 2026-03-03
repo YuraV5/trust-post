@@ -5,7 +5,7 @@ import { Post } from '@prisma/client';
 import { PaginatedResult } from '../types';
 
 export interface IPostsService {
-  create(authorId: string, data: CreatePost): Promise<MessageResponse>;
+  create(authorId: string, data: CreatePost): Promise<Post>;
   getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<Post>>;
   getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<Post>>;
   getAllStaffPosts(query: PostsStaffQueryDto): Promise<PaginatedResult<Post>>;
@@ -14,4 +14,5 @@ export interface IPostsService {
   update(postIds: number[], authorId: string, data: StaffPostUpdate): Promise<MessageResponse>;
   delete(postIds: number[], statusReason?: string): Promise<MessageResponse>;
   deleteManyByAdmin(postIds: number[], adminId: string): Promise<MessageResponse>;
+  toggleLike(postId: number, userId: string): Promise<{ message: string; liked: boolean }>;
 }

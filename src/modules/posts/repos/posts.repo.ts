@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IPostsRepo } from '../interfaces';
 import { Post, PostStatus, Prisma } from '@prisma/client';
-import { CreatePost, PaginatedResult, PostCount, PostId, StaffPostUpdate, PostStatusUpdate } from '../types';
+import { CreatePost, PaginatedResult, PostCount, StaffPostUpdate, PostStatusUpdate } from '../types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from '../types';
@@ -10,7 +10,7 @@ import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from
 export class PostsRepo implements IPostsRepo {
   constructor(private readonly db: PrismaService) {}
 
-  async create(authorId: string, inp: CreatePost): Promise<PostId> {
+  async create(authorId: string, inp: CreatePost): Promise<Post> {
     return await this.db.post.create({
       data: {
         title: inp.title,
@@ -20,14 +20,12 @@ export class PostsRepo implements IPostsRepo {
         authorId: authorId,
         referencePaymentId: `ref_${randomUUID()}`,
       },
-      select: {
-        id: true,
-      },
     });
   }
 
-  async getPostById(id: number): Promise<Post | null> {
-    return await this.db.post.findUnique({
+  async getPostById(id: number, tx?: Prisma.TransactionClient): Promise<Post | null> {
+    const client = tx ?? this.db;
+    return await client.post.findUnique({
       where: {
         id,
       },

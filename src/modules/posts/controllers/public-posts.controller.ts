@@ -15,7 +15,7 @@ export class PublicPostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
-  async create(@CurrentUser() user: AuthenticatedUser, @Body() inp: CreatePostDto): Promise<MessageResponse> {
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() inp: CreatePostDto): Promise<Publication> {
     return await this.postsService.create(user.userId, inp);
   }
 
@@ -54,6 +54,14 @@ export class PublicPostsController {
     @Body() inp: ModifyUserPostStatusDto,
   ): Promise<MessageResponse> {
     return await this.postsService.editUserPostStatus(params.id, inp);
+  }
+
+  @Post('/:id/like')
+  async togglePostLike(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: NumericIdParamDto,
+  ): Promise<{ message: string; liked: boolean }> {
+    return await this.postsService.toggleLike(params.id, user.userId);
   }
 
   @Delete('/:id')

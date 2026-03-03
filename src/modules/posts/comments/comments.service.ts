@@ -8,7 +8,6 @@ import { ICommentsService } from './interfaces';
 import { CommentsQueryDto } from './dtos';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
-import { PostsService } from '../services';
 
 @Injectable()
 export class CommentsService implements ICommentsService {
@@ -16,16 +15,11 @@ export class CommentsService implements ICommentsService {
 
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
-    private readonly postService: PostsService,
     private readonly commentsRepo: CommentsRepo,
     private readonly likeRepo: LikeRepo,
   ) {}
 
   async create(postId: number, authorId: string, data: CreateCommentInput): Promise<MessageResponse> {
-    const post = await this.postService.findById(postId);
-    if (!post) {
-      throw new NotFoundError('Post not found');
-    }
     const comment = await this.commentsRepo.create(authorId, {
       postId,
       content: data.content,

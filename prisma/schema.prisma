@@ -33,6 +33,7 @@ model User {
   postReviews     PostReview[]
   comments        Comment[]
   commentLikes    CommentLike[]
+  postLikes       PostLike[]
 
   @@index([createdAt])
   @@index([role])
@@ -112,6 +113,7 @@ model Post {
   statusReason       String?    @map("status_reason") @db.Text // chenge field name to better reflect its purpose
   authorId           String     @map("author_id")
   totalComments      Int        @default(0) @map("total_comments")
+  totalLikes         Int        @default(0) @map("total_likes")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
   deletedAt          DateTime?  @map("deleted_at")
@@ -119,6 +121,7 @@ model Post {
   author      User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
   postReviews PostReview[]
   comments    Comment[]
+  likes       PostLike[]
 
   @@index([status])
   @@index([authorId])
@@ -182,4 +185,19 @@ model CommentLike {
   @@index([commentId])
   @@index([userId])
   @@map("comment_likes")
+}
+
+model PostLike {
+  id        Int      @id @default(autoincrement())
+  postId    Int      @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("post_likes")
 }

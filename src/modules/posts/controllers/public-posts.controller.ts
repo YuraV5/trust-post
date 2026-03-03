@@ -56,6 +56,14 @@ export class PublicPostsController {
     return await this.postsService.editUserPostStatus(params.id, inp);
   }
 
+  @Post('/:id/like')
+  async togglePostLike(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: NumericIdParamDto,
+  ): Promise<{ message: string; liked: boolean }> {
+    return await this.postsService.toggleLike(params.id, user.userId);
+  }
+
   @Delete('/:id')
   async deletePost(
     @CurrentUser() user: AuthenticatedUser,

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { PostsRepo } from '../repos';
+import { PostsLikeRepo, PostsRepo } from '../repos';
 import { MessageResponse } from '../../../common/types';
 import { CreatePost, StaffPostUpdate, PaginatedResult, SortBy, EditUserPostStatus } from '../types';
 import { Post } from '@prisma/client';
@@ -11,7 +11,6 @@ import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from
 import { PostsQueueService } from '../queue';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
-import { CommentsService } from '../comments/comments.service';
 
 @Injectable()
 export class PostsService implements IPostsService {
@@ -20,8 +19,8 @@ export class PostsService implements IPostsService {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly postsRepo: PostsRepo,
+    private readonly postLikeRepo: PostsLikeRepo,
     private readonly postQueue: PostsQueueService,
-    private readonly commentService: CommentsService,
   ) {}
 
   async create(authorId: string, data: CreatePost): Promise<Post> {
@@ -112,6 +111,20 @@ export class PostsService implements IPostsService {
 
     this.logger.info(`Admin id: ${adminId} deleted posts ${postIds.join(', ')}`);
     return { message: 'Posts deleted successfully' };
+  }
+
+  async toggleLike(postId: number, userId: string): Promise<{ message: string; liked: boolean }> {
+    await this.findById(postId);
+
+    const like = await this.postLikeRepo.getLikeByUserPost(postId, userId);
+
+    if (like) {
+      await this.postLikeRepo.deleteLike(postId, userId);
+      return { message: 'Like removed', liked: false };
+    }
+
+    await this.postLikeRepo.createLike(postId, userId);
+    return { message: 'Like added', liked: true };
   }
 
   private normalizePublicQuery(query: PostsQueryDto): NormalizedPublicQuery {

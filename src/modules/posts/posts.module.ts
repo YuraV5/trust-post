@@ -2,7 +2,7 @@ import { UsersModule } from './../users/users.module';
 import { Module } from '@nestjs/common';
 import { PostsService } from './services/posts.service';
 import { PublicPostsController, StaffPostsController } from './controllers';
-import { PostsRepo, PostsReviewRepo } from './repos';
+import { PostsLikeRepo, PostsRepo, PostsReviewRepo } from './repos';
 import { BullModule } from '@nestjs/bullmq';
 import { POSTS_QUEUE } from './consts';
 import { REDIS_DB } from '../../configs/redis/redis-db';
@@ -24,7 +24,15 @@ import { CommentsModule } from './comments/comments.module';
     CommentsModule,
   ],
   controllers: [PublicPostsController, StaffPostsController],
-  providers: [PostsService, PostsReviewService, PostsRepo, PostsReviewRepo, PostsQueueService, PostsQueueProcessor],
+  providers: [
+    PostsService,
+    PostsReviewService,
+    PostsRepo,
+    PostsReviewRepo,
+    PostsLikeRepo,
+    PostsQueueService,
+    PostsQueueProcessor,
+  ],
   exports: [PostsService],
 })
 export class PostsModule {}

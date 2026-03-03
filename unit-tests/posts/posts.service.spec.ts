@@ -4,7 +4,7 @@ import { EmailQueueServiceMock, StubAppLogger } from '../__mock__';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { EmailQueueService } from '../../src/modules/emails/email-queue.service';
-import { PostsRepo, PostsReviewRepo } from '../../src/modules/posts/repos';
+import { PostsLikeRepo, PostsRepo, PostsReviewRepo } from '../../src/modules/posts/repos';
 import { PostsQueueProcessor, PostsQueueService } from '../../src/modules/posts/queue';
 
 describe('PostsService', () => {
@@ -16,6 +16,7 @@ describe('PostsService', () => {
         PostsService,
         PostsRepo,
         PostsReviewRepo,
+        {provide: PostsLikeRepo, useValue: jest.fn()},
         { provide: PostsQueueService, useValue: jest.fn() },
         { provide: PostsQueueProcessor, useValue: jest.fn() },
         { provide: EmailQueueService, useValue: EmailQueueServiceMock },

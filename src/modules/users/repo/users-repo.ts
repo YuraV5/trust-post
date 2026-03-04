@@ -54,8 +54,15 @@ export class UsersRepo implements IUserRepo {
     return result.count;
   }
 
-  async createByAdmin(inp: NewUserInput): Promise<User> {
-    return await this.db.user.create({ data: { ...inp, createdByAdmin: true, isActive: false, role: inp.role } });
+  async createByAdmin(inp: NewUserInput, tx?: Prisma.TransactionClient): Promise<User> {
+    return await (tx ?? this.db).user.create({
+      data: {
+        ...inp,
+        createdByAdmin: true,
+        isActive: false,
+        role: inp.role,
+      },
+    });
   }
 
   async activateAccount(userId: string, newPassword: string): Promise<void> {

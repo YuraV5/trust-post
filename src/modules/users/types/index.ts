@@ -44,3 +44,10 @@ export type ModeratorsListOutput = {
   id: string;
   name: string;
 };
+
+export type CreateByAdminInput = {
+  email: string;
+  password: string;
+  role?: UserRoles;
+  name?: string;
+};

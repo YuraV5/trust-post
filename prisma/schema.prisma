@@ -62,6 +62,7 @@ model Session {
 
 model UserRolePeriod {
   id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(128)
   userId      String    @map("user_id")
   role        UserRoles
   startDate   DateTime  @map("start_date")
@@ -74,6 +75,7 @@ model UserRolePeriod {
   @@index([userId])
   @@index([role])
   @@index([endDate])
+  @@index([userId, endDate])
   @@map("user_role_periods")
 }
 

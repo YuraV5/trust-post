@@ -10,6 +10,8 @@ import { LinksService } from '../../src/modules/links/links.service';
 import { mockPasswordService } from '../security/mock/password.mock';
 import { userAdminMapper, usersAdminMapper } from '../../src/modules/users/mappers';
 import { mockCreateUserInput, mockUser, mockUserAdminOutput, mockUsersRepo } from './__mock';
+import { UserRolePeriodRepo } from '../../src/modules/user-role-periods/repo/user-role-period.repo';
+import { UserRolePeriodService } from '../../src/modules/user-role-periods/services';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -20,11 +22,15 @@ describe('UsersService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        {provide: UserRolePeriodService, useValue: { handleRoleChange: jest.fn() }},
+        { provide: UserRolePeriodRepo, useValue: jest.fn() },
         { provide: PasswordService, useValue: mockPasswordService },
         { provide: UsersRepo, useValue: mockUsersRepo },
         { provide: LinksService, useValue: jest.fn() },
         { provide: EmailQueueService, useValue: EmailQueueServiceMock },
-        { provide: PrismaService, useValue: jest.fn() },
+        { provide: PrismaService, useValue: {
+          transaction: jest.fn((cb) => cb({})),
+        } },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();
@@ -204,17 +210,17 @@ describe('UsersService', () => {
   describe('createUserByAdmin', () => {
     it('should throw UserAlreadyExistsError if email is already in use', async () => {
       mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
-      await expect(service.createUserByAdmin({ email: 'existing-email', password: 'password' })).rejects.toThrow(
+      await expect(service.createUserByAdmin({ email: 'existing-email', password: 'password' }, 'admin-id')).rejects.toThrow(
         'User already exists',
       );
     });
 
     it('should create a new user by admin and return success message', async () => {
       mockUsersRepo.findByEmail.mockResolvedValue(null);
-      mockUsersRepo.createByAdmin.mockResolvedValue({ id: 'new-user-id' });
+      mockUsersRepo.createByAdmin.mockResolvedValue({ id: 'new-user-id', name: 'Test User' });
       mockPasswordService.createHash.mockResolvedValue('hashed-password');
 
-      await expect(service.createUserByAdmin({ email: 'new-email', password: 'password' })).resolves.toEqual({
+      await expect(service.createUserByAdmin({ email: 'new-email', password: 'password' }, 'admin-id')).resolves.toEqual({
         message: 'User created successfully, need verification',
       });
       expect(mockUsersRepo.createByAdmin).toHaveBeenCalledWith(
@@ -222,17 +228,18 @@ describe('UsersService', () => {
           email: 'new-email',
           password: 'hashed-password',
         }),
+        {},
       );
     });
   });
   it('should handle email sending failure gracefully', async () => {
     mockUsersRepo.findByEmail.mockResolvedValue(null);
-    mockUsersRepo.createByAdmin.mockResolvedValue({ id: 'new-user-id' });
+    mockUsersRepo.createByAdmin.mockResolvedValue({ id: 'new-user-id', name: 'Test User' });
     mockPasswordService.createHash.mockResolvedValue('hashed-password');
     const sendEmailMock = jest.fn().mockRejectedValue(new Error('Email service failure'));
 
     EmailQueueServiceMock.sendAccountActivationEmail = sendEmailMock;
-    await expect(service.createUserByAdmin({ email: 'new-email', password: 'password' })).resolves.toEqual({
+    await expect(service.createUserByAdmin({ email: 'new-email', password: 'password' }, 'admin-id')).resolves.toEqual({
       message: 'User created successfully, need verification',
     });
   });
@@ -246,7 +253,9 @@ describe('UsersService', () => {
     it('should activate account successfully', async () => {
       mockUsersRepo.findById.mockResolvedValue(mockUser);
       mockPasswordService.createHash.mockResolvedValue('new-hashed-password');
-      await expect(service.activateAccount('existing-id', 'new-password')).resolves.toBeUndefined();
+      await expect(service.activateAccount('existing-id', 'new-password')).resolves.toEqual({
+        message: 'Account activated successfully',
+      });
     });
   });
 
@@ -255,7 +264,9 @@ describe('UsersService', () => {
       mockUsersRepo.findById.mockResolvedValue(mockUser);
       mockUsersRepo.updateStatus.mockResolvedValue(1);
 
-      await expect(service.updateStatus('user-id')).resolves.toEqual({ id: 'user-id', isActive: false });
+      await expect(service.updateStatus('user-id')).resolves.toEqual({ 
+        message: `Status ${!mockUser.isActive ? 'enabled' : 'disabled'} successfully` 
+      });
       expect(mockUsersRepo.updateStatus).toHaveBeenCalledWith('user-id', !mockUser.isActive); // Toggles the status
     });
 
@@ -268,7 +279,9 @@ describe('UsersService', () => {
   describe('deleteMany', () => {
     it('should delete users successfully', async () => {
       mockUsersRepo.deleteMany.mockResolvedValue(2);
-      await expect(service.deleteMany(['id1', 'id2'])).resolves.toBeUndefined();
+      await expect(service.deleteMany(['id1', 'id2'])).resolves.toEqual({
+        message: 'Deleted 2',
+      });
       expect(mockUsersRepo.deleteMany).toHaveBeenCalledWith(['id1', 'id2']);
     });
 
@@ -280,14 +293,17 @@ describe('UsersService', () => {
 
   describe('changeRoles', () => {
     it('should change user role successfully', async () => {
+      mockUsersRepo.findById.mockResolvedValue(mockUser);
       mockUsersRepo.updateRoles.mockResolvedValue(1);
-      await expect(service.changeRoles('user-id', 'ADMIN')).resolves.toEqual({ id: 'user-id', role: 'ADMIN' });
+      await expect(service.changeRoles('user-id', 'admin-id', 'ADMIN')).resolves.toEqual({ 
+        message: 'User roles updated successfully' 
+      });
       expect(mockUsersRepo.updateRoles).toHaveBeenCalledWith('user-id', 'ADMIN');
     });
 
     it('should throw UserNotFoundError if user is not found for role change', async () => {
-      mockUsersRepo.updateRoles.mockResolvedValue(0);
-      await expect(service.changeRoles('nonexistent-id', 'ADMIN')).rejects.toThrow('User not found');
+      mockUsersRepo.findById.mockResolvedValue(null);
+      await expect(service.changeRoles('nonexistent-id', 'admin-id', 'ADMIN')).rejects.toThrow('User not found');
     });
   });
 

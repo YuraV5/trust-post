@@ -19,6 +19,8 @@ import { CacheModule } from './modules/cache/cache.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LinksModule } from './modules/links/links.module';
 import { PostsModule } from './modules/posts/posts.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { PostsModule } from './modules/posts/posts.module';
       load: [appConfig],
       validationSchema: configValidation,
     }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -45,6 +48,7 @@ import { PostsModule } from './modules/posts/posts.module';
     CacheModule,
     LinksModule,
     PostsModule,
+    MaintenanceModule,
   ],
   controllers: [],
   providers: [

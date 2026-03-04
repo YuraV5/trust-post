@@ -16,6 +16,7 @@ import {
   UpdatePasswordInput,
   UserAdminOutput,
   ModeratorsListOutput,
+  CreateByAdminInput,
 } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
 import { UserRoles } from '@prisma/client';
@@ -25,6 +26,10 @@ import { LinksService } from '../../links/links.service';
 import { generateRandomUsername } from '../../../common/utils/generate-name.util';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 import { PaginatedResult } from '../types/paginated';
+import { UserRolePeriodService } from '../../user-role-periods/services';
+import { UserRolePeriodOutput } from '../../user-role-periods/types';
+import { PrismaService } from '../../prisma/prisma.service';
+import { UserRolePeriodRepo } from '../../user-role-periods/repo/user-role-period.repo';
 
 @Injectable()
 export class UsersService implements IUserService {
@@ -36,6 +41,9 @@ export class UsersService implements IUserService {
     private readonly passwordService: PasswordService,
     private readonly emailQueueService: EmailQueueService,
     private readonly linksService: LinksService,
+    private readonly userRolePeriodService: UserRolePeriodService,
+    private readonly userRolePeriodRepo: UserRolePeriodRepo,
+    private readonly prismaService: PrismaService,
   ) {}
 
   async findByEmail(email: string): Promise<UserSecyredOutput | null> {
@@ -125,18 +133,38 @@ export class UsersService implements IUserService {
     return userAdminMapper(user);
   }
 
-  async createUserByAdmin(inp: { email: string; password: string; role?: UserRoles }): Promise<MessageResponse | void> {
+  async createUserByAdmin(inp: CreateByAdminInput, adminId: string): Promise<MessageResponse> {
     const result = await this.findByEmail(inp.email);
     if (result) {
       throw new AppUserAlreadyExistsException();
     }
 
-    const name = generateRandomUsername();
+    const name = inp.name ? inp.name.toLowerCase() : generateRandomUsername();
 
     const hashedPassword = await this.passwordService.createHash(inp.password);
     inp.password = hashedPassword;
-    const user = await this.repo.createByAdmin({ ...inp, name });
 
+    // --- TRANSACTION ---
+    const user = await this.prismaService.transaction(async (tx) => {
+      const createdUser = await this.repo.createByAdmin({ ...inp, name }, tx);
+
+      // 2. Якщо роль не USER, створюємо період ролі
+      if (inp.role && inp.role !== UserRoles.USER) {
+        await this.userRolePeriodRepo.createPeriod(
+          {
+            userId: createdUser.id,
+            name: createdUser.name,
+            role: inp.role,
+            changedById: adminId,
+          },
+          tx,
+        );
+      }
+
+      return createdUser;
+    });
+
+    // --- SIDE EFFECT ---
     try {
       await this.emailQueueService.sendAccountActivationEmail({
         to: inp.email,
@@ -151,7 +179,7 @@ export class UsersService implements IUserService {
     return { message: `User created successfully, need verification` };
   }
 
-  async activateAccount(userId: string, newPassword: string): Promise<void> {
+  async activateAccount(userId: string, newPassword: string): Promise<MessageResponse> {
     const user = await this.repo.findById(userId);
     if (!user) {
       this.logger.warn(`User with id ${userId} not found for account activation`);
@@ -160,9 +188,10 @@ export class UsersService implements IUserService {
     }
     const hashedPassword = await this.passwordService.createHash(newPassword);
     await this.repo.activateAccount(userId, hashedPassword);
+    return { message: `Account activated successfully` };
   }
 
-  async updateStatus(id: string): Promise<{ id: string; isActive: boolean }> {
+  async updateStatus(id: string): Promise<MessageResponse> {
     const user = await this.repo.findById(id);
     if (!user) {
       throw new AppUserNotFoundException();
@@ -173,23 +202,41 @@ export class UsersService implements IUserService {
     if (result === 0) {
       throw new AppUserNotFoundException();
     }
-    return { id, isActive };
+    return { message: `Status ${isActive ? 'enabled' : 'disabled'} successfully` };
   }
 
-  async changeRoles(id: string, role: UserRoles): Promise<{ id: string; role: UserRoles }> {
+  async changeRoles(id: string, userId: string, role: UserRoles): Promise<MessageResponse> {
+    const user = await this.repo.findById(id);
+    if (!user) {
+      throw new AppUserNotFoundException();
+    }
+
+    const oldRole = user.role;
+
+    // Track role change history
+    await this.userRolePeriodService.handleRoleChange({
+      userId: id,
+      userName: user.name,
+      oldRole,
+      newRole: role,
+      changedById: userId,
+    });
+
+    // Update user role in the main user record
     const result = await this.repo.updateRoles(id, role);
     if (result === 0) {
       throw new AppUserNotFoundException();
     }
-    return { id, role };
+    return { message: `User roles updated successfully` };
   }
 
-  async deleteMany(ids: string[]): Promise<void> {
+  async deleteMany(ids: string[]): Promise<MessageResponse> {
     const result = await this.repo.deleteMany(ids);
     if (result === 0) {
       throw new AppUserNotFoundException();
     }
     this.logger.info(`Deleted ${result}`);
+    return { message: `Deleted ${result}` };
   }
 
   async findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<UserAdminOutput>> {
@@ -214,6 +261,14 @@ export class UsersService implements IUserService {
       return [];
     }
     return moderators;
+  }
+
+  async getUserRoleHistory(userId: string): Promise<UserRolePeriodOutput[]> {
+    const user = await this.repo.findById(userId);
+    if (!user) {
+      throw new AppUserNotFoundException();
+    }
+    return await this.userRolePeriodService.getUserRoleHistory(userId);
   }
 
   private normalizeAdminQuery(query: AdminUsersQueryDto): AdminUsersQueryDto {

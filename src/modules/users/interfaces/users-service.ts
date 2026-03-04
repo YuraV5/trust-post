@@ -7,9 +7,11 @@ import {
   UserOutput,
   UserSecyredOutput,
   UserAdminOutput,
+  CreateByAdminInput,
 } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
 import { PaginatedResult } from '../types/paginated';
+import { UserRolePeriodOutput } from '../../user-role-periods/types';
 
 export interface IUserService {
   findByEmail(email: string): Promise<UserSecyredOutput | null>;
@@ -24,8 +26,10 @@ export interface IUserService {
 
   // Admin methods
   findByIdForAdmin(id: string): Promise<UserAdminOutput>;
-  updateStatus(id: string, isActive: boolean): Promise<{ id: string; isActive: boolean }>;
-  changeRoles(id: string, role: UserRoles): Promise<{ id: string; role: UserRoles }>;
+  createUserByAdmin(inp: CreateByAdminInput, adminId: string): Promise<MessageResponse>;
+  updateStatus(id: string): Promise<MessageResponse>;
+  changeRoles(id: string, userId: string, role: UserRoles): Promise<MessageResponse>;
   findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<UserAdminOutput>>;
-  deleteMany(ids: string[]): Promise<void>;
+  deleteMany(ids: string[]): Promise<MessageResponse>;
+  getUserRoleHistory(userId: string): Promise<UserRolePeriodOutput[]>;
 }

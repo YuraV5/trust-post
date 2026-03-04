@@ -11,6 +11,7 @@ export class CreateUserDto {
   @ApiProperty({ example: 'John Doe' })
   @IsOptional()
   @IsString()
+  @MinLength(3)
   name?: string;
 
   @ApiProperty({ example: 'strongPassword123' })

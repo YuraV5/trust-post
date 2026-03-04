@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { Roles } from '../../../common/decorators';
+import { Roles, CurrentUser } from '../../../common/decorators';
 import { RolesGuard } from '../../../common/guards';
 import { UserRoles } from '@prisma/client';
 import { UsersService } from '../services';
@@ -8,6 +8,8 @@ import { UserAdminOutput } from '../types';
 import { MessageResponse } from '../../../common/types';
 import { UpdateRolesDto, AdminUsersQueryDto, AdminDeleteDto, AdminUserCreationDto } from '../dtos';
 import { PaginatedResult } from '../types/paginated';
+import { type AuthenticatedUser } from '../../../common/interfaces';
+import { UserRolePeriodOutput } from '../../user-role-periods/types';
 
 @UseGuards(RolesGuard)
 @Controller('admin/users')
@@ -22,9 +24,11 @@ export class AdminUsersController {
 
   @Roles(UserRoles.ADMIN)
   @Post()
-  async createUser(@Body() inp: AdminUserCreationDto): Promise<MessageResponse> {
-    await this.usersService.createUserByAdmin(inp);
-    return { message: `User created successfully` };
+  async createUser(
+    @Body() inp: AdminUserCreationDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<MessageResponse> {
+    return await this.usersService.createUserByAdmin(inp, currentUser.userId);
   }
 
   @Roles(UserRoles.ADMIN)
@@ -36,21 +40,28 @@ export class AdminUsersController {
   @Roles(UserRoles.ADMIN)
   @Get('/:id/toggle-status')
   async updateStatus(@Param() params: UUIDParamDto): Promise<MessageResponse> {
-    const status = await this.usersService.updateStatus(params.id);
-    return { message: `Status ${status.isActive ? 'enabled' : 'disabled'} successfully` };
+    return await this.usersService.updateStatus(params.id);
   }
 
   @Roles(UserRoles.ADMIN)
   @Patch('/:id/roles')
-  async updateUserRoles(@Param() params: UUIDParamDto, @Body() data: UpdateRolesDto): Promise<MessageResponse> {
-    await this.usersService.changeRoles(params.id, data.role);
-    return { message: `User roles updated successfully` };
+  async updateUserRoles(
+    @Param() params: UUIDParamDto,
+    @Body() data: UpdateRolesDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<MessageResponse> {
+    return await this.usersService.changeRoles(params.id, currentUser.userId, data.role);
+  }
+
+  @Roles(UserRoles.ADMIN)
+  @Get('/:id/role-history')
+  async getUserRoleHistory(@Param() params: UUIDParamDto): Promise<UserRolePeriodOutput[]> {
+    return await this.usersService.getUserRoleHistory(params.id);
   }
 
   @Roles(UserRoles.ADMIN)
   @Delete()
   async deleteUser(@Body() data: AdminDeleteDto): Promise<MessageResponse> {
-    await this.usersService.deleteMany(data.ids);
-    return { message: `User deleted successfully` };
+    return await this.usersService.deleteMany(data.ids);
   }
 }

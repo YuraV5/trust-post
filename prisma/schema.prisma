@@ -37,6 +37,7 @@ model User {
 
   @@index([createdAt])
   @@index([role])
+  @@index([isEmailVerified, createdAt])
   @@map("users")
 }
 

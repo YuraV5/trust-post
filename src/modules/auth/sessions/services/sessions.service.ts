@@ -7,6 +7,7 @@ import { mapSessions } from '../mappers';
 import { HashingService } from '../../../security/services';
 import { MessageResponse } from '../../../../common/types';
 import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { AppForbiddenException, AppNotFoundException } from '../../../../shared/errors/app-errors';
 
 @Injectable()
 export class SessionsService implements ISessionService {
@@ -43,7 +44,18 @@ export class SessionsService implements ISessionService {
     await this.sessionRepo.update(sessionId, { lastUsedAt: new Date() });
   }
 
-  async deleteBySessionId(sessionId: string): Promise<MessageResponse> {
+  async deleteBySessionId(sessionId: string, userId: string): Promise<MessageResponse> {
+    // Check if session exists and belongs to the user
+    const session = await this.sessionRepo.findById(sessionId);
+
+    if (!session) {
+      throw new AppNotFoundException('Session not found');
+    }
+
+    if (session.userId !== userId) {
+      throw new AppForbiddenException('You can only delete your own sessions');
+    }
+
     const deletedCount = await this.sessionRepo.deleteByIds([sessionId]);
     if (deletedCount === 0) {
       this.logger.warn(`No session deleted with ID ${sessionId}`);

@@ -59,7 +59,7 @@ export class AuthController {
   @Post('logout')
   @UseGuards(RefreshTokenGuard)
   async logout(@Req() req: RefreshTokenRequest, @Res({ passthrough: true }) resp: Response): Promise<MessageResponse> {
-    const result = await this.authService.logout(req.user.sessionId);
+    const result = await this.authService.logout(req.user.sessionId, req.user.userId);
     this.cookieService.clear(resp);
     return result;
   }

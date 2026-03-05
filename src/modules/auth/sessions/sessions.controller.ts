@@ -31,6 +31,6 @@ export class SessionsController {
     @CurrentUser() user: RefreshTokenUser,
     @Param('sessionId') sessionId: string,
   ): Promise<MessageResponse> {
-    return await this.sessionsService.deleteBySessionId(sessionId);
+    return await this.sessionsService.deleteBySessionId(sessionId, user.userId);
   }
 }

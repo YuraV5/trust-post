@@ -3,7 +3,7 @@ import { CommentsRepo, LikeRepo } from './repo';
 import { MessageResponse } from '../../../common/types';
 import { CreateCommentInput, UpdateCommentInput, PaginatedResult, NormalizedCommentsQuery } from './types';
 import { Comment } from '@prisma/client';
-import { AppBadRequestException, AppNotFoundException, AppForbiddenException } from '../../../shared/errors/app-errors';
+import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { ICommentsService } from './interfaces';
 import { CommentsQueryDto } from './dtos';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
@@ -35,7 +35,7 @@ export class CommentsService implements ICommentsService {
     return await this.commentsRepo.findByPostIdPaginated(postId, normalized);
   }
 
-  async update(id: number, authorId: string, data: UpdateCommentInput): Promise<MessageResponse> {
+  async update(id: number, data: UpdateCommentInput): Promise<MessageResponse> {
     if (!data.content?.trim()) {
       throw new AppBadRequestException('Content cannot be empty');
     }
@@ -45,30 +45,22 @@ export class CommentsService implements ICommentsService {
       throw new AppNotFoundException('Comment not found');
     }
 
-    if (comment.authorId !== authorId) {
-      throw new AppForbiddenException('You can only edit your own comments');
-    }
-
     await this.commentsRepo.update(id, data);
 
-    this.logger.info(`Comment ${id} updated by user ${authorId}`);
+    this.logger.info(`Comment ${id} updated`);
 
     return { message: 'Comment updated successfully' };
   }
 
-  async delete(id: number, authorId: string): Promise<MessageResponse> {
+  async delete(id: number): Promise<MessageResponse> {
     const comment = await this.commentsRepo.getById(id);
     if (!comment) {
       throw new AppNotFoundException('Comment not found');
     }
 
-    if (comment.authorId !== authorId) {
-      throw new AppForbiddenException('You can only delete your own comments');
-    }
-
     await this.commentsRepo.delete(id);
 
-    this.logger.info(`Comment ${id} deleted by user ${authorId}`);
+    this.logger.info(`Comment ${id} deleted`);
 
     return { message: 'Comment deleted successfully' };
   }

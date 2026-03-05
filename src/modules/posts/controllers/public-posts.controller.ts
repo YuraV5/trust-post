@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { PostsService } from '../services';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { CurrentUser, PublicRoute } from '../../../common/decorators';
@@ -9,6 +9,7 @@ import { Post as Publication } from '@prisma/client';
 import { UpdatePostDto, PostsQueryDto, UserPostsQueryDto, ModifyUserPostStatusDto } from '../dtos';
 import { PaginatedResult } from '../types';
 import { DeletePostByUserDto } from '../dtos/delete.dto';
+import { OwnershipGuard } from '../../../common/guards';
 
 @Controller('posts')
 export class PublicPostsController {
@@ -38,18 +39,15 @@ export class PublicPostsController {
     return await this.postsService.findById(params.id);
   }
 
+  @UseGuards(OwnershipGuard({ model: 'post' }))
   @Patch('/:id')
-  async editPostDetails(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param() params: NumericIdParamDto,
-    @Body() inp: UpdatePostDto,
-  ): Promise<MessageResponse> {
-    return await this.postsService.update([params.id], user.userId, inp);
+  async editPostDetails(@Param() params: NumericIdParamDto, @Body() inp: UpdatePostDto): Promise<MessageResponse> {
+    return await this.postsService.update([params.id], inp);
   }
 
+  @UseGuards(OwnershipGuard({ model: 'post' }))
   @Patch('/:id/status')
   async modifyPostStatus(
-    @CurrentUser() user: AuthenticatedUser,
     @Param() params: NumericIdParamDto,
     @Body() inp: ModifyUserPostStatusDto,
   ): Promise<MessageResponse> {
@@ -64,12 +62,9 @@ export class PublicPostsController {
     return await this.postsService.toggleLike(params.id, user.userId);
   }
 
+  @UseGuards(OwnershipGuard({ model: 'post' }))
   @Delete('/:id')
-  async deletePost(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param() params: NumericIdParamDto,
-    @Body() inp: DeletePostByUserDto,
-  ): Promise<MessageResponse> {
+  async deletePost(@Param() params: NumericIdParamDto, @Body() inp: DeletePostByUserDto): Promise<MessageResponse> {
     return await this.postsService.delete([params.id], inp.statusReason);
   }
 }

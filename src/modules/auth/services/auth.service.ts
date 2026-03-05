@@ -133,8 +133,8 @@ export class AuthService implements IAuthService {
     return { accessToken };
   }
 
-  async logout(sessionId: string): Promise<MessageResponse> {
-    await this.sessionsService.deleteBySessionId(sessionId);
+  async logout(sessionId: string, userId: string): Promise<MessageResponse> {
+    await this.sessionsService.deleteBySessionId(sessionId, userId);
     return { message: 'Logged out successfully' };
   }
 

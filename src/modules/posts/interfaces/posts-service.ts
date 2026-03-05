@@ -11,7 +11,7 @@ export interface IPostsService {
   getAllStaffPosts(query: PostsStaffQueryDto): Promise<PaginatedResult<Post>>;
   findById(id: number): Promise<Post>;
   editUserPostStatus(postId: number, data: EditUserPostStatus): Promise<MessageResponse>;
-  update(postIds: number[], authorId: string, data: StaffPostUpdate): Promise<MessageResponse>;
+  update(postIds: number[], data: StaffPostUpdate): Promise<MessageResponse>;
   delete(postIds: number[], statusReason?: string): Promise<MessageResponse>;
   deleteManyByAdmin(postIds: number[], adminId: string): Promise<MessageResponse>;
   toggleLike(postId: number, userId: string): Promise<{ message: string; liked: boolean }>;

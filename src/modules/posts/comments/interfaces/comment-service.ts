@@ -4,8 +4,8 @@ import { CreateCommentInput, NormalizedCommentsQuery, PaginatedResult, UpdateCom
 export interface ICommentsService {
   create(postId: number, authorId: string, data: CreateCommentInput): Promise<{ message: string }>;
   getCommentsByPostId(postId: number, query: NormalizedCommentsQuery): Promise<PaginatedResult<Comment>>;
-  update(id: number, authorId: string, data: UpdateCommentInput): Promise<{ message: string }>;
-  delete(id: number, authorId: string): Promise<{ message: string }>;
+  update(id: number, data: UpdateCommentInput): Promise<{ message: string }>;
+  delete(id: number): Promise<{ message: string }>;
   deleteByModerator(ids: number[]): Promise<{ message: string }>;
   toggleLike(commentId: number, userId: string): Promise<{ message: string; liked: boolean }>;
 }

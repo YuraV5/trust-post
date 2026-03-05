@@ -5,7 +5,7 @@ export interface IAuthService {
   register(inp: UserRegistration): Promise<MessageResponse>;
   login(inp: UserCredentials): Promise<UserLoginOutput>;
   refresh(userId: string): Promise<{ accessToken: string }>;
-  logout(sessionId: string): Promise<MessageResponse>;
+  logout(sessionId: string, userId: string): Promise<MessageResponse>;
   logoutAll(userId: string): Promise<MessageResponse>;
   resendEmailVerification(email: string): Promise<MessageResponse>;
   resendPasswordReset(email: string): Promise<MessageResponse>;

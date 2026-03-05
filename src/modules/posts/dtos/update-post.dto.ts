@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { PostReviewStatus, PostStatus } from '@prisma/client';
-import { IsIn, IsNotEmpty, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
+import { IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
 
 const POST_STATUS_VALUES = ['ARCHIVED', 'COMPLETED'] as const;
 export type PostCondition = (typeof POST_STATUS_VALUES)[number];
@@ -51,6 +51,7 @@ export class PostStatusLifecycleDto {
     example: PostStatus.COMPLETED,
   })
   @IsNotEmpty()
+  @IsEnum(PostStatus)
   postStatus: PostStatus;
 
   @ApiProperty({
@@ -67,6 +68,7 @@ export class PostStatusLifecycleDto {
     example: PostReviewStatus.APPROVED,
   })
   @IsNotEmpty()
+  @IsEnum(PostReviewStatus)
   reviewStatus: PostReviewStatus;
 
   @ApiProperty({

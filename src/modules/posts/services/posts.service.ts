@@ -67,7 +67,7 @@ export class PostsService implements IPostsService {
     return { message: 'Post status updated successfully' };
   }
 
-  async update(postIds: number[], authorId: string, data: StaffPostUpdate): Promise<MessageResponse> {
+  async update(postIds: number[], data: StaffPostUpdate): Promise<MessageResponse> {
     if (!hasUpdatableFields(data)) {
       throw new AppBadRequestException('At least one field must be provided for update');
     }
@@ -86,7 +86,6 @@ export class PostsService implements IPostsService {
       if (res.status === 'rejected') {
         this.logger.error('Failed to enqueue reviewer assignment', {
           postId: postIds[index],
-          authorId,
           error: res.reason,
         });
       }

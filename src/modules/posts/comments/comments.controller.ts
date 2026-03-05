@@ -5,7 +5,7 @@ import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { CurrentUser, PublicRoute, Roles } from '../../../common/decorators';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { CreateCommentDto, UpdateCommentDto, CommentsQueryDto, PostIdParamDto, DeleteCommentsDto } from './dtos';
-import { RolesGuard } from '../../../common/guards';
+import { RolesGuard, OwnershipGuard } from '../../../common/guards';
 import { UserRoles, Comment } from '@prisma/client';
 import { PaginatedResult } from './types';
 
@@ -34,13 +34,10 @@ export class CommentsController {
     return await this.commentsService.getCommentsByPostId(params.postId, query);
   }
 
+  @UseGuards(OwnershipGuard({ model: 'comment' }))
   @Patch('comments/:id')
-  async updateComment(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param() params: NumericIdParamDto,
-    @Body() data: UpdateCommentDto,
-  ): Promise<MessageResponse> {
-    return await this.commentsService.update(params.id, user.userId, data);
+  async updateComment(@Param() params: NumericIdParamDto, @Body() data: UpdateCommentDto): Promise<MessageResponse> {
+    return await this.commentsService.update(params.id, data);
   }
 
   @UseGuards(RolesGuard)
@@ -50,11 +47,9 @@ export class CommentsController {
     return await this.commentsService.deleteByModerator(data.ids);
   }
 
+  @UseGuards(OwnershipGuard({ model: 'comment' }))
   @Delete('comments/:id')
-  async deleteComment(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param() params: NumericIdParamDto,
-  ): Promise<MessageResponse> {
-    return await this.commentsService.delete(params.id, user.userId);
+  async deleteComment(@Param() params: NumericIdParamDto): Promise<MessageResponse> {
+    return await this.commentsService.delete(params.id);
   }
 }

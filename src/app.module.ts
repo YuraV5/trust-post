@@ -21,6 +21,7 @@ import { LinksModule } from './modules/links/links.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { FilesModule } from './modules/files/files.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { MaintenanceModule } from './modules/maintenance/maintenance.module';
     LinksModule,
     PostsModule,
     MaintenanceModule,
+    FilesModule,
   ],
   controllers: [],
   providers: [

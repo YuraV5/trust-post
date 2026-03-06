@@ -35,4 +35,9 @@ export interface IAppConfig {
     resendApiKey: string;
     from: string;
   };
+
+  cloudinary: {
+    apiKey: string;
+    apiSecret: string;
+  };
 }

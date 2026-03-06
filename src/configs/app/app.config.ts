@@ -36,4 +36,9 @@ export default (): IAppConfig => ({
     resendApiKey: process.env.EMAIL_RESEND_API_KEY!,
     from: process.env.EMAIL_FROM || 'trust_post@example.com',
   },
+
+  cloudinary: {
+    apiKey: process.env.CLOUDINARY_API_KEY!,
+    apiSecret: process.env.CLOUDINARY_API_SECRET!,
+  },
 });

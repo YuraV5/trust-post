@@ -4,7 +4,7 @@ import { PrismaService } from '../../modules/prisma/prisma.service';
 import { AppNotFoundException, AppForbiddenException } from '../../shared/errors/app-errors';
 import { AuthenticatedRequest } from '../interfaces';
 
-type ResourceModel = 'post' | 'comment' | 'postReview' | 'commentLike' | 'postLike';
+type ResourceModel = 'post' | 'comment' | 'postReview' | 'commentLike' | 'postLike' | 'user' | 'file';
 
 export interface OwnershipGuardOptions {
   // Name of the Prisma model to check ownership against (e.g., 'post', 'comment')

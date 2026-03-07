@@ -4,7 +4,7 @@ export default (): IAppConfig => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT!, 10) || 3001,
   corsAllowOrigin: process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001',
-  serviceName: process.env.SERVICE_NAME || 'work-link-service',
+  serviceName: process.env.SERVICE_NAME || 'trust-post',
   loggerLevel: process.env.LOGGER_LEVEL || 'info',
   frontUrl: process.env.FRONTEND_URL!,
 
@@ -40,5 +40,6 @@ export default (): IAppConfig => ({
   cloudinary: {
     apiKey: process.env.CLOUDINARY_API_KEY!,
     apiSecret: process.env.CLOUDINARY_API_SECRET!,
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
   },
 });

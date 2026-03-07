@@ -39,5 +39,6 @@ export interface IAppConfig {
   cloudinary: {
     apiKey: string;
     apiSecret: string;
+    cloudName: string;
   };
 }

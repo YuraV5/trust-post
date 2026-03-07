@@ -88,6 +88,8 @@ enum PostStatus {
   BLOCKED        @map("blocked")
   ARCHIVED       @map("archived")
   COMPLETED      @map("completed")
+
+  @@map("post_statuses")
 }
 
 enum PostReviewStatus {
@@ -100,6 +102,8 @@ enum PostReviewStatus {
 
 enum Currencies {
   UAH @map("uah")
+
+  @@map("currencies")
 }
 
 model Post {
@@ -124,7 +128,7 @@ model Post {
   postReviews PostReview[]
   comments    Comment[]
   likes       PostLike[]
-  files       File[]
+  files       PostFile[]
 
   @@index([status])
   @@index([authorId])
@@ -154,6 +158,8 @@ model PostReview {
 enum CommentStatus {
   VISIBLE
   DELETED
+
+  @@map("comment_statuses")
 }
 
 model Comment {
@@ -207,18 +213,12 @@ model PostLike {
 
 enum FileProvider {
   LOCAL      @map("local")
-  CLAUDINARY @map("cloudinary")
+  CLOUDINARY @map("cloudinary")
 
   @@map("file_providers")
 }
 
-enum FileFolder {
-  POST_DOCUMENT @map("post_document")
-  AVATAR        @map("avatar")
-  CHAT_FILE     @map("chat_file")
-}
-
-model File {
+model PostFile {
   id           Int          @id @default(autoincrement())
   url          String       @db.VarChar(512)
   postId       Int          @map("post_id")
@@ -226,8 +226,8 @@ model File {
   storageKey   String       @map("storage_key") @db.VarChar(255)
   provider     FileProvider @map("provider")
   mimeType     String       @map("mime_type") @db.VarChar(255)
+  mainImage    Boolean      @default(false) @map("main_image")
   size         Int          @map("size")
-  folder       FileFolder
   metadata     Json?        @map("metadata") @db.Json
   originalName String       @map("original_name") @db.VarChar(255)
   createdAt    DateTime     @default(now()) @map("created_at")
@@ -237,7 +237,7 @@ model File {
   @@index([postId])
   @@index([uploadedById])
   @@index([provider])
-  @@index([folder])
-  @@index([postId, folder])
-  @@map("files")
+  @@index([createdAt])
+  @@unique([postId, mainImage])
+  @@map("post_files")
 }

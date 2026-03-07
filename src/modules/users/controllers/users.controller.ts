@@ -1,7 +1,7 @@
 import { Controller, Get, Patch, Body, Delete } from '@nestjs/common';
 import { CurrentUser } from '../../../common/decorators';
 import { type AuthenticatedUser } from '../../../common/interfaces';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import { UpdateUserDto, UpdatePasswordDto } from '../dtos';
 import { UserProfileOutput } from '../types';
 import { UsersService } from '../services';
@@ -16,7 +16,7 @@ export class UsersController {
   }
 
   @Patch('/me')
-  async updateMe(@CurrentUser() user: AuthenticatedUser, @Body() inp: UpdateUserDto): Promise<MessageResponse> {
+  async updateMe(@CurrentUser() user: AuthenticatedUser, @Body() inp: UpdateUserDto): Promise<ResponseMessage> {
     return this.usersService.updateProfile(user.userId, inp);
   }
 
@@ -24,12 +24,12 @@ export class UsersController {
   async updatePassword(
     @CurrentUser() user: AuthenticatedUser,
     @Body() inp: UpdatePasswordDto,
-  ): Promise<MessageResponse> {
+  ): Promise<ResponseMessage> {
     return this.usersService.updatePassword(user.userId, inp);
   }
 
   @Delete('/me')
-  async deleteMe(@CurrentUser() user: AuthenticatedUser): Promise<MessageResponse> {
+  async deleteMe(@CurrentUser() user: AuthenticatedUser): Promise<ResponseMessage> {
     return this.usersService.remove(user.userId);
   }
 }

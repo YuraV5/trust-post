@@ -1,5 +1,5 @@
 import { UserRoles } from '@prisma/client';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import {
   NewUserInput,
   UpdatePasswordInput,
@@ -17,19 +17,19 @@ export interface IUserService {
   findByEmail(email: string): Promise<UserSecyredOutput | null>;
   getUserById(id: string): Promise<UserOutput>;
   create(inp: NewUserInput): Promise<{ userId: string }>;
-  remove(id: string): Promise<MessageResponse>;
-  updateProfile(id: string, inp: UpdateUserInput): Promise<MessageResponse>;
-  updatePassword(id: string, inp: UpdatePasswordInput): Promise<MessageResponse>;
+  remove(id: string): Promise<ResponseMessage>;
+  updateProfile(id: string, inp: UpdateUserInput): Promise<ResponseMessage>;
+  updatePassword(id: string, inp: UpdatePasswordInput): Promise<ResponseMessage>;
   findAuthUserbyId(id: string): Promise<UserSecyredOutput | null>;
   markEmailAsVerified(userId: string): Promise<void>;
   resetPasswordThroughEmail(email: string, newPassword: string): Promise<void>;
 
   // Admin methods
   findByIdForAdmin(id: string): Promise<UserAdminOutput>;
-  createUserByAdmin(inp: CreateByAdminInput, adminId: string): Promise<MessageResponse>;
-  updateStatus(id: string): Promise<MessageResponse>;
-  changeRoles(id: string, userId: string, role: UserRoles): Promise<MessageResponse>;
+  createUserByAdmin(inp: CreateByAdminInput, adminId: string): Promise<ResponseMessage>;
+  updateStatus(id: string): Promise<ResponseMessage>;
+  changeRoles(id: string, userId: string, role: UserRoles): Promise<ResponseMessage>;
   findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<UserAdminOutput>>;
-  deleteMany(ids: string[]): Promise<MessageResponse>;
+  deleteMany(ids: string[]): Promise<ResponseMessage>;
   getUserRoleHistory(userId: string): Promise<UserRolePeriodOutput[]>;
 }

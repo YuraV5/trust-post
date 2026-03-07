@@ -11,6 +11,7 @@ import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { ICloudinaryClient } from '../../interfaces/cloudinary';
 import { executeWithRetry } from '../../../../common/utils/retry.util';
 import { CONCURRENCY_LIMIT, MAX_RETRIES, RATE_LIMIT_DELAY_MS, RETRYABLE_STATUSES, TIMEOUT_MS } from '../../consts';
+import { FileProvider } from '@prisma/client/wasm';
 
 type ResourceType = 'auto' | 'image' | 'video' | 'raw';
 
@@ -83,16 +84,14 @@ export class CloudinaryClientService implements ICloudinaryClient {
 
   async delete(storageKeys: string[]): Promise<void> {
     const client = this.getClient();
-    await Promise.all(
-      storageKeys.map(async (key) => {
-        await this.applyRateLimit();
-        return executeWithRetry(() => client.uploader.destroy(key), {
-          maxRetries: MAX_RETRIES,
-          timeoutMs: TIMEOUT_MS.delete,
-          retryableStatuses: RETRYABLE_STATUSES,
-        });
-      }),
-    );
+
+    await this.applyRateLimit();
+
+    await executeWithRetry(() => client.api.delete_resources(storageKeys), {
+      maxRetries: MAX_RETRIES,
+      timeoutMs: TIMEOUT_MS.delete,
+      retryableStatuses: RETRYABLE_STATUSES,
+    });
   }
 
   async deleteFolder(folder: string): Promise<void> {
@@ -144,8 +143,9 @@ export class CloudinaryClientService implements ICloudinaryClient {
       url: uploadResult.secure_url,
       storageKey: uploadResult.public_id,
       size: uploadResult.bytes,
-      originName: file.originalname,
+      originalName: file.originalname,
       mimeType: file.mimetype,
+      provider: FileProvider.CLOUDINARY,
       metadata: {
         width: uploadResult.width || 0,
         height: uploadResult.height || 0,

@@ -1,8 +1,10 @@
+import { FileProvider } from '@prisma/client/edge';
+
 export type FileStorageInfo = {
   resourceId: number;
   userId: string;
   fileFolder: FileFolder;
-  storage: StorageType;
+  storage: FileProvider;
 };
 
 export type FileUploadOptions = {
@@ -10,15 +12,16 @@ export type FileUploadOptions = {
   type: FileFolder;
   userId: string;
   resourceId: string;
-  storage: StorageType;
+  storage: FileProvider;
 };
 
 export type FileUploadResult = {
   url: string;
   storageKey: string;
   size: number;
-  originName: string;
+  originalName: string;
   mimeType: string;
+  provider: FileProvider;
   metadata: {
     width: number;
     height: number;
@@ -44,7 +47,8 @@ export enum FileFolder {
   CHATS = 'chats',
 }
 
-export enum StorageType {
-  CLOUDINARY = 'cloudinary',
-  LOCAL = 'local',
-}
+export type NewFileRecordData = FileUploadResult & {
+  uploadedById: string;
+  postId: number;
+  mainImage?: boolean;
+};

@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } f
 import { PostsService } from '../services';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { CurrentUser, PublicRoute } from '../../../common/decorators';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { Post as Publication } from '@prisma/client';
@@ -41,7 +41,7 @@ export class PublicPostsController {
 
   @UseGuards(OwnershipGuard({ model: 'post' }))
   @Patch('/:id')
-  async editPostDetails(@Param() params: NumericIdParamDto, @Body() inp: UpdatePostDto): Promise<MessageResponse> {
+  async editPostDetails(@Param() params: NumericIdParamDto, @Body() inp: UpdatePostDto): Promise<ResponseMessage> {
     return await this.postsService.update([params.id], inp);
   }
 
@@ -50,7 +50,7 @@ export class PublicPostsController {
   async modifyPostStatus(
     @Param() params: NumericIdParamDto,
     @Body() inp: ModifyUserPostStatusDto,
-  ): Promise<MessageResponse> {
+  ): Promise<ResponseMessage> {
     return await this.postsService.editUserPostStatus(params.id, inp);
   }
 
@@ -64,7 +64,7 @@ export class PublicPostsController {
 
   @UseGuards(OwnershipGuard({ model: 'post' }))
   @Delete('/:id')
-  async deletePost(@Param() params: NumericIdParamDto, @Body() inp: DeletePostByUserDto): Promise<MessageResponse> {
+  async deletePost(@Param() params: NumericIdParamDto, @Body() inp: DeletePostByUserDto): Promise<ResponseMessage> {
     return await this.postsService.delete([params.id], inp.statusReason);
   }
 }

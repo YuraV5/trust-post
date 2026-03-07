@@ -5,7 +5,7 @@ import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { SessionsRepo } from '../repo/session-repo';
 import { mapSessions } from '../mappers';
 import { HashingService } from '../../../security/services';
-import { MessageResponse } from '../../../../common/types';
+import { ResponseMessage } from '../../../../common/types';
 import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
 import { AppForbiddenException, AppNotFoundException } from '../../../../shared/errors/app-errors';
 
@@ -31,7 +31,7 @@ export class SessionsService implements ISessionService {
     await this.sessionRepo.upsert(data);
   }
 
-  async deleteAllExceptCurrentSession(userId: string, sessionId: string): Promise<MessageResponse> {
+  async deleteAllExceptCurrentSession(userId: string, sessionId: string): Promise<ResponseMessage> {
     const deletedCount = await this.sessionRepo.deleteSessionsExceptCurrent(userId, sessionId);
     if (deletedCount === 0) {
       this.logger.warn(`No sessions deleted for user ${userId} except ${sessionId}`);
@@ -44,7 +44,7 @@ export class SessionsService implements ISessionService {
     await this.sessionRepo.update(sessionId, { lastUsedAt: new Date() });
   }
 
-  async deleteBySessionId(sessionId: string, userId: string): Promise<MessageResponse> {
+  async deleteBySessionId(sessionId: string, userId: string): Promise<ResponseMessage> {
     // Check if session exists and belongs to the user
     const session = await this.sessionRepo.findById(sessionId);
 
@@ -65,7 +65,7 @@ export class SessionsService implements ISessionService {
     return { message: 'Session deleted' };
   }
 
-  async deleteAllSessions(userId: string): Promise<MessageResponse> {
+  async deleteAllSessions(userId: string): Promise<ResponseMessage> {
     const deletedCount = await this.sessionRepo.deleteByUserId(userId);
 
     if (deletedCount === 0) {

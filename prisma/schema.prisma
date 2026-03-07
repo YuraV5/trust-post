@@ -212,7 +212,6 @@ model PostLike {
 }
 
 enum FileProvider {
-  LOCAL      @map("local")
   CLOUDINARY @map("cloudinary")
 
   @@map("file_providers")
@@ -238,6 +237,5 @@ model PostFile {
   @@index([uploadedById])
   @@index([provider])
   @@index([createdAt])
-  @@unique([postId, mainImage])
   @@map("post_files")
 }

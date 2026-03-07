@@ -1,6 +1,6 @@
 import { PostsReviewService } from './../services/posts-review.service';
 import { Body, Controller, Delete, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { PostsService } from '../services';
 import { CurrentUser, Roles } from '../../../common/decorators';
@@ -25,7 +25,7 @@ export class StaffPostsController {
     @Param() params: NumericIdParamDto,
     @CurrentUser() user: AuthenticatedUser,
     @Body() data: PostStatusLifecycleDto,
-  ): Promise<MessageResponse> {
+  ): Promise<ResponseMessage> {
     return await this.postsReviewService.modifyPostReviewStatus(params.id, user.userId, data);
   }
 
@@ -46,7 +46,7 @@ export class StaffPostsController {
   async deletePosts(
     @CurrentUser() user: AuthenticatedUser,
     @Body() data: DeleteManyPostsDto,
-  ): Promise<MessageResponse> {
+  ): Promise<ResponseMessage> {
     return await this.postsReviewService.purgePostReviewDataByAdmin(data.postIds, user.userId);
   }
 }

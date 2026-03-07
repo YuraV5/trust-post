@@ -5,7 +5,7 @@ import { UserRoles } from '@prisma/client';
 import { UsersService } from '../services';
 import { UUIDParamDto } from '../../../common/dtos/req-params.dto';
 import { UserAdminOutput } from '../types';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import { UpdateRolesDto, AdminUsersQueryDto, AdminDeleteDto, AdminUserCreationDto } from '../dtos';
 import { PaginatedResult } from '../types/paginated';
 import { type AuthenticatedUser } from '../../../common/interfaces';
@@ -27,7 +27,7 @@ export class AdminUsersController {
   async createUser(
     @Body() inp: AdminUserCreationDto,
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<MessageResponse> {
+  ): Promise<ResponseMessage> {
     return await this.usersService.createUserByAdmin(inp, currentUser.userId);
   }
 
@@ -39,7 +39,7 @@ export class AdminUsersController {
 
   @Roles(UserRoles.ADMIN)
   @Get('/:id/toggle-status')
-  async updateStatus(@Param() params: UUIDParamDto): Promise<MessageResponse> {
+  async updateStatus(@Param() params: UUIDParamDto): Promise<ResponseMessage> {
     return await this.usersService.updateStatus(params.id);
   }
 
@@ -49,7 +49,7 @@ export class AdminUsersController {
     @Param() params: UUIDParamDto,
     @Body() data: UpdateRolesDto,
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<MessageResponse> {
+  ): Promise<ResponseMessage> {
     return await this.usersService.changeRoles(params.id, currentUser.userId, data.role);
   }
 
@@ -61,7 +61,7 @@ export class AdminUsersController {
 
   @Roles(UserRoles.ADMIN)
   @Delete()
-  async deleteUser(@Body() data: AdminDeleteDto): Promise<MessageResponse> {
+  async deleteUser(@Body() data: AdminDeleteDto): Promise<ResponseMessage> {
     return await this.usersService.deleteMany(data.ids);
   }
 }

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, ArrayNotEmpty, IsString, IsEnum } from 'class-validator';
-import { StorageType } from '../types';
+import { FileProvider } from '@prisma/client';
 
 export class DeleteFilesDto {
   @ApiProperty({ description: 'Storage keys to delete', type: [String], example: ['users/123/posts/1/file-key'] })
@@ -10,6 +10,6 @@ export class DeleteFilesDto {
   keys: string[];
 
   @ApiProperty({ description: 'Storage type where files are stored' })
-  @IsEnum(StorageType)
-  storage: StorageType;
+  @IsEnum(FileProvider)
+  storage: FileProvider;
 }

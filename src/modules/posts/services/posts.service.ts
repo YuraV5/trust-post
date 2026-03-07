@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PostsLikeRepo, PostsRepo } from '../repos';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import { CreatePost, StaffPostUpdate, PaginatedResult, SortBy, EditUserPostStatus } from '../types';
 import { Post } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
@@ -56,7 +56,7 @@ export class PostsService implements IPostsService {
     return post;
   }
 
-  async editUserPostStatus(postId: number, data: EditUserPostStatus): Promise<MessageResponse> {
+  async editUserPostStatus(postId: number, data: EditUserPostStatus): Promise<ResponseMessage> {
     const result = await this.postsRepo.updateStatus(postId, {
       postStatus: data.status,
       statusReason: data.statusReason,
@@ -67,7 +67,7 @@ export class PostsService implements IPostsService {
     return { message: 'Post status updated successfully' };
   }
 
-  async update(postIds: number[], data: StaffPostUpdate): Promise<MessageResponse> {
+  async update(postIds: number[], data: StaffPostUpdate): Promise<ResponseMessage> {
     if (!hasUpdatableFields(data)) {
       throw new AppBadRequestException('At least one field must be provided for update');
     }
@@ -94,7 +94,7 @@ export class PostsService implements IPostsService {
     return { message: 'Post updated successfully' };
   }
 
-  async delete(postIds: number[], statusReason?: string): Promise<MessageResponse> {
+  async delete(postIds: number[], statusReason?: string): Promise<ResponseMessage> {
     const result = await this.postsRepo.delete(postIds, statusReason);
     if (result.count === 0) {
       throw new AppNotFoundException('No posts were deleted');
@@ -102,7 +102,7 @@ export class PostsService implements IPostsService {
     return { message: 'Post deleted successfully' };
   }
 
-  async deleteManyByAdmin(postIds: number[], adminId: string): Promise<MessageResponse> {
+  async deleteManyByAdmin(postIds: number[], adminId: string): Promise<ResponseMessage> {
     const result = await this.postsRepo.deleteByAdmin(postIds);
     if (result.count === 0) {
       throw new AppNotFoundException('No posts were deleted');

@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { CommentsService } from './comments.service';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { CurrentUser, PublicRoute, Roles } from '../../../common/decorators';
 import { type AuthenticatedUser } from '../../../common/interfaces';
@@ -18,7 +18,7 @@ export class CommentsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param() params: PostIdParamDto,
     @Body() data: CreateCommentDto,
-  ): Promise<MessageResponse> {
+  ): Promise<ResponseMessage> {
     return await this.commentsService.create(params.postId, user.userId, {
       postId: params.postId,
       content: data.content,
@@ -36,20 +36,20 @@ export class CommentsController {
 
   @UseGuards(OwnershipGuard({ model: 'comment' }))
   @Patch('comments/:id')
-  async updateComment(@Param() params: NumericIdParamDto, @Body() data: UpdateCommentDto): Promise<MessageResponse> {
+  async updateComment(@Param() params: NumericIdParamDto, @Body() data: UpdateCommentDto): Promise<ResponseMessage> {
     return await this.commentsService.update(params.id, data);
   }
 
   @UseGuards(RolesGuard)
   @Roles(UserRoles.MODERATOR)
   @Delete('comments/moderate')
-  async deleteCommentsByModerator(@Body() data: DeleteCommentsDto): Promise<MessageResponse> {
+  async deleteCommentsByModerator(@Body() data: DeleteCommentsDto): Promise<ResponseMessage> {
     return await this.commentsService.deleteByModerator(data.ids);
   }
 
   @UseGuards(OwnershipGuard({ model: 'comment' }))
   @Delete('comments/:id')
-  async deleteComment(@Param() params: NumericIdParamDto): Promise<MessageResponse> {
+  async deleteComment(@Param() params: NumericIdParamDto): Promise<ResponseMessage> {
     return await this.commentsService.delete(params.id);
   }
 }

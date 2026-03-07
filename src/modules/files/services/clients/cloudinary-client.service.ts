@@ -9,13 +9,15 @@ import { FileFolder, FileUploadResult, FileStorageInfo, FileUploadResponse } fro
 import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { ICloudinaryClient } from '../../interfaces/cloudinary';
+import { executeWithRetry } from '../../../../common/utils/retry.util';
+import { CONCURRENCY_LIMIT, MAX_RETRIES, RATE_LIMIT_DELAY_MS, RETRYABLE_STATUSES, TIMEOUT_MS } from '../../consts';
 
 type ResourceType = 'auto' | 'image' | 'video' | 'raw';
-const CONCURRENCY_LIMIT = 3;
 
 @Injectable()
 export class CloudinaryClientService implements ICloudinaryClient {
   private client: typeof cloudinary;
+  private lastRequestTime = 0;
 
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
@@ -81,12 +83,25 @@ export class CloudinaryClientService implements ICloudinaryClient {
 
   async delete(storageKeys: string[]): Promise<void> {
     const client = this.getClient();
-    await Promise.all(storageKeys.map((key) => client.uploader.destroy(key)));
+    await Promise.all(
+      storageKeys.map(async (key) => {
+        await this.applyRateLimit();
+        return executeWithRetry(() => client.uploader.destroy(key), {
+          maxRetries: MAX_RETRIES,
+          timeoutMs: TIMEOUT_MS.delete,
+          retryableStatuses: RETRYABLE_STATUSES,
+        });
+      }),
+    );
   }
 
   async deleteFolder(folder: string): Promise<void> {
     const client = this.getClient();
-    await client.api.delete_resources_by_prefix(folder);
+    await executeWithRetry(() => client.api.delete_resources_by_prefix(folder), {
+      maxRetries: MAX_RETRIES,
+      timeoutMs: TIMEOUT_MS.delete,
+      retryableStatuses: RETRYABLE_STATUSES,
+    });
   }
 
   private uploadStream(
@@ -111,12 +126,19 @@ export class CloudinaryClientService implements ICloudinaryClient {
     file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
     data: FileStorageInfo,
   ): Promise<FileUploadResult> {
-    const stream = Readable.from(file.buffer);
-    const uploadResult = await this.uploadStream(stream, {
-      folder: this.getFolder(data.fileFolder, data.userId, String(data.resourceId)),
-      public_id: `${Date.now()}_${randomUUID()}`,
-      resource_type: 'auto',
-    });
+    await this.applyRateLimit();
+
+    const uploadResult = await executeWithRetry(
+      async () => {
+        const stream = Readable.from(file.buffer);
+        return this.uploadStream(stream, {
+          folder: this.constructFilePath(data.fileFolder, data.userId, String(data.resourceId)),
+          public_id: `${Date.now()}_${randomUUID()}`,
+          resource_type: 'auto',
+        });
+      },
+      { maxRetries: MAX_RETRIES, timeoutMs: TIMEOUT_MS.upload, retryableStatuses: RETRYABLE_STATUSES },
+    );
 
     return {
       url: uploadResult.secure_url,
@@ -132,11 +154,23 @@ export class CloudinaryClientService implements ICloudinaryClient {
     };
   }
 
-  private getFolder(type: FileFolder, userId: string, resourceId?: string): string {
+  private constructFilePath(type: FileFolder, userId: string, resourceId?: string): string {
     const appName = this.config.get<string>('serviceName') || 'trust-post';
     const base = `${appName}/${userId}/${type}`;
     if (type === FileFolder.AVATAR) return base;
     if (!resourceId) throw new AppBadRequestException(`${type} requires resourceId`);
     return `${base}/${resourceId}`;
+  }
+
+  // Rate limiting: ensures minimum delay between API requests
+  private async applyRateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+
+    if (timeSinceLastRequest < RATE_LIMIT_DELAY_MS) {
+      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY_MS - timeSinceLastRequest));
+    }
+
+    this.lastRequestTime = Date.now();
   }
 }

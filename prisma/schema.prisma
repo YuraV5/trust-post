@@ -133,6 +133,7 @@ model Post {
   comments    Comment[]
   likes       PostLike[]
   files       PostFile[]
+  chat        Chat?
 
   @@index([status])
   @@index([authorId])
@@ -253,6 +254,7 @@ model PostFile {
 enum ChatType {
   PRIVATE @map("private")
   GROUP   @map("group")
+  POST    @map("post")
 
   @@map("chat_types")
 }
@@ -261,14 +263,19 @@ model Chat {
   id        String   @id @default(uuid())
   type      ChatType @default(PRIVATE)
   title     String?  @db.VarChar(255)
+  postId    Int?     @map("post_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   members     ChatMember[]
   messages    Message[]
   PrivateChat PrivateChat?
+  post        Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
 
+  @@unique([postId])
   @@index([type])
+  @@index([title])
+  @@index([postId])
   @@map("chats")
 }
 

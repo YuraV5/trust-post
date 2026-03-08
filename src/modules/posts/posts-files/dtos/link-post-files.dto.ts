@@ -10,6 +10,7 @@ import {
   IsNumber,
   Min,
   IsObject,
+  IsEnum,
 } from 'class-validator';
 import { FileProvider } from '@prisma/client';
 
@@ -50,6 +51,7 @@ export class LinkFileRecordDto {
   mimeType: string;
 
   @ApiProperty({ description: 'Storage provider (CLOUDINARY, etc.)' })
+  @IsEnum(FileProvider)
   provider: FileProvider;
 
   @ApiProperty({ description: 'File metadata (dimensions, format)' })

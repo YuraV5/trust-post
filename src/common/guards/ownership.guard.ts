@@ -85,7 +85,7 @@ export function OwnershipGuard(options: OwnershipGuardOptions): Type<CanActivate
      */
     private convertIdType(id: string, model: string): string | number {
       // Models with Int ID
-      const intIdModels = ['post', 'comment', 'postReview', 'commentLike', 'postLike'];
+      const intIdModels = ['post', 'comment', 'postReview', 'commentLike', 'postLike', 'postFile'];
 
       if (intIdModels.includes(model.toLowerCase())) {
         const numId = parseInt(id, 10);

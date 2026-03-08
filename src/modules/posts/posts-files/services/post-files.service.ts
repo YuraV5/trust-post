@@ -23,29 +23,37 @@ export class PostFilesService {
     }
 
     const postId = data[0].postId;
-    const existingCount = await this.postFilesRepo.countFilesByPostId(postId);
-    const totalAfterUpload = existingCount + data.length;
-
-    if (totalAfterUpload > this.MAX_FILES_PER_POST) {
-      const exceededBy = totalAfterUpload - this.MAX_FILES_PER_POST;
-      const maxCanUpload = this.MAX_FILES_PER_POST - existingCount;
-      this.logger.warn(
-        `Upload rejected: Post ${postId} would exceed ${this.MAX_FILES_PER_POST} files limit. Current: ${existingCount}, Attempted: ${data.length}`,
-      );
-      return {
-        message: `Cannot upload ${data.length} files. Post has ${existingCount} files. Maximum is ${this.MAX_FILES_PER_POST}. Delete ${exceededBy} file(s) or upload only ${maxCanUpload} file(s).`,
-      };
+    if (!this.validateFileScope(data)) {
+      this.logger.warn(`Upload rejected: File scope validation failed for post ${postId}`);
+      return { message: 'Invalid file scope. Link only files uploaded by you for this post.' };
     }
 
-    const hasExistingMain = await this.postFilesRepo.hasMainImage(postId);
-    const normalizedData = this.normalizeMainImageValues(data, hasExistingMain);
+    return this.postFilesRepo.withPostLock(postId, async (tx) => {
+      const existingCount = await this.postFilesRepo.countFilesByPostId(postId, tx);
+      const totalAfterUpload = existingCount + data.length;
 
-    const result = await this.postFilesRepo.insertMultipleFiles(normalizedData);
-    if (result.count === 0) {
-      return { message: 'No new files were linked to the post (possible duplicates)' };
-    }
-    this.logger.debug(`${result.count} files uploaded and linked to post successfully`);
-    return { message: 'Files uploaded and linked to post successfully' };
+      if (totalAfterUpload > this.MAX_FILES_PER_POST) {
+        const exceededBy = totalAfterUpload - this.MAX_FILES_PER_POST;
+        const maxCanUpload = this.MAX_FILES_PER_POST - existingCount;
+        this.logger.warn(
+          `Upload rejected: Post ${postId} would exceed ${this.MAX_FILES_PER_POST} files limit. Current: ${existingCount}, Attempted: ${data.length}`,
+        );
+        return {
+          message: `Cannot upload ${data.length} files. Post has ${existingCount} files. Maximum is ${this.MAX_FILES_PER_POST}. Delete ${exceededBy} file(s) or upload only ${maxCanUpload} file(s).`,
+        };
+      }
+
+      const hasExistingMain = await this.postFilesRepo.hasMainImage(postId, tx);
+      const normalizedData = this.normalizeMainImageValues(data, hasExistingMain);
+
+      const result = await this.postFilesRepo.insertMultipleFiles(normalizedData, tx);
+      if (result.count === 0) {
+        return { message: 'No new files were linked to the post (possible duplicates)' };
+      }
+
+      this.logger.debug(`${result.count} files uploaded and linked to post successfully`);
+      return { message: 'Files uploaded and linked to post successfully' };
+    });
   }
 
   async deleteFilesByPostId(postId: number): Promise<ResponseMessage> {
@@ -153,6 +161,26 @@ export class PostFilesService {
 
   private getErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+  }
+
+  private validateFileScope(data: NewFileRecordData[]): boolean {
+    const first = data[0];
+    if (!first) return false;
+
+    const expectedPathFragment = `/${first.uploadedById}/posts/${first.postId}/`;
+
+    return data.every((file) => {
+      if (file.postId !== first.postId || file.uploadedById !== first.uploadedById) {
+        return false;
+      }
+
+      if (file.provider !== FileProvider.CLOUDINARY) {
+        return false;
+      }
+
+      const normalizedStorageKey = file.storageKey.replace(/\\/g, '/');
+      return normalizedStorageKey.includes(expectedPathFragment);
+    });
   }
 
   private groupStorageKeysByProvider(rows: GroupedPostFileKeysRow[]): Partial<Record<FileProvider, string[]>> {

@@ -4,19 +4,19 @@ import { LinkPostFilesDto } from '../dtos';
 import { type AuthenticatedUser } from '../../../../common/interfaces';
 import { CurrentUser } from '../../../../common/decorators';
 import { OwnershipGuard } from '../../../../common/guards';
-import { PostFile } from '@prisma/client/wasm';
+import { PostFile } from '@prisma/client';
 
 @Controller('posts')
 export class PostFilesController {
   constructor(private readonly postFilesService: PostFilesService) {}
 
   @Post('/:postId/files/link')
+  @UseGuards(OwnershipGuard({ model: 'post', paramKey: 'postId' }))
   async linkFilesToPost(
     @Param('postId', ParseIntPipe) postId: number,
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: LinkPostFilesDto,
   ): Promise<{ message: string }> {
-    // TODO: Verify files belong to user and were uploaded
     const data = body.files.map((file) => ({
       ...file,
       postId,
@@ -30,13 +30,13 @@ export class PostFilesController {
     return this.postFilesService.getPostFiles(postId);
   }
 
-  @UseGuards(OwnershipGuard({ model: 'postFile' }))
+  @UseGuards(OwnershipGuard({ model: 'postFile', paramKey: 'fileId' }))
   @Delete('/:postId/files/:fileId')
   async deletePostFile(@Param('fileId', ParseIntPipe) fileId: number): Promise<{ message: string }> {
     return this.postFilesService.deleteFileById(fileId);
   }
 
-  @UseGuards(OwnershipGuard({ model: 'post' }))
+  @UseGuards(OwnershipGuard({ model: 'post', paramKey: 'postId' }))
   @Patch('/:postId/files/:fileId/main')
   async setMainImage(
     @Param('postId', ParseIntPipe) postId: number,

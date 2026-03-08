@@ -221,7 +221,7 @@ model PostFile {
   id           Int          @id @default(autoincrement())
   url          String       @db.VarChar(512)
   postId       Int          @map("post_id")
-  authorId     String       @map("uploaded_by_id")
+  uploadedById String       @map("uploaded_by_id")
   storageKey   String       @map("storage_key") @db.VarChar(255)
   provider     FileProvider @map("provider")
   mimeType     String       @map("mime_type") @db.VarChar(255)
@@ -236,6 +236,8 @@ model PostFile {
   @@index([postId])
   @@index([uploadedById])
   @@index([provider])
+  @@index([postId, mainImage])
   @@index([createdAt])
+  @@unique([postId, provider, storageKey])
   @@map("post_files")
 }

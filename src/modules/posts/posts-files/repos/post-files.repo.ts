@@ -7,13 +7,27 @@ import { FileProvider, PostFile, Prisma } from '@prisma/client';
 export class PostFilesRepo {
   constructor(private readonly db: PrismaService) {}
 
-  async insertMultipleFiles(data: NewFileRecordData[]): Promise<{ count: number }> {
-    const result = await this.db.postFile.createMany({
+  async insertMultipleFiles(data: NewFileRecordData[], tx?: Prisma.TransactionClient): Promise<{ count: number }> {
+    const client = tx ?? this.db;
+    const result = await client.postFile.createMany({
       data,
       skipDuplicates: true,
     });
 
     return { count: result.count };
+  }
+
+  async withPostLock<T>(postId: number, fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw(Prisma.sql`
+        SELECT id
+        FROM posts
+        WHERE id = ${postId}
+        FOR UPDATE
+      `);
+
+      return fn(tx);
+    });
   }
 
   async getGroupedFilesByPostId(postId: number): Promise<GroupedPostFileKeysRow[]> {
@@ -77,14 +91,16 @@ export class PostFilesRepo {
     return { count: result.count };
   }
 
-  async countFilesByPostId(postId: number): Promise<number> {
-    return this.db.postFile.count({
+  async countFilesByPostId(postId: number, tx?: Prisma.TransactionClient): Promise<number> {
+    const client = tx ?? this.db;
+    return client.postFile.count({
       where: { postId },
     });
   }
 
-  async hasMainImage(postId: number): Promise<boolean> {
-    const existing = await this.db.postFile.findFirst({
+  async hasMainImage(postId: number, tx?: Prisma.TransactionClient): Promise<boolean> {
+    const client = tx ?? this.db;
+    const existing = await client.postFile.findFirst({
       where: { postId, mainImage: true },
       select: { id: true },
     });

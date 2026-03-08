@@ -22,6 +22,9 @@ import { PostsModule } from './modules/posts/posts.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { FilesModule } from './modules/files/files.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { MessageModule } from './modules/message/message.module';
+import { SocketModule } from './modules/socket/socket.module';
 
 @Module({
   imports: [
@@ -51,6 +54,9 @@ import { FilesModule } from './modules/files/files.module';
     PostsModule,
     MaintenanceModule,
     FilesModule,
+    ChatModule,
+    MessageModule,
+    SocketModule,
   ],
   controllers: [],
   providers: [

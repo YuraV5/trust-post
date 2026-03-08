@@ -34,6 +34,10 @@ model User {
   comments        Comment[]
   commentLikes    CommentLike[]
   postLikes       PostLike[]
+  chatMembers     ChatMember[]
+  messagesSent    Message[]
+  privateChats1   PrivateChat[]    @relation("private_chat_user1")
+  privateChats2   PrivateChat[]    @relation("private_chat_user2")
 
   @@index([createdAt])
   @@index([role])
@@ -129,6 +133,7 @@ model Post {
   comments    Comment[]
   likes       PostLike[]
   files       PostFile[]
+  chat        Chat?
 
   @@index([status])
   @@index([authorId])
@@ -241,3 +246,107 @@ model PostFile {
   @@unique([postId, provider, storageKey])
   @@map("post_files")
 }
+
+// ========================
+// Chat Models
+// ========================
+
+enum ChatType {
+  PRIVATE @map("private")
+  GROUP   @map("group")
+  POST    @map("post")
+
+  @@map("chat_types")
+}
+
+model Chat {
+  id        String   @id @default(uuid())
+  type      ChatType @default(PRIVATE)
+  title     String?  @db.VarChar(255)
+  postId    Int?     @map("post_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members     ChatMember[]
+  messages    Message[]
+  PrivateChat PrivateChat?
+  post        Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId])
+  @@index([type])
+  @@index([title])
+  @@index([postId])
+  @@map("chats")
+}
+
+model PrivateChat {
+  id        String   @id @default(uuid())
+  chatId    String   @unique @map("chat_id")
+  user1Id   String   @map("user1_id")
+  user2Id   String   @map("user2_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  chat  Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user1 User @relation("private_chat_user1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2 User @relation("private_chat_user2", fields: [user2Id], references: [id], onDelete: Cascade)
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+  @@map("private_chats")
+}
+
+model ChatMember {
+  id         String    @id @default(uuid())
+  chatId     String    @map("chat_id")
+  userId     String    @map("user_id")
+  joinedAt   DateTime  @default(now()) @map("joined_at")
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([chatId])
+  @@index([userId])
+  @@map("chat_members")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String   @map("chat_id")
+  senderId  String   @map("sender_id")
+  content   String   @db.Text
+  isDeleted Boolean  @default(false) @map("is_deleted")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  chat   Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  files  MessageFile[]
+
+  @@index([chatId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model MessageFile {
+  id           String       @id @default(uuid())
+  messageId    String       @map("message_id")
+  url          String       @db.VarChar(512)
+  storageKey   String       @map("storage_key") @db.VarChar(255)
+  provider     FileProvider @map("provider")
+  mimeType     String       @map("mime_type") @db.VarChar(255)
+  size         Int          @map("size")
+  originalName String       @map("original_name") @db.VarChar(255)
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([provider])
+  @@index([createdAt])
+  @@map("message_files")
+}
+
+

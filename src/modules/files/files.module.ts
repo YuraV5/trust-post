@@ -1,13 +1,11 @@
 import { Module } from '@nestjs/common';
-import { FilesController } from './controllers/files.controller';
+import { FilesController } from './controllers';
 import { CloudinaryClientService } from './services/clients';
-import { FilesService, PostFilesService } from './services';
-import { AdminFilesController } from './controllers';
-import { PostFilesRepo } from './repos';
+import { FilesService } from './services';
 
 @Module({
-  controllers: [FilesController, AdminFilesController],
-  providers: [FilesService, PostFilesService, PostFilesRepo, CloudinaryClientService],
-  exports: [FilesService, PostFilesService],
+  controllers: [FilesController],
+  providers: [FilesService, CloudinaryClientService],
+  exports: [FilesService, CloudinaryClientService],
 })
 export class FilesModule {}

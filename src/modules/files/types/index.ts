@@ -46,9 +46,3 @@ export enum FileFolder {
   POSTS = 'posts',
   CHATS = 'chats',
 }
-
-export type NewFileRecordData = FileUploadResult & {
-  uploadedById: string;
-  postId: number;
-  mainImage?: boolean;
-};

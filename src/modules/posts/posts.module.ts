@@ -10,6 +10,7 @@ import { PostsQueueProcessor, PostsQueueService } from './queue';
 import { PostsReviewService } from './services';
 import { EmailsModule } from '../emails/emails.module';
 import { CommentsModule } from './comments/comments.module';
+import { PostsFilesModule } from './posts-files/posts-files.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CommentsModule } from './comments/comments.module';
     UsersModule,
     EmailsModule,
     CommentsModule,
+    PostsFilesModule,
   ],
   controllers: [PublicPostsController, StaffPostsController],
   providers: [

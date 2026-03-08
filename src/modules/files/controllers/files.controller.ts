@@ -6,7 +6,6 @@ import {
   ParseFilePipeBuilder,
   Post,
   UploadedFiles,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -15,7 +14,6 @@ import { type AuthenticatedUser } from '../../../common/interfaces';
 import { type FileStorageInfo } from '../types';
 import { DeleteFilesDto, UploadDocumentsDto } from '../dtos';
 import { FilesService } from '../services';
-import { OwnershipGuard } from '../../../common/guards';
 
 @Controller('files')
 export class FilesController {
@@ -26,7 +24,7 @@ export class FilesController {
   async uploadImages(
     @UploadedFiles(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({ fileType: /image\/(jpeg|png|gif)/ })
+        .addFileTypeValidator({ fileType: /image\/(jpeg|png|gif|webp)/ })
         .addMaxSizeValidator({ maxSize: 5 * 1024 * 1024 })
         .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
     )
@@ -56,7 +54,6 @@ export class FilesController {
     return this.filesService.upload(files, { ...body, userId: user.userId });
   }
 
-  @UseGuards(OwnershipGuard({ model: 'file' }))
   @Delete('/delete')
   async deleteFiles(@Body() body: DeleteFilesDto) {
     return this.filesService.delete(body.keys, body.storage);

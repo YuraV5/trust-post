@@ -1,14 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PostFilesRepo } from '../repos';
-import { FilesService } from './files.service';
-import { ResponseMessage } from '../../../common/types';
-import { NewFileRecordData } from '../types';
-import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
-import { FileProvider } from '@prisma/client';
+import { FilesService } from '../../../files/services/files.service';
+import { ResponseMessage } from '../../../../common/types';
+import { GroupedPostFileKeysRow, NewFileRecordData } from '../types';
+import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
+import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { FileProvider, PostFile } from '@prisma/client';
 
 @Injectable()
 export class PostFilesService {
+  private readonly MAX_FILES_PER_POST = 10;
+
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly postFilesRepo: PostFilesRepo,
@@ -21,6 +23,20 @@ export class PostFilesService {
     }
 
     const postId = data[0].postId;
+    const existingCount = await this.postFilesRepo.countFilesByPostId(postId);
+    const totalAfterUpload = existingCount + data.length;
+
+    if (totalAfterUpload > this.MAX_FILES_PER_POST) {
+      const exceededBy = totalAfterUpload - this.MAX_FILES_PER_POST;
+      const maxCanUpload = this.MAX_FILES_PER_POST - existingCount;
+      this.logger.warn(
+        `Upload rejected: Post ${postId} would exceed ${this.MAX_FILES_PER_POST} files limit. Current: ${existingCount}, Attempted: ${data.length}`,
+      );
+      return {
+        message: `Cannot upload ${data.length} files. Post has ${existingCount} files. Maximum is ${this.MAX_FILES_PER_POST}. Delete ${exceededBy} file(s) or upload only ${maxCanUpload} file(s).`,
+      };
+    }
+
     const hasExistingMain = await this.postFilesRepo.hasMainImage(postId);
     const normalizedData = this.normalizeMainImageValues(data, hasExistingMain);
 
@@ -33,7 +49,8 @@ export class PostFilesService {
   }
 
   async deleteFilesByPostId(postId: number): Promise<ResponseMessage> {
-    const groupedFiles = await this.postFilesRepo.getGroupedFilesByPostId(postId);
+    const groupedRows = await this.postFilesRepo.getGroupedFilesByPostId(postId);
+    const groupedFiles = this.groupStorageKeysByProvider(groupedRows);
     const providers = Object.keys(groupedFiles) as FileProvider[];
 
     if (!providers.length) {
@@ -130,8 +147,29 @@ export class PostFilesService {
     return { message: 'Main image updated successfully' };
   }
 
+  async getPostFiles(postId: number): Promise<PostFile[]> {
+    return this.postFilesRepo.getPostFilesDetail(postId);
+  }
+
   private getErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+  }
+
+  private groupStorageKeysByProvider(rows: GroupedPostFileKeysRow[]): Partial<Record<FileProvider, string[]>> {
+    const grouped: Partial<Record<FileProvider, string[]>> = {};
+
+    for (const row of rows) {
+      const normalizedProvider = row.provider as FileProvider;
+
+      if (!Object.values(FileProvider).includes(normalizedProvider)) {
+        this.logger.warn(`Skipping unknown file provider "${row.provider}" from grouped SQL result`);
+        continue;
+      }
+
+      grouped[normalizedProvider] = row.storageKeys ?? [];
+    }
+
+    return grouped;
   }
 
   private normalizeMainImageValues(

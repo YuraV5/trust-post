@@ -1,13 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IMessageRepo } from '../interfaces';
-import { AddFileInput } from '../types';
+import {
+  AddFileInput,
+  ChatMemberEntity,
+  MessageEntity,
+  MessageFileEntity,
+  MessageFileWithMessage,
+  MessageRepoListResult,
+  MessageWithSenderAndFiles,
+} from '../types';
 
 @Injectable()
 export class MessageRepo implements IMessageRepo {
   constructor(private readonly db: PrismaService) {}
 
-  async findChatMember(chatId: string, userId: string): Promise<any | null> {
+  async findChatMember(chatId: string, userId: string): Promise<ChatMemberEntity | null> {
     return this.db.chatMember.findUnique({
       where: {
         chatId_userId: {
@@ -18,7 +26,7 @@ export class MessageRepo implements IMessageRepo {
     });
   }
 
-  async createMessage(chatId: string, senderId: string, content: string): Promise<any> {
+  async createMessage(chatId: string, senderId: string, content: string): Promise<MessageWithSenderAndFiles> {
     return this.db.message.create({
       data: {
         chatId,
@@ -46,7 +54,7 @@ export class MessageRepo implements IMessageRepo {
     });
   }
 
-  async findMessages(chatId: string, page: number, limit: number): Promise<{ data: any[]; total: number }> {
+  async findMessages(chatId: string, page: number, limit: number): Promise<MessageRepoListResult> {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
@@ -83,13 +91,13 @@ export class MessageRepo implements IMessageRepo {
     return { data, total };
   }
 
-  async findMessageById(messageId: string): Promise<any | null> {
+  async findMessageById(messageId: string): Promise<MessageEntity | null> {
     return this.db.message.findUnique({
       where: { id: messageId },
     });
   }
 
-  async updateMessageContent(messageId: string, newContent: string): Promise<any> {
+  async updateMessageContent(messageId: string, newContent: string): Promise<MessageWithSenderAndFiles> {
     return this.db.message.update({
       where: { id: messageId },
       data: { content: newContent },
@@ -114,13 +122,13 @@ export class MessageRepo implements IMessageRepo {
     });
   }
 
-  async createMessageFile(input: AddFileInput): Promise<any> {
+  async createMessageFile(input: AddFileInput): Promise<MessageFileEntity> {
     return this.db.messageFile.create({
       data: input,
     });
   }
 
-  async findFileById(fileId: string): Promise<any | null> {
+  async findFileById(fileId: string): Promise<MessageFileWithMessage | null> {
     return this.db.messageFile.findUnique({
       where: { id: fileId },
       include: {

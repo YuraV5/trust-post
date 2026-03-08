@@ -1,13 +1,22 @@
-import { CreateGroupChatInput, CreatePostChatInput, CreatePrivateChatInput } from '../types';
+import {
+  ChatEntity,
+  ChatWithMembers,
+  ChatWithMembersAndPrivate,
+  CreateGroupChatInput,
+  CreatePostChatInput,
+  CreatePrivateChatInput,
+  JoinLeaveActionResult,
+  UserChatsResult,
+} from '../types';
 
 export interface IChatService {
-  createPrivateChat(input: CreatePrivateChatInput): Promise<any>;
-  createGroupChat(input: CreateGroupChatInput): Promise<any>;
-  createPostChat(input: CreatePostChatInput): Promise<any>;
-  joinChat(chatId: string, userId: string): Promise<{ message: string }>;
-  leaveChat(chatId: string, userId: string): Promise<{ message: string }>;
-  deleteChatForUser(chatId: string, userId: string): Promise<{ message: string }>;
-  getUserChats(userId: string, page?: number, limit?: number): Promise<any>;
-  getChat(chatId: string, userId: string): Promise<any>;
+  createPrivateChat(input: CreatePrivateChatInput): Promise<ChatWithMembers | ChatEntity>;
+  createGroupChat(input: CreateGroupChatInput): Promise<ChatWithMembers>;
+  createPostChat(input: CreatePostChatInput): Promise<ChatWithMembers>;
+  joinChat(chatId: string, userId: string): Promise<JoinLeaveActionResult>;
+  leaveChat(chatId: string, userId: string): Promise<JoinLeaveActionResult>;
+  deleteChatForUser(chatId: string, userId: string): Promise<JoinLeaveActionResult>;
+  getUserChats(userId: string, page?: number, limit?: number): Promise<UserChatsResult>;
+  getChat(chatId: string, userId: string): Promise<ChatWithMembersAndPrivate>;
   markChatAsRead(chatId: string, userId: string): Promise<{ message: string }>;
 }

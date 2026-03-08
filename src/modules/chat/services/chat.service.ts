@@ -3,7 +3,16 @@ import { ChatType } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException, AppForbiddenException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
-import { CreateGroupChatInput, CreatePostChatInput, CreatePrivateChatInput } from '../types';
+import {
+  ChatEntity,
+  ChatWithMembers,
+  ChatWithMembersAndPrivate,
+  CreateGroupChatInput,
+  CreatePostChatInput,
+  CreatePrivateChatInput,
+  JoinLeaveActionResult,
+  UserChatsResult,
+} from '../types';
 import { IChatService } from '../interfaces';
 import { ChatRepo } from '../repos';
 
@@ -14,7 +23,7 @@ export class ChatService implements IChatService {
     private readonly repo: ChatRepo,
   ) {}
 
-  async createPrivateChat(input: CreatePrivateChatInput) {
+  async createPrivateChat(input: CreatePrivateChatInput): Promise<ChatWithMembers | ChatEntity> {
     const { userId, otherUserId } = input;
 
     if (userId === otherUserId) {
@@ -35,7 +44,7 @@ export class ChatService implements IChatService {
     return chat;
   }
 
-  async createGroupChat(input: CreateGroupChatInput) {
+  async createGroupChat(input: CreateGroupChatInput): Promise<ChatWithMembers> {
     const { title, creatorId, participantIds } = input;
 
     if (!title || title.trim().length === 0) {
@@ -53,7 +62,7 @@ export class ChatService implements IChatService {
     return chat;
   }
 
-  async createPostChat(input: CreatePostChatInput) {
+  async createPostChat(input: CreatePostChatInput): Promise<ChatWithMembers> {
     const { postId, creatorId } = input;
 
     // Check if post exists
@@ -87,7 +96,7 @@ export class ChatService implements IChatService {
     return chat;
   }
 
-  async joinChat(chatId: string, userId: string) {
+  async joinChat(chatId: string, userId: string): Promise<JoinLeaveActionResult> {
     const chat = await this.repo.findChatById(chatId);
 
     if (!chat) {
@@ -111,7 +120,7 @@ export class ChatService implements IChatService {
     return { message: 'Successfully joined the chat' };
   }
 
-  async leaveChat(chatId: string, userId: string) {
+  async leaveChat(chatId: string, userId: string): Promise<JoinLeaveActionResult> {
     const member = await this.repo.findChatMember(chatId, userId);
 
     if (!member) {
@@ -124,7 +133,7 @@ export class ChatService implements IChatService {
     return { message: 'Successfully left the chat' };
   }
 
-  async deleteChatForUser(chatId: string, userId: string) {
+  async deleteChatForUser(chatId: string, userId: string): Promise<JoinLeaveActionResult> {
     const member = await this.repo.findChatMember(chatId, userId);
 
     if (!member) {
@@ -137,7 +146,7 @@ export class ChatService implements IChatService {
     return { message: 'Chat deleted successfully' };
   }
 
-  async getUserChats(userId: string, page: number = 1, limit: number = 20) {
+  async getUserChats(userId: string, page: number = 1, limit: number = 20): Promise<UserChatsResult> {
     const { data: chats, total } = await this.repo.findUserChats(userId, page, limit);
 
     return {
@@ -151,7 +160,7 @@ export class ChatService implements IChatService {
     };
   }
 
-  async getChat(chatId: string, userId: string) {
+  async getChat(chatId: string, userId: string): Promise<ChatWithMembersAndPrivate> {
     const chat = await this.repo.findChatWithMembers(chatId);
 
     if (!chat) {
@@ -167,7 +176,7 @@ export class ChatService implements IChatService {
     return chat;
   }
 
-  async markChatAsRead(chatId: string, userId: string) {
+  async markChatAsRead(chatId: string, userId: string): Promise<{ message: string }> {
     // Verify user is member of chat
     const member = await this.repo.findChatMember(chatId, userId);
 

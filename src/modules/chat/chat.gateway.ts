@@ -18,11 +18,18 @@ import { SocketService } from '../socket/socket.service';
 import { SocketAuthGuard } from '../../common/guards';
 import { TokensService } from '../security/services';
 import { PublicRoute } from '../../common/decorators';
+import { type MessageWithSenderAndFiles } from '../message/types';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
   userRole?: string;
 }
+
+type GatewaySuccess = { success: true };
+type GatewayFailure = { success: false; error: string };
+type GatewayResult = GatewaySuccess | GatewayFailure;
+type ChatActionGatewayResult = GatewayResult & { chatId?: string };
+type MessageGatewayResult = GatewayResult & { message?: MessageWithSenderAndFiles };
 
 @PublicRoute()
 @UseGuards(SocketAuthGuard)
@@ -77,7 +84,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       // Notify user of successful connection
       client.emit('connected', { userId, socketId: client.id });
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Error handling connection', { error });
       client.disconnect();
     }
@@ -103,7 +110,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     return null;
   }
 
-  async handleDisconnect(client: AuthenticatedSocket): Promise<void> {
+  handleDisconnect(client: AuthenticatedSocket): void {
     const userId = client.userId;
 
     if (userId) {
@@ -117,7 +124,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   async handleJoinChat(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { chatId: string },
-  ): Promise<{ success: boolean; chatId?: string; error?: string }> {
+  ): Promise<ChatActionGatewayResult> {
     try {
       const userId = client.userId!;
       const { chatId } = data;
@@ -138,9 +145,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       });
 
       return { success: true, chatId };
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Error joining chat', { error, userId: client.userId });
-      return { success: false, error: (error as Error).message };
+      return { success: false, error: this.getErrorMessage(error) };
     }
   }
 
@@ -148,7 +155,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   async handleLeaveChat(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { chatId: string },
-  ): Promise<{ success: boolean; chatId?: string; error?: string }> {
+  ): Promise<ChatActionGatewayResult> {
     try {
       const userId = client.userId!;
       const { chatId } = data;
@@ -166,9 +173,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       });
 
       return { success: true, chatId };
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Error leaving chat', { error, userId: client.userId });
-      return { success: false, error: (error as Error).message };
+      return { success: false, error: this.getErrorMessage(error) };
     }
   }
 
@@ -176,7 +183,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   async handleSendMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { chatId: string; content: string },
-  ): Promise<{ success: boolean; message?: any; error?: string }> {
+  ): Promise<MessageGatewayResult> {
     try {
       const userId = client.userId!;
       const { chatId, content } = data;
@@ -201,9 +208,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       });
 
       return { success: true, message };
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Error sending message', { error, userId: client.userId });
-      return { success: false, error: (error as Error).message };
+      return { success: false, error: this.getErrorMessage(error) };
     }
   }
 
@@ -211,7 +218,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   async handleEditMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { messageId: string; newContent: string; chatId: string },
-  ): Promise<{ success: boolean; message?: any; error?: string }> {
+  ): Promise<MessageGatewayResult> {
     try {
       const userId = client.userId!;
       const { messageId, newContent, chatId } = data;
@@ -232,9 +239,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       this.logger.info('Message edited via WebSocket', { userId, messageId, chatId });
 
       return { success: true, message };
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Error editing message', { error, userId: client.userId });
-      return { success: false, error: (error as Error).message };
+      return { success: false, error: this.getErrorMessage(error) };
     }
   }
 
@@ -242,7 +249,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   async handleDeleteMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { messageId: string; chatId: string },
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<GatewayResult> {
     try {
       const userId = client.userId!;
       const { messageId, chatId } = data;
@@ -260,17 +267,17 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       this.logger.info('Message deleted via WebSocket', { userId, messageId, chatId });
 
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Error deleting message', { error, userId: client.userId });
-      return { success: false, error: (error as Error).message };
+      return { success: false, error: this.getErrorMessage(error) };
     }
   }
 
   @SubscribeMessage('chat:typing')
-  async handleTyping(
+  handleTyping(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { chatId: string; isTyping: boolean },
-  ): Promise<{ success: boolean; error?: string }> {
+  ): GatewayResult {
     try {
       const userId = client.userId!;
       const { chatId, isTyping } = data;
@@ -284,9 +291,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       });
 
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Error handling typing indicator', { error, userId: client.userId });
-      return { success: false, error: (error as Error).message };
+      return { success: false, error: this.getErrorMessage(error) };
     }
   }
 
@@ -294,7 +301,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   async handleMarkAsRead(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { chatId: string },
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<GatewayResult> {
     try {
       const userId = client.userId!;
       const { chatId } = data;
@@ -312,10 +319,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       this.logger.info('Chat marked as read via WebSocket', { userId, chatId });
 
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error('Error marking chat as read', { error, userId: client.userId });
-      return { success: false, error: (error as Error).message };
+      return { success: false, error: this.getErrorMessage(error) };
     }
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
   }
 
   // Helper method to emit events to specific users

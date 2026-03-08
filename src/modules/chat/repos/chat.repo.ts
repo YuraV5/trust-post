@@ -1,14 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { ChatType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateGroupChatInput, CreatePrivateChatInput } from '../types';
+import {
+  ChatEntity,
+  ChatMemberEntity,
+  ChatWithMembers,
+  ChatWithMembersAndPrivate,
+  ChatRepoUserChatsResult,
+  CreateGroupChatInput,
+  CreatePrivateChatInput,
+  PrivateChatWithChat,
+} from '../types';
 import { IChatRepo } from '../interfaces';
 
 @Injectable()
 export class ChatRepo implements IChatRepo {
   constructor(private readonly db: PrismaService) {}
 
-  async findPrivateChatBetweenUsers(userId: string, otherUserId: string): Promise<any | null> {
+  async findPrivateChatBetweenUsers(userId: string, otherUserId: string): Promise<PrivateChatWithChat | null> {
     return this.db.privateChat.findFirst({
       where: {
         OR: [
@@ -22,7 +31,7 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
-  async createPrivateChat(input: CreatePrivateChatInput): Promise<any> {
+  async createPrivateChat(input: CreatePrivateChatInput): Promise<ChatWithMembers> {
     const { userId, otherUserId } = input;
 
     return this.db.chat.create({
@@ -57,7 +66,7 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
-  async createGroupChat(input: CreateGroupChatInput): Promise<any> {
+  async createGroupChat(input: CreateGroupChatInput): Promise<ChatWithMembers> {
     const { title, creatorId, participantIds } = input;
     const allParticipants = Array.from(new Set([creatorId, ...participantIds]));
 
@@ -98,7 +107,7 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
-  async findChatByTitle(title: string): Promise<any | null> {
+  async findChatByTitle(title: string): Promise<ChatEntity | null> {
     return this.db.chat.findFirst({
       where: {
         title,
@@ -106,7 +115,7 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
-  async findChatByPostId(postId: number): Promise<any | null> {
+  async findChatByPostId(postId: number): Promise<ChatWithMembers | null> {
     return this.db.chat.findUnique({
       where: {
         postId,
@@ -128,7 +137,7 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
-  async createPostChat(postId: number, authorId: string): Promise<any> {
+  async createPostChat(postId: number, authorId: string): Promise<ChatWithMembers> {
     return this.db.chat.create({
       data: {
         type: ChatType.POST,
@@ -157,13 +166,13 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
-  async findChatById(chatId: string): Promise<any | null> {
+  async findChatById(chatId: string): Promise<ChatEntity | null> {
     return this.db.chat.findUnique({
       where: { id: chatId },
     });
   }
 
-  async findChatMember(chatId: string, userId: string): Promise<any | null> {
+  async findChatMember(chatId: string, userId: string): Promise<ChatMemberEntity | null> {
     return this.db.chatMember.findUnique({
       where: {
         chatId_userId: {
@@ -194,7 +203,7 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
-  async findUserChats(userId: string, page: number, limit: number): Promise<{ data: any[]; total: number }> {
+  async findUserChats(userId: string, page: number, limit: number): Promise<ChatRepoUserChatsResult> {
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
@@ -255,7 +264,7 @@ export class ChatRepo implements IChatRepo {
     return { data, total };
   }
 
-  async findChatWithMembers(chatId: string): Promise<any | null> {
+  async findChatWithMembers(chatId: string): Promise<ChatWithMembersAndPrivate | null> {
     return this.db.chat.findUnique({
       where: { id: chatId },
       include: {

@@ -1,19 +1,29 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { FileProvider } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException, AppForbiddenException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 import { IMessageService } from '../interfaces';
-import { AddFileInput, EditMessageInput, SendMessageInput } from '../types';
+import {
+  EditMessageInput,
+  MessageActionResult,
+  MessageListResult,
+  MessageWithSenderAndFiles,
+  SendMessageInput,
+} from '../types';
 import { MessageRepo } from '../repos';
+import { FilesService } from '../../files/services';
+import { FileFolder } from '../../files/types';
 
 @Injectable()
 export class MessageService implements IMessageService {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly repo: MessageRepo,
+    private readonly filesService: FilesService,
   ) {}
 
-  async sendMessage(input: SendMessageInput) {
+  async sendMessage(input: SendMessageInput): Promise<MessageWithSenderAndFiles> {
     const { chatId, senderId, content } = input;
 
     if (!content || content.trim().length === 0) {
@@ -36,7 +46,7 @@ export class MessageService implements IMessageService {
     return message;
   }
 
-  async getMessages(chatId: string, userId: string, page: number = 1, limit: number = 50) {
+  async getMessages(chatId: string, userId: string, page: number = 1, limit: number = 50): Promise<MessageListResult> {
     // Verify user is a member of the chat
     const member = await this.repo.findChatMember(chatId, userId);
 
@@ -57,7 +67,7 @@ export class MessageService implements IMessageService {
     };
   }
 
-  async editMessage(input: EditMessageInput) {
+  async editMessage(input: EditMessageInput): Promise<MessageWithSenderAndFiles> {
     const { messageId, userId, newContent } = input;
 
     if (!newContent || newContent.trim().length === 0) {
@@ -84,7 +94,7 @@ export class MessageService implements IMessageService {
     return updatedMessage;
   }
 
-  async deleteMessage(messageId: string, userId: string) {
+  async deleteMessage(messageId: string, userId: string): Promise<MessageActionResult> {
     const message = await this.repo.findMessageById(messageId);
 
     if (!message) {
@@ -101,34 +111,7 @@ export class MessageService implements IMessageService {
     return { message: 'Message deleted successfully' };
   }
 
-  async addFiles(input: AddFileInput) {
-    const { messageId, url, storageKey, provider, mimeType, size, originalName } = input;
-
-    const message = await this.repo.findMessageById(messageId);
-
-    if (!message) {
-      throw new AppNotFoundException('Message not found');
-    }
-
-    if (message.isDeleted) {
-      throw new AppBadRequestException('Cannot add files to deleted message');
-    }
-
-    const file = await this.repo.createMessageFile({
-      messageId,
-      url,
-      storageKey,
-      provider,
-      mimeType,
-      size,
-      originalName,
-    });
-
-    this.logger.info('File added to message', { messageId, fileId: file.id });
-    return file;
-  }
-
-  async deleteFile(fileId: string, userId: string) {
+  async deleteFile(fileId: string, userId: string): Promise<MessageActionResult> {
     const file = await this.repo.findFileById(fileId);
 
     if (!file) {
@@ -139,13 +122,22 @@ export class MessageService implements IMessageService {
       throw new AppForbiddenException('You can only delete files from your own messages');
     }
 
+    // Delete from storage first
+    try {
+      await this.filesService.delete([file.storageKey], file.provider);
+    } catch (error) {
+      this.logger.error('Failed to delete file from storage', { fileId, storageKey: file.storageKey, error });
+      // Continue with DB deletion even if storage deletion fails
+    }
+
+    // Delete from database
     await this.repo.deleteFile(fileId);
 
     this.logger.info('File deleted', { fileId, userId });
     return { message: 'File deleted successfully' };
   }
 
-  async markAsRead(chatId: string, userId: string) {
+  async markAsRead(chatId: string, userId: string): Promise<MessageActionResult> {
     // Verify user is a member of the chat
     const member = await this.repo.findChatMember(chatId, userId);
 
@@ -157,5 +149,113 @@ export class MessageService implements IMessageService {
     // For now, we'll just return success
     this.logger.info('Messages marked as read', { chatId, userId });
     return { message: 'Messages marked as read' };
+  }
+
+  async sendMessageWithFiles(
+    chatId: string,
+    senderId: string,
+    content: string,
+    files?: Express.Multer.File[],
+  ): Promise<MessageWithSenderAndFiles> {
+    if (!content || content.trim().length === 0) {
+      throw new AppBadRequestException('Message content cannot be empty');
+    }
+
+    // Verify user is a member of the chat
+    const member = await this.repo.findChatMember(chatId, senderId);
+
+    if (!member) {
+      throw new AppForbiddenException('You are not a member of this chat');
+    }
+
+    // Upload files to storage if provided
+    let uploadedFiles: Array<{
+      url: string;
+      storageKey: string;
+      size: number;
+      originalName: string;
+      mimeType: string;
+      provider: FileProvider;
+    }> = [];
+
+    if (files && files.length > 0) {
+      try {
+        const uploadResult = await this.filesService.upload(files, {
+          resourceId: chatId,
+          userId: senderId,
+          fileFolder: FileFolder.CHATS,
+          storage: FileProvider.CLOUDINARY,
+        });
+
+        uploadedFiles = uploadResult.data.map((file) => ({
+          url: file.url,
+          storageKey: file.storageKey,
+          size: file.size,
+          originalName: file.originalName,
+          mimeType: file.mimeType,
+          provider: file.provider,
+        }));
+      } catch (error) {
+        this.logger.error('Failed to upload files', { chatId, senderId, error });
+        throw new AppBadRequestException('Failed to upload files');
+      }
+    }
+
+    // Create message with files in a transaction-like approach
+    try {
+      const message = await this.repo.createMessage(chatId, senderId, content);
+
+      // Attach files to message
+      if (uploadedFiles.length > 0) {
+        await Promise.all(
+          uploadedFiles.map((file) =>
+            this.repo.createMessageFile({
+              messageId: message.id,
+              ...file,
+            }),
+          ),
+        );
+
+        // Refetch message with files included
+        const messageWithFiles = await this.repo.findMessages(chatId, 1, 1);
+        const createdMessage = messageWithFiles.data.find((m) => m.id === message.id);
+
+        if (!createdMessage) {
+          throw new AppNotFoundException('Message not found after creation');
+        }
+
+        // Update chat's updatedAt timestamp
+        await this.repo.touchChat(chatId);
+
+        this.logger.info('Message with files sent', {
+          messageId: message.id,
+          chatId,
+          senderId,
+          filesCount: uploadedFiles.length,
+        });
+
+        return createdMessage;
+      }
+
+      // Update chat's updatedAt timestamp
+      await this.repo.touchChat(chatId);
+
+      this.logger.info('Message sent', { messageId: message.id, chatId, senderId });
+      return message;
+    } catch (error) {
+      // Cleanup uploaded files if message creation failed
+      if (uploadedFiles.length > 0) {
+        this.logger.error('Message creation failed, cleaning up uploaded files', { chatId, senderId, error });
+        try {
+          await this.filesService.delete(
+            uploadedFiles.map((f) => f.storageKey),
+            FileProvider.CLOUDINARY,
+          );
+        } catch (cleanupError) {
+          this.logger.error('Failed to cleanup files after error', { cleanupError });
+        }
+      }
+      throw error;
+    }
   }
 }

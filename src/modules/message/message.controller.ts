@@ -1,9 +1,24 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UploadedFiles,
+  UseInterceptors,
+  HttpStatus,
+  ParseFilePipeBuilder,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { MessageService } from './services/message.service';
 import { CurrentUser } from '../../common/decorators';
 import { type AuthenticatedUser } from '../../common/interfaces';
-import { SendMessageDto, EditMessageDto, AddFileDto } from './dtos';
+import { SendMessageDto, EditMessageDto } from './dtos';
+import { MessageActionResult, MessageListResult, MessageWithSenderAndFiles } from './types';
 
 @ApiTags('messages')
 @ApiBearerAuth('JWT-auth')
@@ -20,7 +35,7 @@ export class MessageController {
     @Param('chatId') chatId: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
-  ) {
+  ): Promise<MessageListResult> {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 50;
     return this.messageService.getMessages(chatId, user.userId, pageNum, limitNum);
@@ -35,12 +50,37 @@ export class MessageController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('chatId') chatId: string,
     @Body() dto: SendMessageDto,
-  ) {
+  ): Promise<MessageWithSenderAndFiles> {
     return this.messageService.sendMessage({
       chatId,
       senderId: user.userId,
       content: dto.content,
     });
+  }
+
+  @Post('chats/:chatId/messages/upload')
+  @UseInterceptors(FilesInterceptor('files', 10)) // max 10 files
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Send a message with files to a chat' })
+  @ApiResponse({ status: 201, description: 'Message with files sent successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Not a member of this chat' })
+  async sendMessageWithFiles(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('chatId') chatId: string,
+    @Body('content') content: string,
+    @UploadedFiles(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({ fileType: /image\/(jpeg|png|gif|webp)|application\/(pdf|msword|vnd\.openxmlformats)/ })
+        .addMaxSizeValidator({ maxSize: 10 * 1024 * 1024 }) // 10MB per file
+        .build({
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+          fileIsRequired: false, // Files are optional
+        }),
+    )
+    files?: Express.Multer.File[],
+  ): Promise<MessageWithSenderAndFiles> {
+    return this.messageService.sendMessageWithFiles(chatId, user.userId, content, files);
   }
 
   @Patch('messages/:messageId')
@@ -52,7 +92,7 @@ export class MessageController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('messageId') messageId: string,
     @Body() dto: EditMessageDto,
-  ) {
+  ): Promise<MessageWithSenderAndFiles> {
     return this.messageService.editMessage({
       messageId,
       userId: user.userId,
@@ -65,28 +105,11 @@ export class MessageController {
   @ApiResponse({ status: 200, description: 'Message deleted successfully' })
   @ApiResponse({ status: 404, description: 'Message not found' })
   @ApiResponse({ status: 403, description: 'Can only delete your own messages' })
-  async deleteMessage(@CurrentUser() user: AuthenticatedUser, @Param('messageId') messageId: string) {
-    return this.messageService.deleteMessage(messageId, user.userId);
-  }
-
-  @Post('messages/:messageId/files')
-  @ApiOperation({ summary: 'Add file to a message' })
-  @ApiResponse({ status: 201, description: 'File added successfully' })
-  @ApiResponse({ status: 404, description: 'Message not found' })
-  async addFiles(
+  async deleteMessage(
     @CurrentUser() user: AuthenticatedUser,
     @Param('messageId') messageId: string,
-    @Body() dto: AddFileDto,
-  ) {
-    return this.messageService.addFiles({
-      messageId,
-      url: dto.url,
-      storageKey: dto.storageKey,
-      provider: dto.provider,
-      mimeType: dto.mimeType,
-      size: dto.size,
-      originalName: dto.originalName,
-    });
+  ): Promise<MessageActionResult> {
+    return this.messageService.deleteMessage(messageId, user.userId);
   }
 
   @Delete('files/:fileId')
@@ -94,7 +117,10 @@ export class MessageController {
   @ApiResponse({ status: 200, description: 'File deleted successfully' })
   @ApiResponse({ status: 404, description: 'File not found' })
   @ApiResponse({ status: 403, description: 'Can only delete files from your own messages' })
-  async deleteFile(@CurrentUser() user: AuthenticatedUser, @Param('fileId') fileId: string) {
+  async deleteFile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('fileId') fileId: string,
+  ): Promise<MessageActionResult> {
     return this.messageService.deleteFile(fileId, user.userId);
   }
 }

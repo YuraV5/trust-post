@@ -1,7 +1,7 @@
 import { FileProvider } from '@prisma/client/edge';
 
 export type FileStorageInfo = {
-  resourceId: number;
+  resourceId: number | string;
   userId: string;
   fileFolder: FileFolder;
   storage: FileProvider;

@@ -85,7 +85,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       // Notify user of successful connection
       client.emit('connected', { userId, socketId: client.id });
     } catch (error: unknown) {
-      this.logger.error('Error handling connection', { error });
+      this.logger.error('Error handling connection', {
+        error: error instanceof Error ? error : String(error),
+        socketId: client.id,
+      });
       client.disconnect();
     }
   }
@@ -146,7 +149,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       return { success: true, chatId };
     } catch (error: unknown) {
-      this.logger.error('Error joining chat', { error, userId: client.userId });
+      this.logger.error('Error joining chat', {
+        error: error instanceof Error ? error : String(error),
+        userId: client.userId,
+      });
       return { success: false, error: this.getErrorMessage(error) };
     }
   }
@@ -174,7 +180,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       return { success: true, chatId };
     } catch (error: unknown) {
-      this.logger.error('Error leaving chat', { error, userId: client.userId });
+      this.logger.error('Error leaving chat', {
+        error: error instanceof Error ? error : String(error),
+        userId: client.userId,
+      });
       return { success: false, error: this.getErrorMessage(error) };
     }
   }
@@ -209,7 +218,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       return { success: true, message };
     } catch (error: unknown) {
-      this.logger.error('Error sending message', { error, userId: client.userId });
+      this.logger.error('Error sending message', {
+        error: error instanceof Error ? error : String(error),
+        userId: client.userId,
+      });
       return { success: false, error: this.getErrorMessage(error) };
     }
   }
@@ -240,7 +252,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       return { success: true, message };
     } catch (error: unknown) {
-      this.logger.error('Error editing message', { error, userId: client.userId });
+      this.logger.error('Error editing message', {
+        error: error instanceof Error ? error : String(error),
+        userId: client.userId,
+      });
       return { success: false, error: this.getErrorMessage(error) };
     }
   }
@@ -268,7 +283,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       return { success: true };
     } catch (error: unknown) {
-      this.logger.error('Error deleting message', { error, userId: client.userId });
+      this.logger.error('Error deleting message', {
+        error: error instanceof Error ? error : String(error),
+        userId: client.userId,
+      });
       return { success: false, error: this.getErrorMessage(error) };
     }
   }
@@ -292,7 +310,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       return { success: true };
     } catch (error: unknown) {
-      this.logger.error('Error handling typing indicator', { error, userId: client.userId });
+      this.logger.error('Error handling typing indicator', {
+        error: error instanceof Error ? error : String(error),
+        userId: client.userId,
+      });
       return { success: false, error: this.getErrorMessage(error) };
     }
   }
@@ -320,7 +341,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       return { success: true };
     } catch (error: unknown) {
-      this.logger.error('Error marking chat as read', { error, userId: client.userId });
+      this.logger.error('Error marking chat as read', {
+        error: error instanceof Error ? error : String(error),
+        userId: client.userId,
+      });
       return { success: false, error: this.getErrorMessage(error) };
     }
   }

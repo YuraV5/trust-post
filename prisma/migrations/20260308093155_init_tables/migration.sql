@@ -2,16 +2,19 @@
 CREATE TYPE "user_roles" AS ENUM ('user', 'admin', 'moderator');
 
 -- CreateEnum
-CREATE TYPE "PostStatus" AS ENUM ('draft', 'pending_review', 'approved', 'rejected', 'blocked', 'archived', 'completed');
+CREATE TYPE "post_statuses" AS ENUM ('draft', 'pending_review', 'approved', 'rejected', 'blocked', 'archived', 'completed');
 
 -- CreateEnum
 CREATE TYPE "post_review_statuses" AS ENUM ('pending', 'approved', 'rejected');
 
 -- CreateEnum
-CREATE TYPE "Currencies" AS ENUM ('uah');
+CREATE TYPE "currencies" AS ENUM ('uah');
 
 -- CreateEnum
-CREATE TYPE "CommentStatus" AS ENUM ('VISIBLE', 'DELETED');
+CREATE TYPE "comment_statuses" AS ENUM ('VISIBLE', 'DELETED');
+
+-- CreateEnum
+CREATE TYPE "file_providers" AS ENUM ('cloudinary');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -48,6 +51,7 @@ CREATE TABLE "sessions" (
 -- CreateTable
 CREATE TABLE "user_role_periods" (
     "id" SERIAL NOT NULL,
+    "name" VARCHAR(128) NOT NULL,
     "user_id" TEXT NOT NULL,
     "role" "user_roles" NOT NULL,
     "start_date" TIMESTAMP(3) NOT NULL,
@@ -65,10 +69,10 @@ CREATE TABLE "posts" (
     "content" TEXT NOT NULL,
     "target_amount" DECIMAL(12,2) NOT NULL,
     "current_amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
-    "currency" "Currencies" NOT NULL DEFAULT 'uah',
+    "currency" "currencies" NOT NULL DEFAULT 'uah',
     "reference_payment_id" VARCHAR(255) NOT NULL,
     "target_date" TIMESTAMP(3) NOT NULL,
-    "status" "PostStatus" NOT NULL DEFAULT 'draft',
+    "status" "post_statuses" NOT NULL DEFAULT 'draft',
     "status_reason" TEXT,
     "author_id" TEXT NOT NULL,
     "total_comments" INTEGER NOT NULL DEFAULT 0,
@@ -99,7 +103,7 @@ CREATE TABLE "comments" (
     "post_id" INTEGER NOT NULL,
     "author_id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
-    "status" "CommentStatus" NOT NULL DEFAULT 'VISIBLE',
+    "status" "comment_statuses" NOT NULL DEFAULT 'VISIBLE',
     "total_likes" INTEGER NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -127,6 +131,24 @@ CREATE TABLE "post_likes" (
     CONSTRAINT "post_likes_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "post_files" (
+    "id" SERIAL NOT NULL,
+    "url" VARCHAR(512) NOT NULL,
+    "post_id" INTEGER NOT NULL,
+    "uploaded_by_id" TEXT NOT NULL,
+    "storage_key" VARCHAR(255) NOT NULL,
+    "provider" "file_providers" NOT NULL,
+    "mime_type" VARCHAR(255) NOT NULL,
+    "main_image" BOOLEAN NOT NULL DEFAULT false,
+    "size" INTEGER NOT NULL,
+    "metadata" JSON,
+    "original_name" VARCHAR(255) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "post_files_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -135,6 +157,9 @@ CREATE INDEX "users_created_at_idx" ON "users"("created_at");
 
 -- CreateIndex
 CREATE INDEX "users_role_idx" ON "users"("role");
+
+-- CreateIndex
+CREATE INDEX "users_is_email_verified_created_at_idx" ON "users"("is_email_verified", "created_at");
 
 -- CreateIndex
 CREATE INDEX "sessions_user_id_idx" ON "sessions"("user_id");
@@ -156,6 +181,9 @@ CREATE INDEX "user_role_periods_role_idx" ON "user_role_periods"("role");
 
 -- CreateIndex
 CREATE INDEX "user_role_periods_end_date_idx" ON "user_role_periods"("end_date");
+
+-- CreateIndex
+CREATE INDEX "user_role_periods_user_id_end_date_idx" ON "user_role_periods"("user_id", "end_date");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "posts_reference_payment_id_key" ON "posts"("reference_payment_id");
@@ -205,6 +233,24 @@ CREATE INDEX "post_likes_user_id_idx" ON "post_likes"("user_id");
 -- CreateIndex
 CREATE UNIQUE INDEX "post_likes_post_id_user_id_key" ON "post_likes"("post_id", "user_id");
 
+-- CreateIndex
+CREATE INDEX "post_files_post_id_idx" ON "post_files"("post_id");
+
+-- CreateIndex
+CREATE INDEX "post_files_uploaded_by_id_idx" ON "post_files"("uploaded_by_id");
+
+-- CreateIndex
+CREATE INDEX "post_files_provider_idx" ON "post_files"("provider");
+
+-- CreateIndex
+CREATE INDEX "post_files_post_id_main_image_idx" ON "post_files"("post_id", "main_image");
+
+-- CreateIndex
+CREATE INDEX "post_files_created_at_idx" ON "post_files"("created_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "post_files_post_id_provider_storage_key_key" ON "post_files"("post_id", "provider", "storage_key");
+
 -- AddForeignKey
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -237,3 +283,6 @@ ALTER TABLE "post_likes" ADD CONSTRAINT "post_likes_post_id_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "post_likes" ADD CONSTRAINT "post_likes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "post_files" ADD CONSTRAINT "post_files_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;

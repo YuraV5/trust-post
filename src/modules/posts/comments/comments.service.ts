@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CommentsRepo, LikeRepo } from './repo';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import { CreateCommentInput, UpdateCommentInput, PaginatedResult, NormalizedCommentsQuery } from './types';
 import { Comment } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
@@ -19,7 +19,7 @@ export class CommentsService implements ICommentsService {
     private readonly likeRepo: LikeRepo,
   ) {}
 
-  async create(postId: number, authorId: string, data: CreateCommentInput): Promise<MessageResponse> {
+  async create(postId: number, authorId: string, data: CreateCommentInput): Promise<ResponseMessage> {
     const comment = await this.commentsRepo.create(authorId, {
       postId,
       content: data.content,
@@ -35,7 +35,7 @@ export class CommentsService implements ICommentsService {
     return await this.commentsRepo.findByPostIdPaginated(postId, normalized);
   }
 
-  async update(id: number, data: UpdateCommentInput): Promise<MessageResponse> {
+  async update(id: number, data: UpdateCommentInput): Promise<ResponseMessage> {
     if (!data.content?.trim()) {
       throw new AppBadRequestException('Content cannot be empty');
     }
@@ -52,7 +52,7 @@ export class CommentsService implements ICommentsService {
     return { message: 'Comment updated successfully' };
   }
 
-  async delete(id: number): Promise<MessageResponse> {
+  async delete(id: number): Promise<ResponseMessage> {
     const comment = await this.commentsRepo.getById(id);
     if (!comment) {
       throw new AppNotFoundException('Comment not found');
@@ -65,7 +65,7 @@ export class CommentsService implements ICommentsService {
     return { message: 'Comment deleted successfully' };
   }
 
-  async deleteByModerator(ids: number[]): Promise<MessageResponse> {
+  async deleteByModerator(ids: number[]): Promise<ResponseMessage> {
     if (!ids || ids.length === 0) {
       throw new AppBadRequestException('At least one comment ID must be provided');
     }

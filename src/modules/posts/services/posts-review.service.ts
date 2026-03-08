@@ -8,7 +8,7 @@ import { AppBadRequestException, AppNotFoundException } from '../../../shared/er
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 import { PostLifecycleStatus } from '../types/common';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import { EmailQueueService } from '../../emails/email-queue.service';
 
 @Injectable()
@@ -22,7 +22,7 @@ export class PostsReviewService {
     private readonly emailQueue: EmailQueueService,
   ) {}
 
-  async assignReviewer(postId: number): Promise<MessageResponse> {
+  async assignReviewer(postId: number): Promise<ResponseMessage> {
     const reviewer = await this.usersService.fetchAllModerators();
     if (reviewer.length === 0) {
       throw new AppNotFoundException('No reviewers available');
@@ -51,7 +51,7 @@ export class PostsReviewService {
     postId: number,
     reviewerId: string,
     data: PostLifecycleStatus,
-  ): Promise<MessageResponse> {
+  ): Promise<ResponseMessage> {
     const { reviewStatus, reviewReason, postStatus, statusReason } = data;
 
     // --- VALIDATION ---
@@ -109,7 +109,7 @@ export class PostsReviewService {
     return history;
   }
 
-  async purgePostReviewDataByAdmin(postIds: number[], adminId: string): Promise<MessageResponse> {
+  async purgePostReviewDataByAdmin(postIds: number[], adminId: string): Promise<ResponseMessage> {
     const resultCounts = await this.prisma.transaction(async (tx) => {
       const counts: number[] = [];
 

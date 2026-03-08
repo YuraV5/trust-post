@@ -42,3 +42,9 @@ export class AppBadRequestException extends AppError {
     super(AppErrorCode.BAD_REQUEST, 400, message);
   }
 }
+
+export class AppConfigException extends AppError {
+  constructor(message = 'Configuration error') {
+    super(AppErrorCode.CONFIG_ERROR, 500, message);
+  }
+}

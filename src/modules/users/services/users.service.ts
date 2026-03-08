@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import { hasUpdatableFields } from '../../../common/utils';
 import { AppBadRequestException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
@@ -75,12 +75,12 @@ export class UsersService implements IUserService {
     return { userId: user.id };
   }
 
-  async remove(id: string): Promise<MessageResponse> {
+  async remove(id: string): Promise<ResponseMessage> {
     await this.repo.remove(id);
     return { message: `Removed successfully` };
   }
 
-  async updateProfile(id: string, inp: UpdateUserInput): Promise<MessageResponse> {
+  async updateProfile(id: string, inp: UpdateUserInput): Promise<ResponseMessage> {
     if (!hasUpdatableFields(inp)) {
       throw new AppBadRequestException('No fields to update');
     }
@@ -89,7 +89,7 @@ export class UsersService implements IUserService {
     return { message: `Updated successfully` };
   }
 
-  async updatePassword(id: string, inp: UpdatePasswordInput): Promise<MessageResponse> {
+  async updatePassword(id: string, inp: UpdatePasswordInput): Promise<ResponseMessage> {
     const user = await this.repo.findById(id);
     if (!user) {
       throw new AppUserNotFoundException();
@@ -133,7 +133,7 @@ export class UsersService implements IUserService {
     return userAdminMapper(user);
   }
 
-  async createUserByAdmin(inp: CreateByAdminInput, adminId: string): Promise<MessageResponse> {
+  async createUserByAdmin(inp: CreateByAdminInput, adminId: string): Promise<ResponseMessage> {
     const result = await this.findByEmail(inp.email);
     if (result) {
       throw new AppUserAlreadyExistsException();
@@ -179,7 +179,7 @@ export class UsersService implements IUserService {
     return { message: `User created successfully, need verification` };
   }
 
-  async activateAccount(userId: string, newPassword: string): Promise<MessageResponse> {
+  async activateAccount(userId: string, newPassword: string): Promise<ResponseMessage> {
     const user = await this.repo.findById(userId);
     if (!user) {
       this.logger.warn(`User with id ${userId} not found for account activation`);
@@ -191,7 +191,7 @@ export class UsersService implements IUserService {
     return { message: `Account activated successfully` };
   }
 
-  async updateStatus(id: string): Promise<MessageResponse> {
+  async updateStatus(id: string): Promise<ResponseMessage> {
     const user = await this.repo.findById(id);
     if (!user) {
       throw new AppUserNotFoundException();
@@ -205,7 +205,7 @@ export class UsersService implements IUserService {
     return { message: `Status ${isActive ? 'enabled' : 'disabled'} successfully` };
   }
 
-  async changeRoles(id: string, userId: string, role: UserRoles): Promise<MessageResponse> {
+  async changeRoles(id: string, userId: string, role: UserRoles): Promise<ResponseMessage> {
     const user = await this.repo.findById(id);
     if (!user) {
       throw new AppUserNotFoundException();
@@ -230,7 +230,7 @@ export class UsersService implements IUserService {
     return { message: `User roles updated successfully` };
   }
 
-  async deleteMany(ids: string[]): Promise<MessageResponse> {
+  async deleteMany(ids: string[]): Promise<ResponseMessage> {
     const result = await this.repo.deleteMany(ids);
     if (result === 0) {
       throw new AppUserNotFoundException();

@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Res, UseGuards, Req, Get, Param, HttpCode } from '@nestjs/common';
 import { AuthService } from './services/auth.service';
 import { LoginDto, RegisterDto } from './dtos';
-import { type MessageResponse } from '../../common/types';
+import { type ResponseMessage } from '../../common/types';
 import { AuthResponse } from './types';
 import { type Response } from 'express';
 import { PublicRoute } from '../../common/decorators';
@@ -24,7 +24,7 @@ export class AuthController {
   @Post('register')
   @PublicRoute()
   @Throttle({ default: { limit: 3, ttl: 60000 } })
-  async register(@Body() inp: RegisterDto): Promise<MessageResponse> {
+  async register(@Body() inp: RegisterDto): Promise<ResponseMessage> {
     return this.authService.register(inp);
   }
 
@@ -58,7 +58,7 @@ export class AuthController {
 
   @Post('logout')
   @UseGuards(RefreshTokenGuard)
-  async logout(@Req() req: RefreshTokenRequest, @Res({ passthrough: true }) resp: Response): Promise<MessageResponse> {
+  async logout(@Req() req: RefreshTokenRequest, @Res({ passthrough: true }) resp: Response): Promise<ResponseMessage> {
     const result = await this.authService.logout(req.user.sessionId, req.user.userId);
     this.cookieService.clear(resp);
     return result;
@@ -69,7 +69,7 @@ export class AuthController {
   async logoutAll(
     @Req() req: RefreshTokenRequest,
     @Res({ passthrough: true }) resp: Response,
-  ): Promise<MessageResponse> {
+  ): Promise<ResponseMessage> {
     const result = await this.authService.logoutAll(req.user.userId);
     this.cookieService.clear(resp);
     return result;
@@ -85,7 +85,7 @@ export class AuthController {
   @Post('resend/verification')
   @PublicRoute()
   @Throttle({ default: { limit: 3, ttl: 60000 } })
-  async resendVerification(@Body() inp: ResendVerificationDto): Promise<MessageResponse> {
+  async resendVerification(@Body() inp: ResendVerificationDto): Promise<ResponseMessage> {
     const result = await this.authService.resendEmailVerification(inp.email);
     return result;
   }
@@ -93,7 +93,7 @@ export class AuthController {
   @Post('reset-password')
   @PublicRoute()
   @Throttle({ default: { limit: 3, ttl: 60000 } })
-  async resetPassword(@Body() inp: ResendVerificationDto): Promise<MessageResponse> {
+  async resetPassword(@Body() inp: ResendVerificationDto): Promise<ResponseMessage> {
     const result = await this.authService.resendPasswordReset(inp.email);
     return result;
   }

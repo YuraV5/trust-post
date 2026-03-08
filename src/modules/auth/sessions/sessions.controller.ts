@@ -4,7 +4,7 @@ import { RefreshTokenGuard } from '../../../common/guards';
 import { CurrentUser } from '../../../common/decorators';
 import type { RefreshTokenUser } from '../../../common/interfaces';
 import { SessionMapping } from './types';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 
 @UseGuards(RefreshTokenGuard)
 @Controller('auth/sessions')
@@ -17,12 +17,12 @@ export class SessionsController {
   }
 
   @Delete('all')
-  async deleteAllSessions(@CurrentUser() user: RefreshTokenUser): Promise<MessageResponse> {
+  async deleteAllSessions(@CurrentUser() user: RefreshTokenUser): Promise<ResponseMessage> {
     return await this.sessionsService.deleteAllSessions(user.userId);
   }
 
   @Delete('all-except-current')
-  async deleteAllExceptCurrentSession(@CurrentUser() user: RefreshTokenUser): Promise<MessageResponse> {
+  async deleteAllExceptCurrentSession(@CurrentUser() user: RefreshTokenUser): Promise<ResponseMessage> {
     return await this.sessionsService.deleteAllExceptCurrentSession(user.userId, user.sessionId);
   }
 
@@ -30,7 +30,7 @@ export class SessionsController {
   async deleteSession(
     @CurrentUser() user: RefreshTokenUser,
     @Param('sessionId') sessionId: string,
-  ): Promise<MessageResponse> {
+  ): Promise<ResponseMessage> {
     return await this.sessionsService.deleteBySessionId(sessionId, user.userId);
   }
 }

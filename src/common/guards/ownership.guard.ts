@@ -4,7 +4,7 @@ import { PrismaService } from '../../modules/prisma/prisma.service';
 import { AppNotFoundException, AppForbiddenException } from '../../shared/errors/app-errors';
 import { AuthenticatedRequest } from '../interfaces';
 
-type ResourceModel = 'post' | 'comment' | 'postReview' | 'commentLike' | 'postLike';
+type ResourceModel = 'post' | 'comment' | 'postReview' | 'commentLike' | 'postLike' | 'user' | 'postFile';
 
 export interface OwnershipGuardOptions {
   // Name of the Prisma model to check ownership against (e.g., 'post', 'comment')
@@ -85,7 +85,7 @@ export function OwnershipGuard(options: OwnershipGuardOptions): Type<CanActivate
      */
     private convertIdType(id: string, model: string): string | number {
       // Models with Int ID
-      const intIdModels = ['post', 'comment', 'postReview', 'commentLike', 'postLike'];
+      const intIdModels = ['post', 'comment', 'postReview', 'commentLike', 'postLike', 'postFile'];
 
       if (intIdModels.includes(model.toLowerCase())) {
         const numId = parseInt(id, 10);

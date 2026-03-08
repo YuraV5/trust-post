@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IAuthService } from '../interfaces';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { SetPassword, UserCredentials, UserLoginOutput, UserRegistration } from '../types';
-import { MessageResponse } from '../../../common/types';
+import { ResponseMessage } from '../../../common/types';
 import { AppBadRequestException } from '../../../shared/errors/app-errors';
 import { PasswordService, TokensService } from '../../security/services';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,7 +34,7 @@ export class AuthService implements IAuthService {
     private readonly redisService: RedisService,
   ) {}
 
-  async register(inp: UserRegistration): Promise<MessageResponse> {
+  async register(inp: UserRegistration): Promise<ResponseMessage> {
     const user = await this.usersService.findByEmail(inp.email);
     if (user) {
       this.logger.warn('Registration failed: user already exists');
@@ -133,17 +133,17 @@ export class AuthService implements IAuthService {
     return { accessToken };
   }
 
-  async logout(sessionId: string, userId: string): Promise<MessageResponse> {
+  async logout(sessionId: string, userId: string): Promise<ResponseMessage> {
     await this.sessionsService.deleteBySessionId(sessionId, userId);
     return { message: 'Logged out successfully' };
   }
 
-  async logoutAll(userId: string): Promise<MessageResponse> {
+  async logoutAll(userId: string): Promise<ResponseMessage> {
     await this.sessionsService.deleteAllSessions(userId);
     return { message: 'Logged out from all sessions successfully' };
   }
 
-  async resendEmailVerification(email: string): Promise<MessageResponse> {
+  async resendEmailVerification(email: string): Promise<ResponseMessage> {
     const message = 'If the email exists, a verification link has been sent';
 
     try {
@@ -167,7 +167,7 @@ export class AuthService implements IAuthService {
     return { message };
   }
 
-  async resendPasswordReset(email: string): Promise<MessageResponse> {
+  async resendPasswordReset(email: string): Promise<ResponseMessage> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       this.logger.warn('Password reset failed: user not found');
@@ -218,7 +218,7 @@ export class AuthService implements IAuthService {
     this.logger.info('Email verified successfully');
   }
 
-  async activateAccount(uuid: string, inp: SetPassword): Promise<MessageResponse> {
+  async activateAccount(uuid: string, inp: SetPassword): Promise<ResponseMessage> {
     if (inp.password !== inp.confirmPassword) {
       throw new AppBadRequestException('Passwords do not match');
     }

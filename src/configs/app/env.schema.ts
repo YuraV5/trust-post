@@ -33,4 +33,8 @@ export const configValidation = Joi.object({
 
   EMAIL_RESEND_API_KEY: Joi.string().required(),
   EMAIL_FROM: Joi.string().email().required(),
+
+  CLOUDINARY_API_KEY: Joi.string().required(),
+  CLOUDINARY_API_SECRET: Joi.string().required(),
+  CLOUDINARY_CLOUD_NAME: Joi.string().required(),
 });

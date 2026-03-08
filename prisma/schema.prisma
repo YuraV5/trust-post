@@ -88,6 +88,8 @@ enum PostStatus {
   BLOCKED        @map("blocked")
   ARCHIVED       @map("archived")
   COMPLETED      @map("completed")
+
+  @@map("post_statuses")
 }
 
 enum PostReviewStatus {
@@ -100,6 +102,8 @@ enum PostReviewStatus {
 
 enum Currencies {
   UAH @map("uah")
+
+  @@map("currencies")
 }
 
 model Post {
@@ -124,6 +128,7 @@ model Post {
   postReviews PostReview[]
   comments    Comment[]
   likes       PostLike[]
+  files       PostFile[]
 
   @@index([status])
   @@index([authorId])
@@ -153,6 +158,8 @@ model PostReview {
 enum CommentStatus {
   VISIBLE
   DELETED
+
+  @@map("comment_statuses")
 }
 
 model Comment {
@@ -202,4 +209,35 @@ model PostLike {
   @@index([postId])
   @@index([userId])
   @@map("post_likes")
+}
+
+enum FileProvider {
+  CLOUDINARY @map("cloudinary")
+
+  @@map("file_providers")
+}
+
+model PostFile {
+  id           Int          @id @default(autoincrement())
+  url          String       @db.VarChar(512)
+  postId       Int          @map("post_id")
+  uploadedById String       @map("uploaded_by_id")
+  storageKey   String       @map("storage_key") @db.VarChar(255)
+  provider     FileProvider @map("provider")
+  mimeType     String       @map("mime_type") @db.VarChar(255)
+  mainImage    Boolean      @default(false) @map("main_image")
+  size         Int          @map("size")
+  metadata     Json?        @map("metadata") @db.Json
+  originalName String       @map("original_name") @db.VarChar(255)
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([uploadedById])
+  @@index([provider])
+  @@index([postId, mainImage])
+  @@index([createdAt])
+  @@unique([postId, provider, storageKey])
+  @@map("post_files")
 }

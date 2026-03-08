@@ -103,6 +103,35 @@ export class CloudinaryClientService implements ICloudinaryClient {
     });
   }
 
+  async findOrphanCandidates(
+    prefix: string,
+    nextCursor?: string,
+  ): Promise<{ resources: { public_id: string; created_at: string }[]; nextCursor?: string }> {
+    const client = this.getClient();
+    await this.applyRateLimit();
+
+    const result = await executeWithRetry(
+      async () => {
+        let search = client.search
+          // uploaded_at<1d means "uploaded more than 1 day ago"
+          .expression(`folder:"${prefix}/*" AND uploaded_at<1d`)
+          .max_results(500);
+
+        if (nextCursor) {
+          search = search.next_cursor(nextCursor);
+        }
+
+        return search.execute();
+      },
+      { maxRetries: MAX_RETRIES, timeoutMs: TIMEOUT_MS.delete, retryableStatuses: RETRYABLE_STATUSES },
+    );
+
+    return {
+      resources: result.resources,
+      nextCursor: result.next_cursor,
+    };
+  }
+
   private uploadStream(
     stream: NodeJS.ReadableStream,
     options: { folder: string; public_id: string; resource_type?: ResourceType },

@@ -11,7 +11,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../../common/decorators';
 import { type AuthenticatedUser } from '../../../common/interfaces';
-import { type FileStorageInfo } from '../types';
+import { FileUploadResponse, type FileStorageInfo } from '../types';
 import { DeleteFilesDto, UploadDocumentsDto } from '../dtos';
 import { FilesService } from '../services';
 
@@ -31,7 +31,7 @@ export class FilesController {
     files: Express.Multer.File[],
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: FileStorageInfo,
-  ) {
+  ): Promise<FileUploadResponse> {
     return this.filesService.upload(files, { ...body, userId: user.userId });
   }
 
@@ -50,12 +50,12 @@ export class FilesController {
     files: Express.Multer.File[],
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: UploadDocumentsDto,
-  ) {
+  ): Promise<FileUploadResponse> {
     return this.filesService.upload(files, { ...body, userId: user.userId });
   }
 
   @Delete('/delete')
-  async deleteFiles(@Body() body: DeleteFilesDto) {
+  async deleteFiles(@Body() body: DeleteFilesDto): Promise<void> {
     return this.filesService.delete(body.keys, body.storage);
   }
 }

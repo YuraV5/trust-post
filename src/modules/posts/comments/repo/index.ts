@@ -1,2 +1,2 @@
 export * from './comments.repo';
-export * from './like.repo';
+export * from './comments-like.repo';

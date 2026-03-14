@@ -13,6 +13,14 @@ import { PaginatedResult } from './types';
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
+  @Post('comments/:id/like')
+  async toggleCommentLike(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: NumericIdParamDto,
+  ): Promise<{ message: string; liked: boolean }> {
+    return await this.commentsService.toggleLike(params.id, user.userId);
+  }
+
   @Post('posts/:postId/comments')
   async createComment(
     @CurrentUser() user: AuthenticatedUser,

@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { ILikeRepo } from '../interfaces/like-repo';
+import { ICommentLikeRepo } from '../interfaces/like-repo';
 
 @Injectable()
-export class LikeRepo implements ILikeRepo {
+export class CommentLikeRepo implements ICommentLikeRepo {
   constructor(private readonly db: PrismaService) {}
 
   async createLike(commentId: number, userId: string): Promise<boolean> {

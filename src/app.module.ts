@@ -25,6 +25,7 @@ import { FilesModule } from './modules/files/files.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { MessageModule } from './modules/message/message.module';
 import { SocketModule } from './modules/socket/socket.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { SocketModule } from './modules/socket/socket.module';
     ChatModule,
     MessageModule,
     SocketModule,
+    PaymentsModule,
   ],
   controllers: [],
   providers: [

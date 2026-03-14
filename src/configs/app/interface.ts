@@ -5,6 +5,7 @@ export interface IAppConfig {
   serviceName: string;
   loggerLevel: string;
   frontUrl: string;
+  serviceUrl: string;
 
   redis: {
     host: string;
@@ -40,5 +41,15 @@ export interface IAppConfig {
     apiKey: string;
     apiSecret: string;
     cloudName: string;
+  };
+
+  wayforpay: {
+    merchantAccount: string;
+    merchantDomainName: string;
+    secretKey: string;
+    apiUrl: string;
+    webhookUrl: string;
+    returnUrl: string;
+    orderExpiresAt: number;
   };
 }

@@ -7,6 +7,7 @@ export default (): IAppConfig => ({
   serviceName: process.env.SERVICE_NAME || 'trust-post',
   loggerLevel: process.env.LOGGER_LEVEL || 'info',
   frontUrl: process.env.FRONTEND_URL!,
+  serviceUrl: process.env.SERVICE_URL || 'http://localhost:3001',
 
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
@@ -41,5 +42,17 @@ export default (): IAppConfig => ({
     apiKey: process.env.CLOUDINARY_API_KEY!,
     apiSecret: process.env.CLOUDINARY_API_SECRET!,
     cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
+  },
+
+  wayforpay: {
+    merchantAccount: process.env.WAYFORPAY_MERCHANT_ACCOUNT!,
+    merchantDomainName: process.env.WAYFORPAY_MERCHANT_DOMAIN_NAME!,
+    secretKey: process.env.WAYFORPAY_SECRET_KEY!,
+    apiUrl: process.env.WAYFORPAY_API_URL || 'https://api.wayforpay.com/api',
+    webhookUrl: process.env.WAYFORPAY_WEBHOOK_URL!,
+    returnUrl: process.env.WAYFORPAY_RETURN_URL!,
+    orderExpiresAt: process.env.WAYFORPAY_ORDER_EXPIRES_AT
+      ? parseInt(process.env.WAYFORPAY_ORDER_EXPIRES_AT, 10)
+      : 3600, // Default to 1 hour
   },
 });

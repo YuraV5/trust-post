@@ -34,15 +34,12 @@ export class PublicPostsController {
     return await this.postsService.getUserPosts(user.userId, query);
   }
 
-  @Get('/:id')
-  async getPostById(@Param() params: NumericIdParamDto): Promise<Publication> {
-    return await this.postsService.findById(params.id);
-  }
-
-  @UseGuards(OwnershipGuard({ model: 'post' }))
-  @Patch('/:id')
-  async editPostDetails(@Param() params: NumericIdParamDto, @Body() inp: UpdatePostDto): Promise<ResponseMessage> {
-    return await this.postsService.update([params.id], inp);
+  @Post('/:id/like')
+  async togglePostLike(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: NumericIdParamDto,
+  ): Promise<{ message: string; liked: boolean }> {
+    return await this.postsService.toggleLike(params.id, user.userId);
   }
 
   @UseGuards(OwnershipGuard({ model: 'post' }))
@@ -54,17 +51,20 @@ export class PublicPostsController {
     return await this.postsService.editUserPostStatus(params.id, inp);
   }
 
-  @Post('/:id/like')
-  async togglePostLike(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param() params: NumericIdParamDto,
-  ): Promise<{ message: string; liked: boolean }> {
-    return await this.postsService.toggleLike(params.id, user.userId);
+  @UseGuards(OwnershipGuard({ model: 'post' }))
+  @Patch('/:id')
+  async editPostDetails(@Param() params: NumericIdParamDto, @Body() inp: UpdatePostDto): Promise<ResponseMessage> {
+    return await this.postsService.update([params.id], inp);
   }
 
   @UseGuards(OwnershipGuard({ model: 'post' }))
   @Delete('/:id')
   async deletePost(@Param() params: NumericIdParamDto, @Body() inp: DeletePostByUserDto): Promise<ResponseMessage> {
     return await this.postsService.delete([params.id], inp.statusReason);
+  }
+
+  @Get('/:id')
+  async getPostById(@Param() params: NumericIdParamDto): Promise<Publication> {
+    return await this.postsService.findById(params.id);
   }
 }

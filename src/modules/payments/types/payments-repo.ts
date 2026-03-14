@@ -1,35 +1,35 @@
 import { Currencies, Payment, PaymentProvider, PaymentStatus, Prisma } from '@prisma/client';
-import { PaymentProviderPayload, PaymentsListQuery, PaymentsPage } from '../types';
+import { PaymentProviderPayload } from './payments-provider-payload';
+import { PaymentsListQuery, PaymentsPage } from './payments-list';
 
-export interface CreatePaymentInput {
+export type CreatePaymentInput = {
   postId: number;
   userId: string | null;
   amount: Prisma.Decimal;
   currency: Currencies;
   referencePaymentId: string;
-}
+};
 
-export interface UpdatePaymentCheckoutStateInput {
+export type UpdatePaymentCheckoutStateInput = {
   paymentId: string;
   status: PaymentStatus;
   expiresAt?: Date;
-}
+};
 
-export interface PaymentUpdateWebhookSuccessInput {
+export type PaymentUpdateWebhookSuccessInput = {
   paymentId: string;
   provider: PaymentProvider;
   providerPaymentId: string | null;
   providerPayload: PaymentProviderPayload;
-}
+};
 
-export interface PaymentUpdateWebhookStatusInput {
+export type PaymentUpdateWebhookStatusInput = {
   paymentId: string;
   provider: PaymentProvider;
   status: PaymentStatus;
   providerPaymentId: string | null;
   providerPayload?: PaymentProviderPayload;
-  message?: string;
-}
+};
 
 export type PaymentWithLastAttempt = Payment & {
   lastAttempt: {
@@ -47,15 +47,20 @@ export type PaymentForRegeneration = Payment & {
   };
 };
 
-export interface IPaymentsRepo {
+export type DonationPost = {
+  id: number;
+  title: string;
+  currency: Currencies;
+  referencePaymentId: string;
+};
+
+export type PaymentsRepo = {
   create(input: CreatePaymentInput): Promise<Payment>;
   findById(id: string): Promise<PaymentWithLastAttempt | null>;
-  getPostForDonation(
-    postId: number,
-  ): Promise<{ id: number; title: string; currency: Currencies; referencePaymentId: string } | null>;
+  getPostForDonation(postId: number): Promise<DonationPost | null>;
   getPaymentForRegeneration(paymentId: string, userId: string): Promise<PaymentForRegeneration | null>;
   updatePaymentCheckoutState(input: UpdatePaymentCheckoutStateInput): Promise<void>;
   listByUserId(userId: string, query: PaymentsListQuery): Promise<PaymentsPage>;
   updateStatusWithPostIncrement(input: PaymentUpdateWebhookSuccessInput): Promise<boolean>;
   updateStatusWithoutPostIncrement(input: PaymentUpdateWebhookStatusInput): Promise<boolean>;
-}
+};

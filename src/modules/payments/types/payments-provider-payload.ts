@@ -1,6 +1,6 @@
-type TransactionType = 'CREATE_INVOICE';
+import { Currencies } from '@prisma/client';
 
-type Currencies = 'USD' | 'EUR' | 'UAH';
+type TransactionType = 'CREATE_INVOICE';
 
 type MethodPaymentSystem = 'card' | 'applepay' | 'googlepay';
 

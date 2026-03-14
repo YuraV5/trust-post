@@ -14,7 +14,13 @@ export class UserPaymentsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateUserPaymentDto,
   ): Promise<PaymentInitResponse> {
-    return await this.paymentsService.createUserPayment(user, dto);
+    return await this.paymentsService.createPayment({
+      postId: dto.postId,
+      amount: dto.amount,
+      currency: dto.currency,
+      userId: user.userId,
+      provider: dto.provider,
+    });
   }
 
   @Post(':paymentId/regenerate-link')
@@ -23,11 +29,21 @@ export class UserPaymentsController {
     @Param('paymentId') paymentId: string,
     @Body() dto: RegeneratePaymentLinkDto,
   ): Promise<PaymentInitResponse> {
-    return await this.paymentsService.regeneratePaymentLink(user.userId, paymentId, dto);
+    return await this.paymentsService.regeneratePaymentLink({
+      userId: user.userId,
+      paymentId,
+      provider: dto.provider,
+    });
   }
 
   @Get('my')
   async getMyPayments(@CurrentUser() user: AuthenticatedUser, @Query() query: PaymentsQueryDto): Promise<PaymentsPage> {
-    return await this.paymentsService.listMyPayments(user.userId, query);
+    return await this.paymentsService.listMyPayments({
+      userId: user.userId,
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      postId: query.postId,
+    });
   }
 }

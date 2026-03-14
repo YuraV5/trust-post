@@ -1,5 +1,5 @@
 import { Currencies } from '@prisma/client';
-import { PaymentProviderPayload, WayForPayWebhookPayload } from './payment-provider-payload';
+import { WayForPayWebhookPayload } from './payment-provider-payload';
 
 export type PaymentGatewayCreateInput = {
   paymentId: string;
@@ -11,7 +11,6 @@ export type PaymentGatewayCreateInput = {
 export type PaymentGatewayInitResult = {
   checkoutUrl: string;
   qrCodeUrl?: string;
-  //payload: PaymentProviderPayload;
 };
 
 export type PaymentWebhookResult = {

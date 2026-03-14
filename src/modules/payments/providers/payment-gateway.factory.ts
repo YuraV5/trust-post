@@ -9,7 +9,7 @@ export class PaymentGatewayFactory implements IPaymentGatewayFactory {
   constructor(private readonly wayForPayGateway: WayForPayGateway) {}
 
   get(provider: PaymentProvider): IPaymentGateway {
-    switch (provider) {
+    switch (provider as PaymentProvider) {
       case PaymentProvider.WAYFORPAY:
         return this.wayForPayGateway;
       default:

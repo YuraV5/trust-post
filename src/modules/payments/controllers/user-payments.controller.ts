@@ -23,7 +23,6 @@ export class UserPaymentsController {
     @Param('paymentId') paymentId: string,
     @Body() dto: RegeneratePaymentLinkDto,
   ): Promise<PaymentInitResponse> {
-    console.log('Regenerating payment link for paymentId:', paymentId, 'userId:', user.userId, 'with data:', dto);
     return await this.paymentsService.regeneratePaymentLink(user.userId, paymentId, dto);
   }
 

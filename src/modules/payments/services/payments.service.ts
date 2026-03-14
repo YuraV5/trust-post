@@ -228,7 +228,7 @@ export class PaymentsService implements IPaymentsService {
     await this.paymentRepo.updatePaymentCheckoutState({
       paymentId: payment.id,
       status: PaymentStatus.PENDING,
-      expiresAt: new Date(Date.now() + (Number(this.config.get('wayforpay.orderExpiresAt')) ?? 3600) * 1000),
+      expiresAt: new Date(Date.now() + Number(this.config.getOrThrow('wayforpay.orderExpiresAt')) * 1000),
     });
 
     return {

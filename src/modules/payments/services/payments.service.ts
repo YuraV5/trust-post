@@ -4,11 +4,20 @@ import { AuthenticatedUser } from '../../../common/interfaces';
 import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
-import { CreateAnonymousPaymentDto, CreateUserPaymentDto, PaymentsQueryDto, WayForPayWebhookDto } from '../dtos';
+import {
+  CreateAnonymousPaymentDto,
+  CreateUserPaymentDto,
+  PaymentsQueryDto,
+  RegeneratePaymentLinkDto,
+  WayForPayWebhookDto,
+} from '../dtos';
 import { IPaymentsService } from '../interfaces';
 import { PaymentGatewayFactory } from '../providers';
 import { PaymentsRepo } from '../repo';
 import { PaymentInitResponse, PaymentsPage, WayForPayWebhookAcknowledge } from '../types';
+import { ConfigService } from '@nestjs/config/dist/config.service';
+
+const CARDHOLDER_SESSION_EXPIRED = 'Cardholder session expired';
 
 @Injectable()
 export class PaymentsService implements IPaymentsService {
@@ -19,32 +28,69 @@ export class PaymentsService implements IPaymentsService {
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly paymentRepo: PaymentsRepo,
     private readonly gatewayFactory: PaymentGatewayFactory,
+    private readonly config: ConfigService,
   ) {}
 
-  async createAnonymousPayment(dto: CreateAnonymousPaymentDto): Promise<PaymentInitResponse> {
+  async createAnonymousPayment(data: CreateAnonymousPaymentDto): Promise<PaymentInitResponse> {
     return await this.createPayment({
-      postId: dto.postId,
-      amount: dto.amount,
-      currency: dto.currency ?? Currencies.UAH,
-      donorEmail: dto.donorEmail ?? null,
-      donorName: dto.donorName ?? null,
-      message: dto.message ?? null,
+      postId: data.postId,
+      amount: data.amount,
+      currency: data.currency ?? Currencies.UAH,
+      message: data.message ?? null,
       userId: null,
-      provider: dto.provider,
+      provider: data.provider ?? this.DEFAULT_PROVIDER,
     });
   }
 
-  async createUserPayment(user: AuthenticatedUser, dto: CreateUserPaymentDto): Promise<PaymentInitResponse> {
+  async createUserPayment(user: AuthenticatedUser, data: CreateUserPaymentDto): Promise<PaymentInitResponse> {
     return await this.createPayment({
-      postId: dto.postId,
-      amount: dto.amount,
-      currency: dto.currency ?? Currencies.UAH,
-      donorEmail: null,
-      donorName: null,
-      message: dto.message ?? null,
+      postId: data.postId,
+      amount: data.amount,
+      currency: data.currency ?? Currencies.UAH,
+      message: data.message ?? null,
       userId: user.userId,
-      provider: dto.provider,
+      provider: data.provider ?? this.DEFAULT_PROVIDER,
     });
+  }
+
+  async regeneratePaymentLink(
+    userId: string,
+    paymentId: string,
+    inp: RegeneratePaymentLinkDto,
+  ): Promise<PaymentInitResponse> {
+    const provider = inp.provider ?? this.DEFAULT_PROVIDER;
+
+    const payment = await this.paymentRepo.getPaymentForRegeneration(paymentId, userId);
+
+    if (!payment) {
+      throw new AppBadRequestException(
+        'Payment cannot be regenerated. Ensure payment status is pending or failed, payment is not expired, and post is approved',
+      );
+    }
+
+    const newPayment = await this.paymentRepo.create({
+      postId: payment.postId,
+      userId,
+      amount: payment.amount,
+      currency: payment.currency,
+      referencePaymentId: payment.referencePaymentId,
+    });
+
+    const gateway = this.gatewayFactory.get(provider);
+
+    const checkout = await gateway.createCheckout({
+      paymentId: newPayment.id,
+      amount: Number(newPayment.amount),
+      currency: newPayment.currency,
+      postTitle: payment.post.title,
+    });
+
+    return {
+      paymentId: newPayment.id,
+      provider,
+      checkoutUrl: checkout.checkoutUrl,
+      qrCodeUrl: checkout.qrCodeUrl,
+    };
   }
 
   async handleWebhook(provider: PaymentProvider, payload: WayForPayWebhookDto): Promise<WayForPayWebhookAcknowledge> {
@@ -61,19 +107,6 @@ export class PaymentsService implements IPaymentsService {
       throw new AppNotFoundException('Payment not found');
     }
 
-    if (payment.provider !== provider) {
-      throw new AppBadRequestException('Webhook provider mismatch');
-    }
-
-    if (payment.status === PaymentStatus.SUCCESS) {
-      this.logger.debug('Duplicate success webhook ignored', {
-        paymentId: payment.id,
-        provider,
-      });
-
-      return gateway.buildWebhookAcknowledge(payment.id);
-    }
-
     if (Number(payment.amount) !== payload.amount) {
       throw new AppBadRequestException('Webhook amount mismatch');
     }
@@ -82,12 +115,11 @@ export class PaymentsService implements IPaymentsService {
       throw new AppBadRequestException('Webhook currency mismatch');
     }
 
-    const providerPaymentId = webhook.providerPaymentId ?? `${provider.toLowerCase()}_${payment.id}`;
-
     if (webhook.status === 'SUCCESS') {
       const updated = await this.paymentRepo.updateStatusWithPostIncrement({
         paymentId: payment.id,
-        providerPaymentId,
+        provider,
+        providerPaymentId: webhook.providerPaymentId ?? null,
         providerPayload: payload,
       });
 
@@ -95,7 +127,7 @@ export class PaymentsService implements IPaymentsService {
         this.logger.debug('Concurrent success webhook ignored', {
           paymentId: payment.id,
           provider,
-          providerPaymentId,
+          providerPaymentId: webhook.providerPaymentId ?? null,
         });
 
         return gateway.buildWebhookAcknowledge(payment.id);
@@ -110,11 +142,15 @@ export class PaymentsService implements IPaymentsService {
       return gateway.buildWebhookAcknowledge(payment.id);
     }
 
+    const isSessionExpired = webhook.payload.reason === CARDHOLDER_SESSION_EXPIRED;
+
     const updated = await this.paymentRepo.updateStatusWithoutPostIncrement({
       paymentId: payment.id,
-      status: webhook.status === 'EXPIRED' ? PaymentStatus.EXPIRED : PaymentStatus.FAILED,
-      providerPaymentId,
+      provider,
+      status: isSessionExpired ? PaymentStatus.EXPIRED : PaymentStatus.FAILED,
+      providerPaymentId: webhook.providerPaymentId ?? null,
       providerPayload: payload,
+      message: webhook.payload.reason,
     });
 
     if (!updated) {
@@ -153,8 +189,6 @@ export class PaymentsService implements IPaymentsService {
     postId: number;
     amount: number;
     currency: Currencies;
-    donorEmail: string | null;
-    donorName: string | null;
     message: string | null;
     userId: string | null;
     provider: PaymentProvider;
@@ -178,28 +212,28 @@ export class PaymentsService implements IPaymentsService {
       userId: input.userId,
       amount: new Prisma.Decimal(String(input.amount)),
       currency: input.currency,
-      provider: input.provider,
       referencePaymentId: post.referencePaymentId,
-      donorEmail: input.donorEmail,
-      donorName: input.donorName,
-      message: input.message,
     });
 
-    const gateway = this.gatewayFactory.get(input.provider ?? this.DEFAULT_PROVIDER);
+    const provider = input.provider ?? this.DEFAULT_PROVIDER;
+    const gateway = this.gatewayFactory.get(provider);
 
     const checkout = await gateway.createCheckout({
-      payment,
+      paymentId: payment.id,
+      amount: Number(payment.amount),
+      currency: payment.currency,
       postTitle: post.title,
     });
 
-    await this.paymentRepo.updateStatusWithoutPostIncrement({
+    await this.paymentRepo.updatePaymentCheckoutState({
       paymentId: payment.id,
       status: PaymentStatus.PENDING,
+      expiresAt: new Date(Date.now() + (Number(this.config.get('wayforpay.orderExpiresAt')) ?? 3600) * 1000),
     });
 
     return {
       paymentId: payment.id,
-      provider: input.provider,
+      provider,
       checkoutUrl: checkout.checkoutUrl,
       qrCodeUrl: checkout.qrCodeUrl,
     };

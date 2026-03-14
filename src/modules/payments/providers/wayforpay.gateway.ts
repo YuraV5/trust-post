@@ -29,19 +29,17 @@ export class WayForPayGateway implements IPaymentGateway {
       merchantAccount,
       merchantDomainName,
       apiVersion: '1',
-      orderReference: input.payment.id,
+      orderReference: input.paymentId,
       orderDate,
       language: 'en',
-      amount: Number(input.payment.amount),
-      currency: input.payment.currency,
-      orderTimeout: this.config.getOrThrow<number>('wayforpay.orderTimeout'), // 1 hour
+      amount: input.amount,
+      currency: input.currency,
+      orderTimeout: Number(this.config.get('wayforpay.orderExpiresAt')) || 3600,
       productName: [input.postTitle],
-      productPrice: [Number(input.payment.amount)],
+      productPrice: [input.amount],
       productCount: [1],
       returnUrl: this.config.getOrThrow<string>('wayforpay.returnUrl'),
-      serviceUrl: `https://growth-forwarding-cathedral-forever.trycloudflare.com/api/v1/payments/webhook/wayforpay`,
-      clientFirstName: input.payment.donorName ?? undefined,
-      clientEmail: input.payment.donorEmail ?? undefined,
+      serviceUrl: `https://continuing-pennsylvania-ratio-oxygen.trycloudflare.com/api/v1/payments/webhook/wayforpay`,
       notifyMethod: 'email',
       paymentSystem: 'card',
     };
@@ -69,10 +67,11 @@ export class WayForPayGateway implements IPaymentGateway {
       { maxRetries: 2, timeoutMs: 1000, exponentialBackoff: true },
     );
 
+    this.logger.debug('WayForPay create checkout response', { paymentRequestUrl });
+
     return {
       checkoutUrl: paymentRequestUrl.invoiceUrl,
       qrCodeUrl: paymentRequestUrl.qrCode,
-      payload: payloadBase,
     };
   }
 

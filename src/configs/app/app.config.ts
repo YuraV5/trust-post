@@ -51,6 +51,8 @@ export default (): IAppConfig => ({
     apiUrl: process.env.WAYFORPAY_API_URL || 'https://api.wayforpay.com/api',
     webhookUrl: process.env.WAYFORPAY_WEBHOOK_URL!,
     returnUrl: process.env.WAYFORPAY_RETURN_URL!,
-    orderTimeout: process.env.WAYFORPAY_ORDER_TIMEOUT ? parseInt(process.env.WAYFORPAY_ORDER_TIMEOUT, 10) : 3600, // Default to 1 hour
+    orderExpiresAt: process.env.WAYFORPAY_ORDER_EXPIRES_AT
+      ? parseInt(process.env.WAYFORPAY_ORDER_EXPIRES_AT, 10)
+      : 3600, // Default to 1 hour
   },
 });

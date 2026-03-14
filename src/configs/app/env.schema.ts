@@ -45,5 +45,5 @@ export const configValidation = Joi.object({
   WAYFORPAY_API_URL: Joi.string().uri().default('https://api.wayforpay.com/api'),
   WAYFORPAY_WEBHOOK_URL: Joi.string().uri().required(),
   WAYFORPAY_RETURN_URL: Joi.string().uri().required(),
-  WAYFORPAY_ORDER_TIMEOUT: Joi.number().default(3600), // Default to 1 hour
+  WAYFORPAY_ORDER_EXPIRES_AT: Joi.number().default(3600), // Default to 1 hour
 });

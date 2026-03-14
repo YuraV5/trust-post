@@ -50,6 +50,6 @@ export interface IAppConfig {
     apiUrl: string;
     webhookUrl: string;
     returnUrl: string;
-    orderTimeout: number;
+    orderExpiresAt: number;
   };
 }

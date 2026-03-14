@@ -52,4 +52,4 @@ export type WayForPayWebhookAcknowledge = {
   signature: string;
 };
 
-export type PaymentProviderPayload = WayForPayCheckoutPayload | WayForPayWebhookPayload;
+export type PaymentProviderPayload = WayForPayWebhookPayload;

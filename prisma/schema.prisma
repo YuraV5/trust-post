@@ -126,30 +126,51 @@ enum PaymentProvider {
 }
 
 model Payment {
-  id                 String          @id @default(uuid())
-  postId             Int             @map("post_id")
-  userId             String?         @map("user_id")
-  amount             Decimal         @db.Decimal(12, 2)
-  currency           Currencies      @default(UAH)
-  status             PaymentStatus   @default(PENDING)
-  provider           PaymentProvider
-  providerPaymentId  String?         @map("provider_payment_id")
-  referencePaymentId String          @map("reference_payment_id") @db.VarChar(255)
-  donorEmail         String?         @map("donor_email")
-  donorName          String?         @map("donor_name")
-  message            String?         @db.Text
-  providerPayload    Json?           @map("provider_payload")
-  confirmedAt        DateTime?       @map("confirmed_at")
-  createdAt          DateTime        @default(now()) @map("created_at")
-  updatedAt          DateTime        @updatedAt @map("updated_at")
+  id                 String        @id @default(uuid())
+  postId             Int           @map("post_id")
+  userId             String?       @map("user_id")
+  amount             Decimal       @db.Decimal(12, 2)
+  currency           Currencies    @default(UAH)
+  status             PaymentStatus @default(PENDING)
+  message            String?       @db.Text // rewite field name to better reflect its purpose, e.g. failureReason or statusMessage
+  referencePaymentId String        @map("reference_payment_id") @db.VarChar(255)
+  lastAttemptId      String?       @map("last_attempt_id") @db.VarChar(255)
+  confirmedAt        DateTime?     @map("confirmed_at")
+  expiredAt          DateTime?     @map("expired_at")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
 
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post            Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  lastAttempt     PaymentAttempt?  @relation("PaymentLastAttempt", fields: [lastAttemptId], references: [id], onDelete: SetNull)
+  paymentAttempts PaymentAttempt[] @relation("PaymentAttempts")
 
-  @@unique([provider, providerPaymentId])
   @@index([postId])
+  @@index([userId])
   @@index([status])
+  @@index([lastAttemptId])
   @@index([referencePaymentId])
   @@map("payments")
+}
+
+model PaymentAttempt {
+  id                String          @id @default(uuid())
+  paymentId         String          @map("payment_id")
+  provider          PaymentProvider @map("provider")
+  providerPaymentId String?         @map("provider_payment_id") @db.VarChar(255)
+  status            PaymentStatus   @default(PENDING)
+  providerResponse  Json?           @map("provider_response") @db.Json
+  message           String?         @db.Text // rewrite field name to better reflect its purpose, e.g. failureReason or statusMessage
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  payment        Payment   @relation("PaymentAttempts", fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentLastRef Payment[] @relation("PaymentLastAttempt")
+
+  @@unique([provider, providerPaymentId])
+  @@index([paymentId])
+  @@index([paymentId, createdAt])
+  @@index([provider])
+  @@index([providerPaymentId])
+  @@map("payment_attempts")
 }
 
 model Post {

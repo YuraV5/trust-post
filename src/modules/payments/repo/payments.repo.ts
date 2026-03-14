@@ -1,17 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { Currencies, Payment, PaymentStatus, PostStatus, Prisma } from '@prisma/client';
+import { Currencies, Payment, PaymentStatus, PostStatus, Prisma, Message } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreatePaymentInput,
   IPaymentsRepo,
+  PaymentForRegeneration,
+  PaymentWithLastAttempt,
+  UpdatePaymentCheckoutStateInput,
   PaymentUpdateWebhookStatusInput,
   PaymentUpdateWebhookSuccessInput,
 } from '../interfaces';
 import { PaymentsListQuery, PaymentsPage } from '../types';
+import { PaymentAttemptsRepo } from './payment-attempts.repo';
 
 @Injectable()
 export class PaymentsRepo implements IPaymentsRepo {
-  constructor(private readonly db: PrismaService) {}
+  constructor(
+    private readonly db: PrismaService,
+    private readonly paymentAttemptsRepo: PaymentAttemptsRepo,
+  ) {}
 
   async create(input: CreatePaymentInput): Promise<Payment> {
     return await this.db.payment.create({
@@ -20,18 +27,24 @@ export class PaymentsRepo implements IPaymentsRepo {
         userId: input.userId,
         amount: input.amount,
         currency: input.currency,
-        provider: input.provider,
         referencePaymentId: input.referencePaymentId,
-        donorEmail: input.donorEmail,
-        donorName: input.donorName,
-        message: input.message,
-        providerPayload: input.providerPayload,
+        status: PaymentStatus.PENDING,
       },
     });
   }
 
-  async findById(id: string): Promise<Payment | null> {
-    return await this.db.payment.findUnique({ where: { id } });
+  async findById(id: string): Promise<PaymentWithLastAttempt | null> {
+    return await this.db.payment.findUnique({
+      where: { id },
+      include: {
+        lastAttempt: {
+          select: {
+            id: true,
+            provider: true,
+          },
+        },
+      },
+    });
   }
 
   async getPostForDonation(
@@ -48,6 +61,43 @@ export class PaymentsRepo implements IPaymentsRepo {
         title: true,
         currency: true,
         referencePaymentId: true,
+      },
+    });
+  }
+
+  async getPaymentForRegeneration(paymentId: string, userId: string): Promise<PaymentForRegeneration | null> {
+    return await this.db.payment.findFirst({
+      where: {
+        id: paymentId,
+        userId,
+        expiredAt: {
+          gt: new Date(),
+        },
+        post: {
+          status: PostStatus.APPROVED,
+          deletedAt: null,
+        },
+      },
+      include: {
+        post: {
+          select: {
+            id: true,
+            title: true,
+            currency: true,
+            referencePaymentId: true,
+          },
+        },
+      },
+    });
+  }
+
+  async updatePaymentCheckoutState(input: UpdatePaymentCheckoutStateInput): Promise<void> {
+    await this.db.payment.update({
+      where: { id: input.paymentId },
+      data: {
+        status: input.status,
+        expiredAt: input.expiresAt,
+        ...(input.status === PaymentStatus.PENDING ? { confirmedAt: null } : {}),
       },
     });
   }
@@ -81,60 +131,99 @@ export class PaymentsRepo implements IPaymentsRepo {
   }
 
   async updateStatusWithPostIncrement(input: PaymentUpdateWebhookSuccessInput): Promise<boolean> {
-    return await this.db.transaction(async (tx) => {
-      const payment = await tx.payment.findUnique({ where: { id: input.paymentId } });
+    try {
+      return await this.db.transaction(async (tx) => {
+        const payment = await tx.payment.findUnique({ where: { id: input.paymentId } });
 
-      if (!payment) {
-        return false;
-      }
+        if (!payment) {
+          return false;
+        }
+        const message = input.providerPayload?.reason ?? '';
 
-      const updateResult = await tx.payment.updateMany({
-        where: {
-          id: input.paymentId,
-          status: {
-            not: PaymentStatus.SUCCESS,
-          },
-        },
-        data: {
-          status: PaymentStatus.SUCCESS,
-          confirmedAt: new Date(),
+        const attempt = await this.paymentAttemptsRepo.createInTransaction(tx, {
+          paymentId: input.paymentId,
+          provider: input.provider,
           providerPaymentId: input.providerPaymentId,
+          status: PaymentStatus.SUCCESS,
           providerPayload: input.providerPayload,
-        },
-      });
+          message,
+        });
 
-      if (updateResult.count === 0) {
+        const updateResult = await tx.payment.updateMany({
+          where: {
+            id: input.paymentId,
+            status: {
+              not: PaymentStatus.SUCCESS,
+            },
+          },
+          data: {
+            status: PaymentStatus.SUCCESS,
+            confirmedAt: new Date(),
+            lastAttemptId: attempt.id,
+            message,
+          },
+        });
+
+        if (updateResult.count === 0) {
+          return false;
+        }
+
+        await tx.post.update({
+          where: { id: payment.postId },
+          data: {
+            currentAmount: {
+              increment: payment.amount,
+            },
+          },
+        });
+
+        return true;
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         return false;
       }
 
-      await tx.post.update({
-        where: { id: payment.postId },
-        data: {
-          currentAmount: {
-            increment: payment.amount,
-          },
-        },
-      });
-
-      return true;
-    });
+      throw error;
+    }
   }
 
   async updateStatusWithoutPostIncrement(input: PaymentUpdateWebhookStatusInput): Promise<boolean> {
-    const result = await this.db.payment.updateMany({
-      where: {
-        id: input.paymentId,
-        status: {
-          not: PaymentStatus.SUCCESS,
-        },
-      },
-      data: {
-        status: input.status,
-        providerPaymentId: input.providerPaymentId,
-        providerPayload: input.providerPayload,
-      },
-    });
+    try {
+      return await this.db.transaction(async (tx) => {
+        const message = input.providerPayload?.reason ?? '';
+        const attempt = await this.paymentAttemptsRepo.createInTransaction(tx, {
+          paymentId: input.paymentId,
+          provider: input.provider,
+          providerPaymentId: input.providerPaymentId,
+          status: input.status,
+          providerPayload: input.providerPayload,
+          message,
+        });
 
-    return result.count > 0;
+        const result = await tx.payment.updateMany({
+          where: {
+            id: input.paymentId,
+            status: {
+              not: PaymentStatus.SUCCESS,
+            },
+          },
+          data: {
+            status: input.status,
+            lastAttemptId: attempt.id,
+            ...(input.status === PaymentStatus.EXPIRED ? { expiredAt: new Date() } : {}),
+            message,
+          },
+        });
+
+        return result.count > 0;
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return false;
+      }
+
+      throw error;
+    }
   }
 }

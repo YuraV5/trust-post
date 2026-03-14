@@ -47,6 +47,15 @@ async function main() {
           isEmailVerified: true,
           createdByAdmin: true,
         },
+        {
+          email: 'user@com.com',
+          name: 'user',
+          password: hashedPassword,
+          role: UserRoles.USER,
+          isActive: true,
+          isEmailVerified: true,
+          createdByAdmin: true,
+        }
       ],
     });
 

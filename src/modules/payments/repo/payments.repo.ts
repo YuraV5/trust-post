@@ -1,17 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { Currencies, Payment, PaymentStatus, PostStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { IPaymentsRepo } from '../interfaces';
 import {
   CreatePaymentInput,
-  IPaymentsRepo,
   PaymentForRegeneration,
-  PaymentWithLastAttempt,
-  UpdatePaymentCheckoutStateInput,
   PaymentUpdateWebhookStatusInput,
   PaymentUpdateWebhookSuccessInput,
-} from '../interfaces';
-import { PaymentsListQuery, PaymentsPage } from '../types';
-import { PaymentAttemptsRepo } from './payment-attempts.repo';
+  PaymentWithLastAttempt,
+  PaymentsListQuery,
+  PaymentsPage,
+  UpdatePaymentCheckoutStateInput,
+} from '../types';
+import { PaymentAttemptsRepo } from './payments-attempts.repo';
 
 @Injectable()
 export class PaymentsRepo implements IPaymentsRepo {
@@ -146,7 +147,6 @@ export class PaymentsRepo implements IPaymentsRepo {
           providerPaymentId: input.providerPaymentId,
           status: PaymentStatus.SUCCESS,
           providerPayload: input.providerPayload,
-          message,
         });
 
         const updateResult = await tx.payment.updateMany({
@@ -198,7 +198,6 @@ export class PaymentsRepo implements IPaymentsRepo {
           providerPaymentId: input.providerPaymentId,
           status: input.status,
           providerPayload: input.providerPayload,
-          message,
         });
 
         const result = await tx.payment.updateMany({

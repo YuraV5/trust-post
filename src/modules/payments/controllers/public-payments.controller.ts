@@ -13,7 +13,13 @@ export class PublicPaymentsController {
   @Post('anonymous')
   @PublicRoute()
   async createAnonymousPayment(@Body() dto: CreateAnonymousPaymentDto): Promise<PaymentInitResponse> {
-    return await this.paymentsService.createAnonymousPayment(dto);
+    return await this.paymentsService.createPayment({
+      postId: dto.postId,
+      amount: dto.amount,
+      currency: dto.currency,
+      userId: null,
+      provider: dto.provider,
+    });
   }
 
   @Post('webhook/wayforpay')
@@ -29,6 +35,9 @@ export class PublicPaymentsController {
     )
     payload: WayForPayWebhookDto,
   ): Promise<WayForPayWebhookAcknowledge> {
-    return await this.paymentsService.handleWebhook(PaymentProvider.WAYFORPAY, payload);
+    return await this.paymentsService.handleWebhook({
+      provider: PaymentProvider.WAYFORPAY,
+      payload,
+    });
   }
 }

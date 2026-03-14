@@ -1,15 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PaymentAttempt, PaymentProvider, PaymentStatus, Prisma } from '@prisma/client';
+import { PaymentAttempt, Prisma } from '@prisma/client';
 import { PaymentProviderPayload } from '../types';
-
-type CreatePaymentAttemptInput = {
-  paymentId: string;
-  provider: PaymentProvider;
-  status: PaymentStatus;
-  providerPaymentId: string | null;
-  providerPayload?: PaymentProviderPayload;
-  message?: string;
-};
+import { CreatePaymentAttemptInput } from '../types/payments-attemp';
 
 @Injectable()
 export class PaymentAttemptsRepo {

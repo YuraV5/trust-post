@@ -7,7 +7,7 @@ import { IPaymentGateway } from '../interfaces';
 import { executeWithRetry } from '../../../common/utils';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
-import { PaymentGatewayCreateInput, PaymentGatewayInitResult, PaymentWebhookResult } from '../types/payment-gateway';
+import { PaymentGatewayCreateInput, PaymentGatewayInitResult, PaymentWebhookResult } from '../types/payments-gateway';
 
 @Injectable()
 export class WayForPayGateway implements IPaymentGateway {
@@ -39,7 +39,7 @@ export class WayForPayGateway implements IPaymentGateway {
       productPrice: [input.amount],
       productCount: [1],
       returnUrl: this.config.getOrThrow<string>('wayforpay.returnUrl'),
-      serviceUrl: `https://continuing-pennsylvania-ratio-oxygen.trycloudflare.com/api/v1/payments/webhook/wayforpay`,
+      serviceUrl: this.config.getOrThrow<string>('wayforpay.serviceUrl'),
       notifyMethod: 'email',
       paymentSystem: 'card',
     };

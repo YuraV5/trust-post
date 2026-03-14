@@ -1,23 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Currencies, PaymentProvider, PaymentStatus, Prisma } from '@prisma/client';
-import { AuthenticatedUser } from '../../../common/interfaces';
 import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
-import {
-  CreateAnonymousPaymentDto,
-  CreateUserPaymentDto,
-  PaymentsQueryDto,
-  RegeneratePaymentLinkDto,
-  WayForPayWebhookDto,
-} from '../dtos';
 import { IPaymentsService } from '../interfaces';
 import { PaymentGatewayFactory } from '../providers';
 import { PaymentsRepo } from '../repo';
-import { PaymentInitResponse, PaymentsPage, WayForPayWebhookAcknowledge } from '../types';
 import { ConfigService } from '@nestjs/config/dist/config.service';
-
-const CARDHOLDER_SESSION_EXPIRED = 'Cardholder session expired';
+import {
+  CreatePaymentRequest,
+  HandleWebhookRequest,
+  PaymentInitResponse,
+  PaymentsListRequest,
+  PaymentsPage,
+  RegeneratePaymentLinkRequest,
+  WayForPayWebhookAcknowledge,
+} from '../types';
 
 @Injectable()
 export class PaymentsService implements IPaymentsService {
@@ -31,168 +29,7 @@ export class PaymentsService implements IPaymentsService {
     private readonly config: ConfigService,
   ) {}
 
-  async createAnonymousPayment(data: CreateAnonymousPaymentDto): Promise<PaymentInitResponse> {
-    return await this.createPayment({
-      postId: data.postId,
-      amount: data.amount,
-      currency: data.currency ?? Currencies.UAH,
-      message: data.message ?? null,
-      userId: null,
-      provider: data.provider ?? this.DEFAULT_PROVIDER,
-    });
-  }
-
-  async createUserPayment(user: AuthenticatedUser, data: CreateUserPaymentDto): Promise<PaymentInitResponse> {
-    return await this.createPayment({
-      postId: data.postId,
-      amount: data.amount,
-      currency: data.currency ?? Currencies.UAH,
-      message: data.message ?? null,
-      userId: user.userId,
-      provider: data.provider ?? this.DEFAULT_PROVIDER,
-    });
-  }
-
-  async regeneratePaymentLink(
-    userId: string,
-    paymentId: string,
-    inp: RegeneratePaymentLinkDto,
-  ): Promise<PaymentInitResponse> {
-    const provider = inp.provider ?? this.DEFAULT_PROVIDER;
-
-    const payment = await this.paymentRepo.getPaymentForRegeneration(paymentId, userId);
-
-    if (!payment) {
-      throw new AppBadRequestException(
-        'Payment cannot be regenerated. Ensure payment status is pending or failed, payment is not expired, and post is approved',
-      );
-    }
-
-    const newPayment = await this.paymentRepo.create({
-      postId: payment.postId,
-      userId,
-      amount: payment.amount,
-      currency: payment.currency,
-      referencePaymentId: payment.referencePaymentId,
-    });
-
-    const gateway = this.gatewayFactory.get(provider);
-
-    const checkout = await gateway.createCheckout({
-      paymentId: newPayment.id,
-      amount: Number(newPayment.amount),
-      currency: newPayment.currency,
-      postTitle: payment.post.title,
-    });
-
-    return {
-      paymentId: newPayment.id,
-      provider,
-      checkoutUrl: checkout.checkoutUrl,
-      qrCodeUrl: checkout.qrCodeUrl,
-    };
-  }
-
-  async handleWebhook(provider: PaymentProvider, payload: WayForPayWebhookDto): Promise<WayForPayWebhookAcknowledge> {
-    const gateway = this.gatewayFactory.get(provider);
-
-    if (!gateway.verifyWebhookSignature(payload)) {
-      throw new AppBadRequestException('Invalid payment webhook signature');
-    }
-
-    const webhook = gateway.parseWebhook(payload);
-    const payment = await this.paymentRepo.findById(webhook.paymentId);
-
-    if (!payment) {
-      throw new AppNotFoundException('Payment not found');
-    }
-
-    if (Number(payment.amount) !== payload.amount) {
-      throw new AppBadRequestException('Webhook amount mismatch');
-    }
-
-    if (payment.currency !== payload.currency) {
-      throw new AppBadRequestException('Webhook currency mismatch');
-    }
-
-    if (webhook.status === 'SUCCESS') {
-      const updated = await this.paymentRepo.updateStatusWithPostIncrement({
-        paymentId: payment.id,
-        provider,
-        providerPaymentId: webhook.providerPaymentId ?? null,
-        providerPayload: payload,
-      });
-
-      if (!updated) {
-        this.logger.debug('Concurrent success webhook ignored', {
-          paymentId: payment.id,
-          provider,
-          providerPaymentId: webhook.providerPaymentId ?? null,
-        });
-
-        return gateway.buildWebhookAcknowledge(payment.id);
-      }
-
-      this.logger.info('Payment confirmed', {
-        paymentId: payment.id,
-        postId: payment.postId,
-        provider,
-      });
-
-      return gateway.buildWebhookAcknowledge(payment.id);
-    }
-
-    const isSessionExpired = webhook.payload.reason === CARDHOLDER_SESSION_EXPIRED;
-
-    const updated = await this.paymentRepo.updateStatusWithoutPostIncrement({
-      paymentId: payment.id,
-      provider,
-      status: isSessionExpired ? PaymentStatus.EXPIRED : PaymentStatus.FAILED,
-      providerPaymentId: webhook.providerPaymentId ?? null,
-      providerPayload: payload,
-      message: webhook.payload.reason,
-    });
-
-    if (!updated) {
-      this.logger.debug('Terminal webhook ignored because payment already confirmed', {
-        paymentId: payment.id,
-        provider,
-        status: webhook.status,
-      });
-
-      return gateway.buildWebhookAcknowledge(payment.id);
-    }
-
-    this.logger.info('Payment not successful', {
-      paymentId: payment.id,
-      postId: payment.postId,
-      provider,
-      status: webhook.status,
-    });
-
-    return gateway.buildWebhookAcknowledge(payment.id);
-  }
-
-  async listMyPayments(userId: string, query: PaymentsQueryDto): Promise<PaymentsPage> {
-    const limit = Math.min(Math.max(query.limit ?? 10, 1), this.MAX_LIMIT);
-    const page = Math.max(query.page ?? 1, 1);
-
-    return await this.paymentRepo.listByUserId(userId, {
-      page,
-      limit,
-      status: query.status,
-      postId: query.postId,
-    });
-  }
-
-  private async createPayment(input: {
-    postId: number;
-    amount: number;
-    currency: Currencies;
-    message: string | null;
-    userId: string | null;
-    provider: PaymentProvider;
-  }): Promise<PaymentInitResponse> {
+  async createPayment(input: CreatePaymentRequest): Promise<PaymentInitResponse> {
     if (input.amount <= 0) {
       throw new AppBadRequestException('Amount must be greater than zero');
     }
@@ -203,7 +40,8 @@ export class PaymentsService implements IPaymentsService {
       throw new AppNotFoundException('Post for donation not found');
     }
 
-    if (post.currency !== input.currency) {
+    const currency = input.currency ?? Currencies.UAH;
+    if (post.currency !== currency) {
       throw new AppBadRequestException('Payment currency must match post currency');
     }
 
@@ -211,7 +49,7 @@ export class PaymentsService implements IPaymentsService {
       postId: post.id,
       userId: input.userId,
       amount: new Prisma.Decimal(String(input.amount)),
-      currency: input.currency,
+      currency,
       referencePaymentId: post.referencePaymentId,
     });
 
@@ -237,5 +75,132 @@ export class PaymentsService implements IPaymentsService {
       checkoutUrl: checkout.checkoutUrl,
       qrCodeUrl: checkout.qrCodeUrl,
     };
+  }
+
+  async regeneratePaymentLink(input: RegeneratePaymentLinkRequest): Promise<PaymentInitResponse> {
+    const provider = input.provider ?? this.DEFAULT_PROVIDER;
+
+    const payment = await this.paymentRepo.getPaymentForRegeneration(input.paymentId, input.userId);
+
+    if (!payment) {
+      throw new AppBadRequestException(
+        'Payment cannot be regenerated. Ensure payment status is pending or failed, payment is not expired, and post is approved',
+      );
+    }
+
+    const newPayment = await this.paymentRepo.create({
+      postId: payment.postId,
+      userId: input.userId,
+      amount: payment.amount,
+      currency: payment.currency,
+      referencePaymentId: payment.referencePaymentId,
+    });
+
+    const gateway = this.gatewayFactory.get(provider);
+
+    const checkout = await gateway.createCheckout({
+      paymentId: newPayment.id,
+      amount: Number(newPayment.amount),
+      currency: newPayment.currency,
+      postTitle: payment.post.title,
+    });
+
+    return {
+      paymentId: newPayment.id,
+      provider,
+      checkoutUrl: checkout.checkoutUrl,
+      qrCodeUrl: checkout.qrCodeUrl,
+    };
+  }
+
+  async handleWebhook(input: HandleWebhookRequest): Promise<WayForPayWebhookAcknowledge> {
+    const gateway = this.gatewayFactory.get(input.provider);
+
+    if (!gateway.verifyWebhookSignature(input.payload)) {
+      throw new AppBadRequestException('Invalid payment webhook signature');
+    }
+
+    const webhook = gateway.parseWebhook(input.payload);
+    const payment = await this.paymentRepo.findById(webhook.paymentId);
+
+    if (!payment) {
+      throw new AppNotFoundException('Payment not found');
+    }
+
+    if (Number(payment.amount) !== input.payload.amount) {
+      throw new AppBadRequestException('Webhook amount mismatch');
+    }
+
+    if (payment.currency !== input.payload.currency) {
+      throw new AppBadRequestException('Webhook currency mismatch');
+    }
+
+    if (webhook.status === 'SUCCESS') {
+      const updated = await this.paymentRepo.updateStatusWithPostIncrement({
+        paymentId: payment.id,
+        provider: input.provider,
+        providerPaymentId: webhook.providerPaymentId ?? null,
+        providerPayload: input.payload,
+      });
+
+      if (!updated) {
+        this.logger.debug('Concurrent success webhook ignored', {
+          paymentId: payment.id,
+          provider: input.provider,
+          providerPaymentId: webhook.providerPaymentId ?? null,
+        });
+
+        return gateway.buildWebhookAcknowledge(payment.id);
+      }
+
+      this.logger.info('Payment confirmed', {
+        paymentId: payment.id,
+        postId: payment.postId,
+        provider: input.provider,
+      });
+
+      return gateway.buildWebhookAcknowledge(payment.id);
+    }
+
+    const isSessionExpired = webhook.payload.reason === 'Cardholder session expired';
+
+    const updated = await this.paymentRepo.updateStatusWithoutPostIncrement({
+      paymentId: payment.id,
+      provider: input.provider,
+      status: isSessionExpired ? PaymentStatus.EXPIRED : PaymentStatus.FAILED,
+      providerPaymentId: webhook.providerPaymentId ?? null,
+      providerPayload: input.payload,
+    });
+
+    if (!updated) {
+      this.logger.debug('Terminal webhook ignored because payment already confirmed', {
+        paymentId: payment.id,
+        provider: input.provider,
+        status: webhook.status,
+      });
+
+      return gateway.buildWebhookAcknowledge(payment.id);
+    }
+
+    this.logger.info('Payment not successful', {
+      paymentId: payment.id,
+      postId: payment.postId,
+      provider: input.provider,
+      status: webhook.status,
+    });
+
+    return gateway.buildWebhookAcknowledge(payment.id);
+  }
+
+  async listMyPayments(input: PaymentsListRequest): Promise<PaymentsPage> {
+    const limit = Math.min(Math.max(input.limit ?? 10, 1), this.MAX_LIMIT);
+    const page = Math.max(input.page ?? 1, 1);
+
+    return await this.paymentRepo.listByUserId(input.userId, {
+      page,
+      limit,
+      status: input.status,
+      postId: input.postId,
+    });
   }
 }

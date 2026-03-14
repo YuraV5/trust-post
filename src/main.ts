@@ -6,7 +6,9 @@ import { APP_LOGGER } from './shared/logger/services/app-logger';
 import { IAppLogger } from './shared/logger/intefaces/interface';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
 
   const config = app.get(ConfigService);
   setupGlobalSettings(app, config);

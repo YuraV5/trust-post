@@ -7,6 +7,7 @@ export const configValidation = Joi.object({
   SERVICE_NAME: Joi.string().default('work-link-service'),
   LOGGER_LEVEL: Joi.string().default('info'),
   FRONTEND_URL: Joi.string().uri().required(),
+  SERVICE_URL: Joi.string().uri().default('http://localhost:3001'),
 
   DB_USER: Joi.string().required(),
   DB_PASSWORD: Joi.string().required(),
@@ -37,4 +38,12 @@ export const configValidation = Joi.object({
   CLOUDINARY_API_KEY: Joi.string().required(),
   CLOUDINARY_API_SECRET: Joi.string().required(),
   CLOUDINARY_CLOUD_NAME: Joi.string().required(),
+
+  WAYFORPAY_MERCHANT_ACCOUNT: Joi.string().required(),
+  WAYFORPAY_MERCHANT_DOMAIN_NAME: Joi.string().required(),
+  WAYFORPAY_SECRET_KEY: Joi.string().required(),
+  WAYFORPAY_API_URL: Joi.string().uri().default('https://api.wayforpay.com/api'),
+  WAYFORPAY_WEBHOOK_URL: Joi.string().uri().required(),
+  WAYFORPAY_RETURN_URL: Joi.string().uri().required(),
+  WAYFORPAY_ORDER_TIMEOUT: Joi.number().default(3600), // Default to 1 hour
 });

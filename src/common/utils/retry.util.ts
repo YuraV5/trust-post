@@ -55,16 +55,12 @@ export async function executeWithRetry<T>(
   }
 }
 
-/**
- * Creates a promise that rejects after the specified timeout
- */
+// Creates a promise that rejects after the specified timeout
 function createTimeoutPromise(timeoutMs: number): Promise<never> {
   return new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), timeoutMs));
 }
 
-/**
- * Checks if an error is retryable based on status codes and error messages
- */
+// Checks if an error is retryable based on status codes and error messages
 function isRetryableError(error: any, config: Required<RetryOptions>): boolean {
   return (
     config.retryableStatuses.includes(error?.status) ||
@@ -72,9 +68,7 @@ function isRetryableError(error: any, config: Required<RetryOptions>): boolean {
   );
 }
 
-/**
- * Delays execution for the specified number of milliseconds
- */
+// Delays execution for the specified number of milliseconds
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CommentsRepo, LikeRepo } from './repo';
+import { CommentsRepo, CommentLikeRepo } from './repo';
 import { ResponseMessage } from '../../../common/types';
 import { CreateCommentInput, UpdateCommentInput, PaginatedResult, NormalizedCommentsQuery } from './types';
 import { Comment } from '@prisma/client';
@@ -16,7 +16,7 @@ export class CommentsService implements ICommentsService {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly commentsRepo: CommentsRepo,
-    private readonly likeRepo: LikeRepo,
+    private readonly commentLikesRepo: CommentLikeRepo,
   ) {}
 
   async create(postId: number, authorId: string, data: CreateCommentInput): Promise<ResponseMessage> {
@@ -83,12 +83,12 @@ export class CommentsService implements ICommentsService {
 
   // Like/unlike a comment
   async toggleLike(commentId: number, userId: string): Promise<{ message: string; liked: boolean }> {
-    const like = await this.likeRepo.getLikeByUserComment(commentId, userId);
+    const like = await this.commentLikesRepo.getLikeByUserComment(commentId, userId);
     if (like) {
-      await this.likeRepo.deleteLike(commentId, userId);
+      await this.commentLikesRepo.deleteLike(commentId, userId);
       return { message: 'Like removed', liked: false };
     } else {
-      await this.likeRepo.createLike(commentId, userId);
+      await this.commentLikesRepo.createLike(commentId, userId);
       return { message: 'Like added', liked: true };
     }
   }

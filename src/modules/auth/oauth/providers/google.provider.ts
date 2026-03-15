@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthProvider } from '@prisma/client';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
-import type { IOAuthProvider } from '../interfaces/oauth-provider.interface';
+import type { IOAuthProvider } from '../interfaces/oauth-provider';
 import type { OAuthTokenResult, OAuthUserProfile } from '../types';
 import {
   AppOAuthEmailMissingException,
@@ -93,10 +93,13 @@ export class GoogleOAuthProvider implements IOAuthProvider {
       throw new AppOAuthTokenExchangeException('Google');
     }
 
+    const { access_token, refresh_token, expires_in, ...rest } = data; // For easier debugging/logging if needed
+
     return {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresIn: data.expires_in,
+      accessToken: access_token,
+      refreshToken: refresh_token,
+      expiresIn: expires_in,
+      providerData: rest,
     };
   }
 

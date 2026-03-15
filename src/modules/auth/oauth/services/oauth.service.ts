@@ -41,7 +41,7 @@ export class OAuthService {
 
   // Public API
   getRedirectUrl(providerName: string, deviceId: string, redirectTo?: string): string {
-    const provider = this.registry.get(providerName);
+    const provider = this.registry.getProvider(providerName.toUpperCase() as AuthProvider);
 
     const state = this.stateService.sign({
       provider: provider.getProvider(),
@@ -72,10 +72,10 @@ export class OAuthService {
     const statePayload = this.stateService.verify(state);
     this.assertStateProvider(statePayload, providerName);
 
-    const provider = this.registry.get(providerName);
-    const tokens = await provider.exchangeCode(code);
-    const profile = await provider.getUserProfile(tokens.accessToken);
-    const { userId, role, isNewUser } = await this.resolveOrCreateUser(provider.getProvider(), profile, tokens);
+    const provider = this.registry.getProvider(providerName.toUpperCase() as AuthProvider);
+    const providerInfo = await provider.exchangeCode(code);
+    const profile = await provider.getUserProfile(providerInfo.accessToken);
+    const { userId, role, isNewUser } = await this.resolveOrCreateUser(provider.getProvider(), profile, providerInfo);
 
     const sessionTokens = await this.createSessionAndTokens(userId, role, statePayload.deviceId);
     const redirectUrl = this.buildRedirectUrl(
@@ -109,16 +109,17 @@ export class OAuthService {
   private async resolveOrCreateUser(
     provider: AuthProvider,
     profile: OAuthUserProfile,
-    tokens: OAuthTokenResult,
+    authenticationDetails: OAuthTokenResult,
   ): Promise<{ userId: string; role: string; isNewUser: boolean }> {
     const email = profile.email;
 
     const providerAccount = await this.providerAccountRepo.findByProviderId(provider, profile.providerId);
     if (providerAccount) {
       await this.providerAccountRepo.update(providerAccount.id, {
-        providerData: tokens,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
+        providerData: authenticationDetails.providerData,
+        accessToken: authenticationDetails.accessToken,
+        refreshToken: authenticationDetails.refreshToken,
+        tokenExpiresAt: new Date(Date.now() + (authenticationDetails.expiresIn ?? 0) * 1000),
       });
 
       const existingUser = await this.usersService.findAuthUserbyId(providerAccount.userId);
@@ -142,9 +143,10 @@ export class OAuthService {
           provider,
           userId: existingByEmail.id,
           providerId: profile.providerId,
-          providerData: tokens,
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
+          providerData: authenticationDetails.providerData,
+          accessToken: authenticationDetails.accessToken,
+          refreshToken: authenticationDetails.refreshToken,
+          tokenExpiresAt: new Date(Date.now() + (authenticationDetails.expiresIn ?? 0) * 1000),
         });
 
         return { userId: existingByEmail.id, role: existingByEmail.role, isNewUser: false };
@@ -168,9 +170,10 @@ export class OAuthService {
           provider,
           userId: user.id,
           providerId: profile.providerId,
-          providerData: tokens,
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
+          providerData: authenticationDetails.providerData,
+          accessToken: authenticationDetails.accessToken,
+          refreshToken: authenticationDetails.refreshToken,
+          tokenExpiresAt: new Date(Date.now() + (authenticationDetails.expiresIn ?? 0) * 1000),
         },
         tx,
       );

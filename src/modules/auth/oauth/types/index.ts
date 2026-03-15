@@ -1,11 +1,10 @@
 import { AuthProvider } from '@prisma/client';
 
-// ─── Shared OAuth flow types ──────────────────────────────────────────────────
-
 export type OAuthTokenResult = {
   accessToken: string;
   refreshToken?: string;
   expiresIn?: number;
+  providerData: Record<string, unknown>;
 };
 
 export type OAuthUserProfile = {
@@ -29,19 +28,19 @@ export type OAuthCallbackResult = {
   isNewUser: boolean;
 };
 
-// ─── Provider account repo input types ───────────────────────────────────────
-
 export type ProviderAccountCreateInput = {
   provider: AuthProvider;
   providerId: string;
   userId: string;
-  providerData?: unknown;
+  providerData?: Record<string, unknown>;
   accessToken?: string;
   refreshToken?: string;
+  tokenExpiresAt?: Date;
 };
 
 export type ProviderAccountUpdateInput = {
-  providerData?: unknown;
+  providerData?: Record<string, unknown>;
   accessToken?: string;
   refreshToken?: string;
+  tokenExpiresAt?: Date;
 };

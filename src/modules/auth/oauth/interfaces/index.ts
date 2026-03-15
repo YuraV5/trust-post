@@ -1,2 +1,3 @@
-export * from './oauth-provider.interface';
-export * from './provider-account.repo.interface';
+export * from './oauth-provider';
+export * from './provider-account.repo';
+export * from './provider-registery';

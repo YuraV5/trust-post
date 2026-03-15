@@ -1,5 +1,5 @@
 import { AuthProvider, Prisma, ProviderAccount } from '@prisma/client';
-import { ProviderAccountCreateInput, ProviderAccountUpdateInput } from '../types/google-provider';
+import { ProviderAccountCreateInput, ProviderAccountUpdateInput } from '../types';
 
 export interface IProviderAccountRepo {
   findByProviderId(provider: AuthProvider, providerId: string): Promise<ProviderAccount | null>;

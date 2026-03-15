@@ -5,7 +5,7 @@ import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 import { PasswordService, TokensService } from '../../security/services';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SessionsPolicy } from '../sessions/services/sessions-polict.service';
+import { SessionsPolicy } from '../sessions/services/sessions-policy.service';
 import { SessionsService } from '../sessions/services';
 import { JwtService } from '@nestjs/jwt';
 import { AuthProvider } from '@prisma/client';
@@ -99,12 +99,7 @@ export class OAuthGoogleService implements IOAuthGoogleService {
 
     const { userId, role, isNewUser } = await this.resolveOrCreateUser(googleProfile, tokenData);
     const sessionTokens = await this.createSessionAndTokens(userId, role, statePayload.deviceId);
-    const redirectUrl = this.buildSuccessRedirectUrl(
-      sessionTokens.accessToken,
-      sessionTokens.refreshToken,
-      isNewUser,
-      statePayload.redirectTo,
-    );
+    const redirectUrl = this.buildSuccessRedirectUrl(sessionTokens.accessToken, isNewUser, statePayload.redirectTo);
 
     this.logger.info('Google OAuth callback handled successfully', {
       context: 'OAuthGoogleService.handleGoogleCallback',
@@ -323,12 +318,7 @@ export class OAuthGoogleService implements IOAuthGoogleService {
     return { accessToken, refreshToken };
   }
 
-  private buildSuccessRedirectUrl(
-    accessToken: string,
-    refreshToken: string,
-    isNewUser: boolean,
-    redirectTo?: string,
-  ): string {
+  private buildSuccessRedirectUrl(accessToken: string, isNewUser: boolean, redirectTo?: string): string {
     const baseUrl = this.config.getOrThrow<string>('frontUrl');
     const url = new URL(baseUrl);
     url.pathname = redirectTo ?? '/oauth/callback';
@@ -336,7 +326,6 @@ export class OAuthGoogleService implements IOAuthGoogleService {
 
     const hashParams = new URLSearchParams({
       accessToken,
-      refreshToken,
       provider: AuthProvider.GOOGLE.toLowerCase(),
       isNewUser: String(isNewUser),
     });

@@ -22,6 +22,7 @@ export interface IUserService {
   updatePassword(id: string, inp: UpdatePasswordInput): Promise<ResponseMessage>;
   findAuthUserbyId(id: string): Promise<UserSecyredOutput | null>;
   markEmailAsVerified(userId: string): Promise<void>;
+  resetPasswordById(userId: string, newPassword: string): Promise<void>;
   resetPasswordThroughEmail(email: string, newPassword: string): Promise<void>;
 
   // Admin methods

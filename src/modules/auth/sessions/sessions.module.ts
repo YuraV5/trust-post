@@ -3,7 +3,7 @@ import { SessionsService } from './services/sessions.service';
 import { SessionsController } from './sessions.controller';
 import { SessionsRepo } from './repo/session-repo';
 import { SecurityModule } from '../../security/security.module';
-import { SessionsPolicy } from './services/sessions-polict.service';
+import { SessionsPolicy } from './services/sessions-policy.service';
 
 @Module({
   imports: [SecurityModule],

@@ -1,6 +1,8 @@
 import argon2 from 'argon2';
+import { Injectable } from '@nestjs/common';
 import { IPasswordService } from '../interfaces';
 
+@Injectable()
 export class PasswordService implements IPasswordService {
   async createHash(password: string): Promise<string> {
     return argon2.hash(password, {

@@ -111,6 +111,16 @@ export class UsersService implements IUserService {
     return user;
   }
 
+  async resetPasswordById(userId: string, newPassword: string): Promise<void> {
+    const user = await this.repo.findById(userId);
+    if (!user) {
+      throw new AppUserNotFoundException();
+    }
+
+    const hashedPassword = await this.passwordService.createHash(newPassword);
+    await this.repo.updatePassword(userId, hashedPassword);
+  }
+
   async resetPasswordThroughEmail(email: string, newPassword: string): Promise<void> {
     const user = await this.repo.findByEmail(email);
     if (!user) {

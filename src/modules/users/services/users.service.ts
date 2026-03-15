@@ -19,7 +19,7 @@ import {
   CreateByAdminInput,
 } from '../types';
 import { AdminUsersQueryDto } from '../dtos';
-import { UserRoles } from '@prisma/client';
+import { Prisma, UserRoles } from '@prisma/client';
 import { EmailQueueService } from '../../emails/email-queue.service';
 import { REDIS_KEYS } from '../../auth/const';
 import { LinksService } from '../../links/links.service';
@@ -290,5 +290,27 @@ export class UsersService implements IUserService {
       sortBy,
       sortOrder,
     };
+  }
+
+  async createByProvider(
+    data: {
+      email: string;
+      name?: string;
+      photoUrl?: string;
+      isEmailVerified?: boolean;
+    },
+    tx?: Prisma.TransactionClient,
+  ): Promise<{ id: string; role: UserRoles }> {
+    const newUser = await this.repo.createByProvider(
+      {
+        email: data.email,
+        name: data.name || `user_${generateRandomUsername()}`,
+        photoUrl: data.photoUrl,
+        isEmailVerified: data.isEmailVerified,
+      },
+      tx,
+    );
+
+    return { id: newUser.id, role: newUser.role };
   }
 }

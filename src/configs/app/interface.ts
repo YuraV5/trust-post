@@ -29,7 +29,7 @@ export interface IAppConfig {
   };
 
   session: {
-    expiresInMs: number;
+    sessionDuration: string | number;
   };
 
   email: {
@@ -51,5 +51,12 @@ export interface IAppConfig {
     webhookUrl: string;
     returnUrl: string;
     orderExpiresAt: number;
+  };
+
+  googleOAuth: {
+    clientId: string;
+    clientSecret: string;
+    callbackUrl: string;
+    apiKey: string;
   };
 }

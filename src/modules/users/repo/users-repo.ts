@@ -38,6 +38,20 @@ export class UsersRepo implements IUserRepo {
     await this.db.user.update({ where: { id: userId }, data: { isEmailVerified: true } });
   }
 
+  async createByProvider(
+    data: { email: string; name: string; photoUrl?: string; isEmailVerified?: boolean },
+    tx?: Prisma.TransactionClient,
+  ): Promise<User> {
+    return await (tx ?? this.db).user.create({
+      data: {
+        email: data.email,
+        name: data.name,
+        photoUrl: data.photoUrl,
+        isEmailVerified: data.isEmailVerified ?? false,
+      },
+    });
+  }
+
   // Admin methods
   async updateStatus(id: string, isActive: boolean): Promise<number> {
     const result = await this.db.user.updateMany({ where: { id }, data: { isActive } });

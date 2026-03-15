@@ -1,15 +1,15 @@
 import { Controller, Post, Body, Res, UseGuards, Req, Get, Param, HttpCode } from '@nestjs/common';
-import { AuthService } from './services/auth.service';
-import { LoginDto, RegisterDto } from './dtos';
-import { type ResponseMessage } from '../../common/types';
-import { AuthResponse } from './types';
+import { AuthService } from '../services/auth.service';
+import { LoginDto, RegisterDto } from '../dtos';
+import { type ResponseMessage } from '../../../common/types';
+import { AuthResponse } from '../types';
 import { type Response } from 'express';
-import { PublicRoute } from '../../common/decorators';
-import { RefreshTokenGuard } from '../../common/guards';
-import { type RefreshTokenRequest } from '../../common/interfaces';
-import { AuthCookiesService } from './services';
-import { ResendVerificationDto, VerifyEmailParamsDto } from './dtos/emailVerify.dto';
-import { SetPasswordDto } from './dtos/setPassword.dto';
+import { PublicRoute } from '../../../common/decorators';
+import { RefreshTokenGuard } from '../../../common/guards';
+import { type RefreshTokenRequest } from '../../../common/interfaces';
+import { AuthCookiesService } from '../services';
+import { ResendVerificationDto, VerifyEmailParamsDto } from '../dtos/emailVerify.dto';
+import { SetPasswordDto } from '../dtos/setPassword.dto';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 

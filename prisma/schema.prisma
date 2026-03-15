@@ -16,33 +16,58 @@ enum UserRoles {
 }
 
 model User {
-  id              String           @id @default(uuid())
-  email           String           @unique @db.VarChar(255)
-  name            String           @db.VarChar(128)
-  password        String?
-  photoUrl        String?          @map("photo_url") @db.VarChar(512)
-  role            UserRoles        @default(USER)
-  isActive        Boolean          @default(true) @map("is_active")
-  isEmailVerified Boolean          @default(false) @map("is_email_verified")
-  createdByAdmin  Boolean          @default(false) @map("created_by_admin")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  sessions        Session[]
-  posts           Post[]
-  userRolePeriods UserRolePeriod[]
-  postReviews     PostReview[]
-  comments        Comment[]
-  commentLikes    CommentLike[]
-  postLikes       PostLike[]
-  chatMembers     ChatMember[]
-  messagesSent    Message[]
-  privateChats1   PrivateChat[]    @relation("private_chat_user1")
-  privateChats2   PrivateChat[]    @relation("private_chat_user2")
+  id               String            @id @default(uuid())
+  email            String            @unique @db.VarChar(255)
+  name             String            @db.VarChar(128)
+  password         String?
+  photoUrl         String?           @map("photo_url") @db.VarChar(512)
+  role             UserRoles         @default(USER)
+  isActive         Boolean           @default(true) @map("is_active")
+  isEmailVerified  Boolean           @default(false) @map("is_email_verified")
+  createdByAdmin   Boolean           @default(false) @map("created_by_admin")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  sessions         Session[]
+  posts            Post[]
+  userRolePeriods  UserRolePeriod[]
+  postReviews      PostReview[]
+  comments         Comment[]
+  commentLikes     CommentLike[]
+  postLikes        PostLike[]
+  chatMembers      ChatMember[]
+  messagesSent     Message[]
+  privateChats1    PrivateChat[]     @relation("private_chat_user1")
+  privateChats2    PrivateChat[]     @relation("private_chat_user2")
+  providerAccounts ProviderAccount[]
 
   @@index([createdAt])
   @@index([role])
   @@index([isEmailVerified, createdAt])
   @@map("users")
+}
+
+enum AuthProvider {
+  GOOGLE @map("google")
+
+  @@map("auth_providers")
+}
+
+model ProviderAccount {
+  id           String       @id @default(uuid())
+  provider     AuthProvider
+  providerId   String       @map("provider_id") @db.VarChar(255)
+  userId       String       @map("user_id")
+  providerData Json?        @map("provider_data") @db.Json
+  accessToken  String?      @map("access_token") @db.VarChar(512)
+  refreshToken String?      @map("refresh_token") @db.VarChar(512)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@map("provider_accounts")
 }
 
 model Session {

@@ -30,7 +30,7 @@ export default (): IAppConfig => ({
   },
 
   session: {
-    expiresInMs: parseInt(process.env.SESSION_EXPIRES_IN_MS!, 10) || 604800000, // Default to 7 days
+    sessionDuration: process.env.SESSION_EXPIRES || '7d', // Default to 7 days
   },
 
   email: {
@@ -54,5 +54,12 @@ export default (): IAppConfig => ({
     orderExpiresAt: process.env.WAYFORPAY_ORDER_EXPIRES_AT
       ? parseInt(process.env.WAYFORPAY_ORDER_EXPIRES_AT, 10)
       : 3600, // Default to 1 hour
+  },
+
+  googleOAuth: {
+    clientId: process.env.GOOGLE_OAUTH_CLIENT_ID!,
+    clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
+    callbackUrl: process.env.GOOGLE_OAUTH_CALLBACK_URL!,
+    apiKey: process.env.GOOGLE_OAUTH_API_KEY!,
   },
 });

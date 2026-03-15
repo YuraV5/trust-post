@@ -30,7 +30,7 @@ export const configValidation = Joi.object({
   JWT_REFRESH_EXPIRATION: Joi.string().default('7d'),
   JWT_ISSUER: Joi.string().required().default('work-link-service'),
 
-  SESSION_EXPIRES_IN_MS: Joi.string().default('7d'), // Default to 7 days
+  SESSION_EXPIRES: Joi.string().default('7d'), // Default to 7 days
 
   EMAIL_RESEND_API_KEY: Joi.string().required(),
   EMAIL_FROM: Joi.string().email().required(),
@@ -46,4 +46,9 @@ export const configValidation = Joi.object({
   WAYFORPAY_WEBHOOK_URL: Joi.string().uri().required(),
   WAYFORPAY_RETURN_URL: Joi.string().uri().required(),
   WAYFORPAY_ORDER_EXPIRES_AT: Joi.number().default(3600), // Default to 1 hour
+
+  GOOGLE_OAUTH_CLIENT_ID: Joi.string().required(),
+  GOOGLE_OAUTH_CLIENT_SECRET: Joi.string().required(),
+  GOOGLE_OAUTH_CALLBACK_URL: Joi.string().uri().required(),
+  GOOGLE_OAUTH_API_KEY: Joi.string().required(),
 });

@@ -7,7 +7,7 @@ import { AppBadRequestException } from '../../../shared/errors/app-errors';
 import { PasswordService, TokensService } from '../../security/services';
 import { v4 as uuidv4 } from 'uuid';
 import { SessionsService } from '../sessions/services';
-import { SessionsPolicy } from '../sessions/services/sessions-polict.service';
+import { SessionsPolicy } from '../sessions/services/sessions-policy.service';
 import { Context } from '../../../shared/contex/context.service';
 import { ConfigService } from '@nestjs/config';
 import { parseDuration } from '../../../common/utils/expiration.util';
@@ -72,6 +72,7 @@ export class AuthService implements IAuthService {
     }
 
     const isPasswordValid = await this.passwordService.verify(inp.password, user.password);
+
     if (!isPasswordValid) {
       this.logger.warn('Login failed: invalid credentials');
       throw new AppBadRequestException('Invalid credentials');
@@ -106,7 +107,7 @@ export class AuthService implements IAuthService {
       refreshTokenHash,
       userAgent: ctx.userAgent,
       ip: ctx.ip,
-      expiresAt: new Date(Date.now() + parseDuration(this.config.get<string>('session.expiresInMs')!)),
+      expiresAt: new Date(Date.now() + parseDuration(this.config.get<string>('session.sessionDuration')!)),
     });
 
     this.logger.info(`User ${user.id} logged successfully`);
@@ -196,14 +197,25 @@ export class AuthService implements IAuthService {
     if (inp.password !== inp.confirmPassword) {
       throw new AppBadRequestException('Passwords do not match');
     }
+
     const userId = await this.redisService.get(`${REDIS_KEYS.PASSWORD_RESET}:${uuid}`);
     if (!userId) {
       this.logger.warn(`Password reset failed: invalid or expired token ${uuid}`);
       throw new AppBadRequestException('Invalid or expired password reset link');
     }
-    await this.usersService.resetPasswordThroughEmail(inp.email, inp.password);
+
+    this.logger.debug('Applying password reset by verified userId from Redis token', {
+      context: 'AuthService.setPassword',
+      userId,
+    });
+
+    await this.usersService.resetPasswordById(userId, inp.password);
+    await this.sessionsService.deleteAllSessions(userId);
     await this.redisService.del(`${REDIS_KEYS.PASSWORD_RESET}:${uuid}`);
-    this.logger.info('Password reset completed successfully');
+    this.logger.info('Password reset completed successfully and all sessions invalidated', {
+      context: 'AuthService.setPassword',
+      userId,
+    });
   }
 
   async verifyEmail(uuid: string): Promise<void> {
@@ -222,6 +234,7 @@ export class AuthService implements IAuthService {
     if (inp.password !== inp.confirmPassword) {
       throw new AppBadRequestException('Passwords do not match');
     }
+
     const userId = await this.redisService.get(`${REDIS_KEYS.ACTIVATE_ACCOUNT}:${uuid}`);
     if (!userId) {
       this.logger.warn(`Account activation failed: invalid or expired token ${uuid}`);
@@ -229,8 +242,12 @@ export class AuthService implements IAuthService {
     }
 
     await this.usersService.activateAccount(userId, inp.password);
+    await this.sessionsService.deleteAllSessions(userId);
     await this.redisService.del(`${REDIS_KEYS.ACTIVATE_ACCOUNT}:${uuid}`);
-    this.logger.info('Account activated successfully');
+    this.logger.info('Account activated successfully and all sessions invalidated', {
+      context: 'AuthService.activateAccount',
+      userId,
+    });
 
     return { message: 'Account activated successfully, you can now log in' };
   }

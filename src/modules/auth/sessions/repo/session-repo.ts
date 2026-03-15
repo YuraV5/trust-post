@@ -60,4 +60,13 @@ export class SessionsRepo implements ISessionRepo {
   async findById(sessionId: string): Promise<Session | null> {
     return this.db.session.findUnique({ where: { id: sessionId } });
   }
+
+  async findActiveById(sessionId: string): Promise<Session | null> {
+    return this.db.session.findFirst({
+      where: {
+        id: sessionId,
+        expiresAt: { gt: new Date() },
+      },
+    });
+  }
 }

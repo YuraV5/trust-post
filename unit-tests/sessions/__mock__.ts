@@ -8,3 +8,15 @@ export const mockSessionsService = {
     validateSession: jest.fn(),
     getSessionByUserIdAndDeviceId: jest.fn(),
 };
+
+export const sessionRepoMock = {
+    findById: jest.fn(),
+    findActiveById: jest.fn(),
+    findByUserId: jest.fn(),
+    deleteByIds: jest.fn(),
+    deleteByUserId: jest.fn(),
+    deleteSessionsExceptCurrent: jest.fn(),
+    upsert: jest.fn(),
+    update: jest.fn(),
+    findByUserIdAndDeviceId: jest.fn(),
+  };

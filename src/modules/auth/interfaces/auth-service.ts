@@ -11,4 +11,5 @@ export interface IAuthService {
   resendPasswordReset(email: string): Promise<ResponseMessage>;
   setPassword(uuid: string, inp: SetPassword): Promise<void>;
   verifyEmail(uuid: string): Promise<void>;
+  activateAccount(uuid: string, inp: SetPassword): Promise<ResponseMessage>;
 }

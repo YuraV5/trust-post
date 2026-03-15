@@ -7,7 +7,8 @@ import { mapSessions } from '../mappers';
 import { HashingService } from '../../../security/services';
 import { ResponseMessage } from '../../../../common/types';
 import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
-import { AppForbiddenException, AppNotFoundException } from '../../../../shared/errors/app-errors';
+import { AppForbiddenException } from '../../../../shared/errors/app-errors';
+import { SessionNotFoundError } from '../errors/session-not-found';
 
 @Injectable()
 export class SessionsService implements ISessionService {
@@ -49,7 +50,7 @@ export class SessionsService implements ISessionService {
     const session = await this.sessionRepo.findById(sessionId);
 
     if (!session) {
-      throw new AppNotFoundException('Session not found');
+      throw new SessionNotFoundError();
     }
 
     if (session.userId !== userId) {
@@ -78,9 +79,9 @@ export class SessionsService implements ISessionService {
   }
 
   async validateSession(sessionId: string, token: string): Promise<boolean> {
-    const session = await this.sessionRepo.findById(sessionId);
+    const session = await this.sessionRepo.findActiveById(sessionId);
     if (!session) {
-      this.logger.warn(`Session ${sessionId} not found for validation`);
+      this.logger.warn(`Session ${sessionId} not found or expired for validation`);
       return false;
     }
 

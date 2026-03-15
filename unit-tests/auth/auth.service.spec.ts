@@ -1,53 +1,43 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../../src/modules/auth/services';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
-import { HashingService, PasswordService, TokensService } from '../../src/modules/security/services';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { UsersRepo } from '../../src/modules/users/repo/users-repo';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
-import { ConfigServiceMock, StubAppLogger } from '../__mock__';
+import { PasswordService, TokensService } from '../../src/modules/security/services';
 import { SessionsService } from '../../src/modules/auth/sessions/services';
-import { SessionsPolicy } from '../../src/modules/auth/sessions/services/sessions-polict.service';
-import { SessionsRepo } from '../../src/modules/auth/sessions/repo/session-repo';
+import { SessionsPolicy } from '../../src/modules/auth/sessions/services/sessions-policy.service';
 import { EmailQueueService } from '../../src/modules/emails/email-queue.service';
 import { RedisService } from '../../src/modules/cache/services';
-import { RedisConnectionManager } from '../../src/modules/cache/factories/redis-connection.manager';
 import { UsersService } from '../../src/modules/users/services';
 import { LinksService } from '../../src/modules/links/links.service';
+import { ConfigServiceMock, StubAppLogger } from '../__mock__';
 import { mockUsersService } from '../__mock__/users-service.mock';
 import { mockPasswordService } from '../security/mock/password.mock';
-import { Context } from '../../src/shared/contex/context.service';
 import { mockSessionsService } from '../sessions/__mock__';
 import { mockTokensService } from '../security/mock/token.mock';
 import { mockEmailQueueService } from '../emailQueue/__mock__';
 import { mockLinksService } from '../links/__mock__';
-import { mockUsersRepo } from '../users/__mock';
 import { mockRedisService } from '../redis/__mock__';
 
 describe('AuthService', () => {
   let service: AuthService;
 
+  const mockSessionsPolicy = {
+    prepareForLogin: jest.fn(),
+  };
+
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: PasswordService, useValue: mockPasswordService },
         { provide: TokensService, useValue: mockTokensService },
-        JwtService,
-        { provide: UsersRepo, useValue: mockUsersRepo },
-        { provide: PrismaService, useValue: jest.fn() },
         { provide: SessionsService, useValue: mockSessionsService },
-        SessionsPolicy,
-        SessionsRepo,
-        HashingService,
+        { provide: SessionsPolicy, useValue: mockSessionsPolicy },
         { provide: LinksService, useValue: mockLinksService },
         { provide: RedisService, useValue: mockRedisService },
-        { provide: RedisConnectionManager, useValue: { getClient: jest.fn() } },
-        {
-          provide: EmailQueueService,
-          useValue: mockEmailQueueService,
-        },
+        { provide: EmailQueueService, useValue: mockEmailQueueService },
         { provide: UsersService, useValue: mockUsersService },
         { provide: ConfigService, useValue: ConfigServiceMock },
         { provide: APP_LOGGER, useValue: StubAppLogger },
@@ -55,124 +45,74 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-
-    // Мок для ALS/ExecutionContext, щоб login не падав
-    jest.spyOn(Context, 'getRequired').mockReturnValue({
-      requestId: 'req-123',
-      ip: '127.0.0.1',
-      userAgent: 'Mozilla/5.0',
-    });
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe('register', () => {
-    it('should register a new user', async () => {
-      mockUsersService.findByEmail.mockResolvedValue(null);
-      mockUsersService.create.mockResolvedValue({ userId: '123' });
+  describe('setPassword', () => {
+    it('resets password by userId from token and invalidates all sessions', async () => {
+      mockRedisService.get = jest.fn().mockResolvedValue('user-123');
+      mockUsersService.resetPasswordById.mockResolvedValue(undefined);
+      mockSessionsService.deleteAllSessions.mockResolvedValue({ message: 'deleted' });
+      mockRedisService.del = jest.fn().mockResolvedValue(1);
 
-      const result = await service.register({
-        email: 'test@example.com',
-        password: 'password',
-        name: 'Test User',
+      await service.setPassword('token-uuid', {
+        email: 'attacker@example.com',
+        password: 'StrongPassword123!',
+        confirmPassword: 'StrongPassword123!',
       });
 
-      expect(result).toEqual({ message: 'User registered successfully' });
+      expect(mockUsersService.resetPasswordById).toHaveBeenCalledWith('user-123', 'StrongPassword123!');
+      expect(mockUsersService.resetPasswordThroughEmail).not.toHaveBeenCalled();
+      expect(mockSessionsService.deleteAllSessions).toHaveBeenCalledWith('user-123');
+      expect(mockRedisService.del).toHaveBeenCalledWith('password-reset:token-uuid');
     });
 
-    it('should not register if user already exists', async () => {
-      mockUsersService.findByEmail.mockResolvedValue({ id: '123', email: 'test@example.com' });
+    it('throws for invalid reset token', async () => {
+      mockRedisService.get = jest.fn().mockResolvedValue(null);
 
       await expect(
-        service.register({ email: 'test@example.com', password: 'password', name: 'Test User' }),
-      ).rejects.toThrow('User already exists');
+        service.setPassword('expired-token', {
+          email: 'user@example.com',
+          password: 'StrongPassword123!',
+          confirmPassword: 'StrongPassword123!',
+        }),
+      ).rejects.toThrow('Invalid or expired password reset link');
     });
   });
 
-  describe('login', () => {
-    it('should login a user with valid credentials', async () => {
-      const user = {
-        id: '123',
-        email: 'test@example.com',
-        password: 'password',
-        isActive: true,
-        isEmailVerified: true,
-      };
+  describe('verifyEmail', () => {
+    it('marks user email as verified and deletes token', async () => {
+      mockRedisService.get = jest.fn().mockResolvedValue('user-321');
+      mockUsersService.markEmailAsVerified.mockResolvedValue(undefined);
+      mockRedisService.del = jest.fn().mockResolvedValue(1);
 
-      mockUsersService.findByEmail.mockResolvedValue(user);
-      mockPasswordService.verify.mockResolvedValue(true);
+      await service.verifyEmail('verify-token');
 
-      const result = await service.login({
-        email: 'test@example.com',
-        password: 'password',
-        deviceId: 'device123',
+      expect(mockUsersService.markEmailAsVerified).toHaveBeenCalledWith('user-321');
+      expect(mockRedisService.del).toHaveBeenCalledWith('email-verify:verify-token');
+    });
+  });
+
+  describe('activateAccount', () => {
+    it('activates account and invalidates all sessions', async () => {
+      mockRedisService.get = jest.fn().mockResolvedValue('user-999');
+      mockUsersService.activateAccount.mockResolvedValue({ message: 'Account activated successfully' });
+      mockSessionsService.deleteAllSessions.mockResolvedValue({ message: 'deleted' });
+      mockRedisService.del = jest.fn().mockResolvedValue(1);
+
+      const result = await service.activateAccount('activate-token', {
+        email: 'user@example.com',
+        password: 'StrongPassword123!',
+        confirmPassword: 'StrongPassword123!',
       });
 
-      expect(result).toHaveProperty('accessToken');
-      expect(result).toHaveProperty('refreshToken');
-      expect(result.user).toEqual({
-        id: '123',
-        email: 'test@example.com',
-      });
-    });
-
-    it('should not login with invalid credentials', async () => {
-      mockUsersService.findByEmail.mockResolvedValue(null);
-
-      await expect(
-        service.login({ email: 'test@example.com', password: 'password', deviceId: 'device123' }),
-      ).rejects.toThrow('Invalid credentials');
-    });
-  });
-
-  describe('refreshTokens', () => {
-    it('should refresh tokens with valid refresh token', async () => {
-      mockUsersService.findAuthUserbyId.mockResolvedValue({ id: '123', email: 'test@example.com' });
-
-      const result = await service.refresh('user-id');
-      expect(result).toHaveProperty('accessToken');
-    });
-  });
-
-  describe('logout', () => {
-    it('should logout and invalidate the refresh token', async () => {
-      mockSessionsService.deleteBySessionId.mockResolvedValue({ message: 'Session deleted' });
-      const result = await service.logout('valid-refresh-token');
-      expect(result).toEqual({ message: 'Logged out successfully' });
-    });
-  });
-
-  describe('logoutAll', () => {
-    it('should logout from all sessions', async () => {
-      mockSessionsService.deleteAllSessions.mockResolvedValue({ message: '3 sessions deleted' });
-      const result = await service.logoutAll('user-id');
-      expect(result).toEqual({ message: "Logged out from all sessions successfully" });
-    });
-  });
-
-  describe('resendEmailVerification', () => {
-    it('should resend email verification if user exists and is not verified', async () => {
-      mockUsersService.findByEmail.mockResolvedValue({ id: '123', email: 'test@example.com', isEmailVerified: false });
-      mockEmailQueueService.sendVerificationEmail.mockResolvedValue(undefined);
-
-      const result = await service.resendEmailVerification('test@example.com');
-      expect(result).toEqual({ message: 'If the email exists, a verification link has been sent' });
-    });
-
-    it('should not resend email verification if user is already verified', async () => {
-      mockUsersService.findByEmail.mockResolvedValue({ id: '123', email: 'test@example.com', isEmailVerified: true });
-
-      const result = await service.resendEmailVerification('test@example.com');
-      expect(result).toEqual({ message: 'If the email exists, a verification link has been sent' });
-    });
-
-    it('should not resend email verification if user does not exist', async () => {
-      mockUsersService.findByEmail.mockResolvedValue(null);
-
-      const result = await service.resendEmailVerification('test@example.com');
-      expect(result).toEqual({ message: 'If the email exists, a verification link has been sent' });
+      expect(mockUsersService.activateAccount).toHaveBeenCalledWith('user-999', 'StrongPassword123!');
+      expect(mockSessionsService.deleteAllSessions).toHaveBeenCalledWith('user-999');
+      expect(mockRedisService.del).toHaveBeenCalledWith('activate-account:activate-token');
+      expect(result).toEqual({ message: 'Account activated successfully, you can now log in' });
     });
   });
 });

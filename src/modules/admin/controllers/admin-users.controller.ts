@@ -1,25 +1,25 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { Roles, CurrentUser } from '../../../common/decorators';
-import { RolesGuard } from '../../../common/guards';
 import { UserRoles } from '@prisma/client';
-import { UsersService } from '../services';
+import { CurrentUser, Roles } from '../../../common/decorators';
+import { RolesGuard } from '../../../common/guards';
 import { UUIDParamDto } from '../../../common/dtos/req-params.dto';
-import { UserAdminOutput } from '../types';
-import { ResponseMessage } from '../../../common/types';
-import { UpdateRolesDto, AdminUsersQueryDto, AdminDeleteDto, AdminUserCreationDto } from '../dtos';
-import { PaginatedResult } from '../types/paginated';
 import { type AuthenticatedUser } from '../../../common/interfaces';
+import { ResponseMessage } from '../../../common/types';
+import { AdminDeleteDto, AdminUserCreationDto, AdminUsersQueryDto, UpdateRolesDto } from '../../users/dtos';
+import { UserAdminOutput } from '../../users/types';
+import { PaginatedResult } from '../../users/types/paginated';
 import { UserRolePeriodOutput } from '../../user-role-periods/types';
+import { AdminService } from '../services';
 
 @UseGuards(RolesGuard)
 @Controller('admin/users')
 export class AdminUsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly adminService: AdminService) {}
 
   @Roles(UserRoles.ADMIN)
   @Get()
   async getAllUsers(@Query() query: AdminUsersQueryDto): Promise<PaginatedResult<UserAdminOutput>> {
-    return await this.usersService.findAllForAdmin(query);
+    return this.adminService.findAllForAdmin(query);
   }
 
   @Roles(UserRoles.ADMIN)
@@ -28,19 +28,19 @@ export class AdminUsersController {
     @Body() inp: AdminUserCreationDto,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<ResponseMessage> {
-    return await this.usersService.createUserByAdmin(inp, currentUser.userId);
+    return this.adminService.createUserByAdmin(inp, currentUser.userId);
   }
 
   @Roles(UserRoles.ADMIN)
   @Get('/:id')
   async getUserById(@Param() params: UUIDParamDto): Promise<UserAdminOutput> {
-    return await this.usersService.findByIdForAdmin(params.id);
+    return this.adminService.findByIdForAdmin(params.id);
   }
 
   @Roles(UserRoles.ADMIN)
   @Get('/:id/toggle-status')
   async updateStatus(@Param() params: UUIDParamDto): Promise<ResponseMessage> {
-    return await this.usersService.updateStatus(params.id);
+    return this.adminService.updateStatus(params.id);
   }
 
   @Roles(UserRoles.ADMIN)
@@ -50,18 +50,18 @@ export class AdminUsersController {
     @Body() data: UpdateRolesDto,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<ResponseMessage> {
-    return await this.usersService.changeRoles(params.id, currentUser.userId, data.role);
+    return this.adminService.changeRoles(params.id, currentUser.userId, data.role);
   }
 
   @Roles(UserRoles.ADMIN)
   @Get('/:id/role-history')
   async getUserRoleHistory(@Param() params: UUIDParamDto): Promise<UserRolePeriodOutput[]> {
-    return await this.usersService.getUserRoleHistory(params.id);
+    return this.adminService.getUserRoleHistory(params.id);
   }
 
   @Roles(UserRoles.ADMIN)
   @Delete()
   async deleteUser(@Body() data: AdminDeleteDto): Promise<ResponseMessage> {
-    return await this.usersService.deleteMany(data.ids);
+    return this.adminService.deleteMany(data.ids);
   }
 }

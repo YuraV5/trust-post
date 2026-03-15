@@ -1,8 +1,8 @@
 import { AuthProvider, Prisma, ProviderAccount } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ProviderAccountCreateInput, ProviderAccountUpdateInput } from '../types/google-provider';
-import { IProviderAccountRepo } from './provider-account.repo.interface';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { ProviderAccountCreateInput, ProviderAccountUpdateInput } from '../types';
+import { IProviderAccountRepo } from '../interfaces/provider-account.repo';
 
 @Injectable()
 export class ProviderAccountRepo implements IProviderAccountRepo {
@@ -29,9 +29,10 @@ export class ProviderAccountRepo implements IProviderAccountRepo {
         provider: data.provider,
         providerId: data.providerId,
         userId: data.userId,
-        providerData: data.providerData,
+        providerData: data.providerData as Prisma.InputJsonValue,
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
+        tokenExpiresAt: data.tokenExpiresAt,
       },
     });
   }
@@ -40,9 +41,10 @@ export class ProviderAccountRepo implements IProviderAccountRepo {
     return (tx ?? this.db).providerAccount.update({
       where: { id },
       data: {
-        providerData: data.providerData,
+        providerData: data.providerData as Prisma.InputJsonValue,
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
+        tokenExpiresAt: data.tokenExpiresAt,
       },
     });
   }

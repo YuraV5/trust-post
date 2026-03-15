@@ -72,6 +72,7 @@ export class AuthService implements IAuthService {
     }
 
     const isPasswordValid = await this.passwordService.verify(inp.password, user.password);
+
     if (!isPasswordValid) {
       this.logger.warn('Login failed: invalid credentials');
       throw new AppBadRequestException('Invalid credentials');
@@ -106,7 +107,7 @@ export class AuthService implements IAuthService {
       refreshTokenHash,
       userAgent: ctx.userAgent,
       ip: ctx.ip,
-      expiresAt: new Date(Date.now() + parseDuration(this.config.get<string>('session.expiresInMs')!)),
+      expiresAt: new Date(Date.now() + parseDuration(this.config.get<string>('session.sessionDuration')!)),
     });
 
     this.logger.info(`User ${user.id} logged successfully`);

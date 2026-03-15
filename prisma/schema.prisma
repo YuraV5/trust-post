@@ -100,7 +100,7 @@ model UserRolePeriod {
   changedById String    @map("changed_by_id")
   createdAt   DateTime  @default(now()) @map("created_at")
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([role])

@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { Readable } from 'stream';
-import  { type UploadApiResponse, v2 as cloudinary  } from 'cloudinary';
+import { type UploadApiResponse, v2 as cloudinary } from 'cloudinary';
 import {
   AppBadRequestException,
   AppConfigException,

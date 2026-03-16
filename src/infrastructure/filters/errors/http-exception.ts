@@ -8,6 +8,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { Request, Response } from 'express';
 import { Context } from '../../../shared/contex/context.service';
 import { AppError } from '../../../shared/errors/basic-app-error';
 import { AppErrorCode } from '../../../shared/errors/error-codes';

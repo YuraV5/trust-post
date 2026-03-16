@@ -1,5 +1,5 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject } from '@nestjs/common';
-import { Observable, tap } from 'rxjs';
+import { Observable, finalize, tap } from 'rxjs';
 import { Context } from '../../../shared/contex/context.service';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Response, Request } from 'express';
@@ -22,19 +22,45 @@ export class HttpContextInterceptor implements NestInterceptor {
     if (ctx) {
       const route = req.route as { path?: string } | undefined;
       const routePath = route?.path;
+      const requestUser = req as Request & { user?: { userId?: string } };
       ctx.method = req.method;
       ctx.path = routePath ?? req.url;
+      ctx.userId = requestUser.user?.userId;
     }
 
+    let hasError = false;
+
     return next.handle().pipe(
-      tap(() => {
+      tap({
+        error: () => {
+          hasError = true;
+        },
+      }),
+      finalize(() => {
         const ctx = Context.get();
+        const duration = Date.now() - start;
+
         if (ctx) {
           ctx.status = res.statusCode;
-          ctx.duration = Date.now() - start;
+          ctx.duration = duration;
         }
 
-        this.logger.info('HTTP request completed');
+        if (hasError) {
+          this.logger.error('HTTP request failed', {
+            method: req.method,
+            path: req.originalUrl ?? req.url,
+            statusCode: res.statusCode,
+            duration,
+          });
+          return;
+        }
+
+        this.logger.info('HTTP request completed', {
+          method: req.method,
+          path: req.originalUrl ?? req.url,
+          statusCode: res.statusCode,
+          duration,
+        });
       }),
     );
   }

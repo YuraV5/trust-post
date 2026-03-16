@@ -16,7 +16,7 @@ export class PaymentAttemptsRepo {
         providerPaymentId: input.providerPaymentId,
         status: input.status,
         providerResponse: input.providerPayload,
-        message: this.getAttemptMessage(input.providerPayload),
+        statusReason: this.getAttemptMessage(input.providerPayload),
       },
       select: {
         id: true,

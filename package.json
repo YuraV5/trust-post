@@ -21,12 +21,16 @@
     "docker:dev": "docker compose --env-file .env.development up -d",
     "mgr:dev": "prisma migrate dev",
     "db:reset": "prisma migrate reset --force",
-    "db:seed": "ts-node prisma/seed.ts",
-    "seed:admin": "ts-node tools/seed-admin.ts",
+    "db:seed": "ts-node tools/seeds.ts full",
     "mgr:deploy": "prisma migrate deploy",
     "pr:gen": "prisma generate",
     "docker:prod": "docker build -t trust-post:latest . && docker-compose -f docker-compose.prod.yml up --abort-on-container-exit --remove-orphans",
-    "docker:prod:down": "docker-compose -f docker-compose.prod.yml down -v"
+    "docker:prod:down": "docker-compose -f docker-compose.prod.yml down -v",
+    "seed:users": "ts-node tools/seeds.ts users",
+    "seed:posts": "ts-node tools/seeds.ts posts",
+    "seed:comments": "ts-node tools/seeds.ts comments",
+    "seed:full": "ts-node tools/seeds.ts full",
+    "seed:admin": "npm run seed:users"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",

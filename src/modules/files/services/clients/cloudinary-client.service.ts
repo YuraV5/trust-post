@@ -1,19 +1,27 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { v2 as cloudinary } from 'cloudinary';
 import { randomUUID } from 'crypto';
 import { Readable } from 'stream';
-import type { UploadApiResponse } from 'cloudinary';
-import { AppBadRequestException, AppConfigException } from '../../../../shared/errors/app-errors';
+import  { type UploadApiResponse, v2 as cloudinary  } from 'cloudinary';
+import {
+  AppBadRequestException,
+  AppConfigException,
+  AppInternalServerException,
+} from '../../../../shared/errors/app-errors';
 import { FileFolder, FileUploadResult, FileStorageInfo, FileUploadResponse } from '../../types';
 import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { ICloudinaryClient } from '../../interfaces/cloudinary';
-import { executeWithRetry } from '../../../../common/utils/retry.util';
+import { executeWithRetry } from '../../../../common/utils';
 import { CONCURRENCY_LIMIT, MAX_RETRIES, RATE_LIMIT_DELAY_MS, RETRYABLE_STATUSES, TIMEOUT_MS } from '../../consts';
 import { FileProvider } from '@prisma/client/wasm';
 
 type ResourceType = 'auto' | 'image' | 'video' | 'raw';
+
+type CloudinarySearchResult = {
+  resources: { public_id: string; created_at: string }[];
+  next_cursor?: string;
+};
 
 @Injectable()
 export class CloudinaryClientService implements ICloudinaryClient {
@@ -87,20 +95,33 @@ export class CloudinaryClientService implements ICloudinaryClient {
 
     await this.applyRateLimit();
 
-    await executeWithRetry(() => client.api.delete_resources(storageKeys), {
-      maxRetries: MAX_RETRIES,
-      timeoutMs: TIMEOUT_MS.delete,
-      retryableStatuses: RETRYABLE_STATUSES,
-    });
+    try {
+      await executeWithRetry(() => client.api.delete_resources(storageKeys), {
+        maxRetries: MAX_RETRIES,
+        timeoutMs: TIMEOUT_MS.delete,
+        retryableStatuses: RETRYABLE_STATUSES,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error('Cloudinary delete failed', { storageKeys, error: message });
+      throw new AppInternalServerException('Failed to delete files from storage', [message]);
+    }
   }
 
   async deleteFolder(folder: string): Promise<void> {
     const client = this.getClient();
-    await executeWithRetry(() => client.api.delete_resources_by_prefix(folder), {
-      maxRetries: MAX_RETRIES,
-      timeoutMs: TIMEOUT_MS.delete,
-      retryableStatuses: RETRYABLE_STATUSES,
-    });
+
+    try {
+      await executeWithRetry(() => client.api.delete_resources_by_prefix(folder), {
+        maxRetries: MAX_RETRIES,
+        timeoutMs: TIMEOUT_MS.delete,
+        retryableStatuses: RETRYABLE_STATUSES,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error('Cloudinary deleteFolder failed', { folder, error: message });
+      throw new AppInternalServerException('Failed to delete folder from storage', [message]);
+    }
   }
 
   async findOrphanCandidates(
@@ -110,21 +131,29 @@ export class CloudinaryClientService implements ICloudinaryClient {
     const client = this.getClient();
     await this.applyRateLimit();
 
-    const result = await executeWithRetry(
-      async () => {
-        let search = client.search
-          // uploaded_at<1d means "uploaded more than 1 day ago"
-          .expression(`folder:"${prefix}/*" AND uploaded_at<1d`)
-          .max_results(500);
+    let result: CloudinarySearchResult;
 
-        if (nextCursor) {
-          search = search.next_cursor(nextCursor);
-        }
+    try {
+      result = await executeWithRetry(
+        async () => {
+          let search = client.search
+            // uploaded_at<1d means "uploaded more than 1 day ago"
+            .expression(`folder:"${prefix}/*" AND uploaded_at<1d`)
+            .max_results(300);
 
-        return search.execute();
-      },
-      { maxRetries: MAX_RETRIES, timeoutMs: TIMEOUT_MS.delete, retryableStatuses: RETRYABLE_STATUSES },
-    );
+          if (nextCursor) {
+            search = search.next_cursor(nextCursor);
+          }
+
+          return search.execute();
+        },
+        { maxRetries: MAX_RETRIES, timeoutMs: TIMEOUT_MS.delete, retryableStatuses: RETRYABLE_STATUSES },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error('Cloudinary search failed', { prefix, error: message });
+      throw new AppInternalServerException('Failed to search files in storage', [message]);
+    }
 
     return {
       resources: result.resources,
@@ -165,7 +194,12 @@ export class CloudinaryClientService implements ICloudinaryClient {
           resource_type: 'auto',
         });
       },
-      { maxRetries: MAX_RETRIES, timeoutMs: TIMEOUT_MS.upload, retryableStatuses: RETRYABLE_STATUSES },
+      {
+        maxRetries: MAX_RETRIES,
+        timeoutMs: TIMEOUT_MS.upload,
+        retryableStatuses: RETRYABLE_STATUSES,
+        retryTimeouts: true,
+      },
     );
 
     return {

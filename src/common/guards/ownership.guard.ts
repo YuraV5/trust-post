@@ -6,7 +6,17 @@ import { AuthenticatedRequest } from '../interfaces';
 
 type ResourceModel = 'post' | 'comment' | 'postReview' | 'commentLike' | 'postLike' | 'user' | 'postFile';
 
-export interface OwnershipGuardOptions {
+const OWNER_FIELD_BY_MODEL: Record<ResourceModel, string> = {
+  post: 'authorId',
+  comment: 'authorId',
+  postReview: 'reviewedById',
+  commentLike: 'userId',
+  postLike: 'userId',
+  user: 'id',
+  postFile: 'uploadedById',
+};
+
+interface OwnershipGuardOptions {
   // Name of the Prisma model to check ownership against (e.g., 'post', 'comment')
   model: ResourceModel;
 
@@ -30,12 +40,13 @@ export interface OwnershipGuardOptions {
 export function OwnershipGuard(options: OwnershipGuardOptions): Type<CanActivate> {
   const {
     model,
-    ownerField = 'authorId',
+    ownerField,
     paramKey = 'id',
     bypassRoles = [UserRoles.ADMIN],
     forbiddenMessage,
     notFoundMessage,
   } = options;
+  const resolvedOwnerField = ownerField ?? OWNER_FIELD_BY_MODEL[model];
 
   @Injectable()
   class OwnershipGuardMixin implements CanActivate {
@@ -51,6 +62,10 @@ export function OwnershipGuard(options: OwnershipGuardOptions): Type<CanActivate
         throw new AppNotFoundException('Invalid resource ID format');
       }
 
+      if (!resourceId) {
+        throw new AppNotFoundException('Resource ID is required');
+      }
+
       // Check if the user is authenticated
       if (!user || !user.userId) {
         throw new AppForbiddenException('User not authenticated');
@@ -64,7 +79,7 @@ export function OwnershipGuard(options: OwnershipGuardOptions): Type<CanActivate
       // Check if the resource exists and get the owner field
       const entity = await (this.prisma as any)[model].findUnique({
         where: { id: this.convertIdType(resourceId, model) },
-        select: { [ownerField]: true },
+        select: { [resolvedOwnerField]: true },
       });
 
       if (!entity) {
@@ -72,7 +87,7 @@ export function OwnershipGuard(options: OwnershipGuardOptions): Type<CanActivate
       }
 
       // Check ownership
-      if (entity[ownerField] !== user.userId) {
+      if (entity[resolvedOwnerField] !== user.userId) {
         throw new AppForbiddenException(forbiddenMessage || `You are not allowed to modify this ${model}`);
       }
 

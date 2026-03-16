@@ -1,6 +1,7 @@
 import { ExceptionFilter, Catch, ArgumentsHost, Inject, HttpServer } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Prisma } from '@prisma/client';
+import { Request, Response } from 'express';
 import { AppErrorCode } from '../../../shared/errors/error-codes';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Context } from '../../../shared/contex/context.service';

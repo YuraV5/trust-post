@@ -1,5 +1,6 @@
 import { ExceptionFilter, Catch, ArgumentsHost, Inject, HttpServer } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { Request, Response } from 'express';
 import { AppErrorCode } from '../../../shared/errors/error-codes';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Context } from '../../../shared/contex/context.service';
@@ -20,7 +21,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const requestId = Context.get()?.requestId || 'no-rid';
 
-    this.logger.error('Unhandled exception', {
+    this.logger.error('Unhandled non-HTTP exception', {
       error: exception instanceof Error ? exception.stack || exception.message : String(exception),
       path: req.url,
       method: req.method,

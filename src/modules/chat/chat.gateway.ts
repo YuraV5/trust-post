@@ -8,7 +8,6 @@ import {
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
 import { Inject, UseGuards } from '@nestjs/common';
 import { ChatService } from './services/chat.service';
 import { MessageService } from '../message/services/message.service';
@@ -16,14 +15,12 @@ import { APP_LOGGER } from '../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../shared/logger/intefaces/interface';
 import { SocketService } from '../socket/socket.service';
 import { SocketAuthGuard } from '../../common/guards';
+import type { AuthenticatedSocket } from '../../common/guards/socket-auth.guard';
 import { TokensService } from '../security/services';
 import { PublicRoute } from '../../common/decorators';
 import { type MessageWithSenderAndFiles } from '../message/types';
-
-interface AuthenticatedSocket extends Socket {
-  userId?: string;
-  userRole?: string;
-}
+import { Server } from 'socket.io';
+import { extractSocketToken } from '../../common/utils/extract-socket-token';
 
 type GatewaySuccess = { success: true };
 type GatewayFailure = { success: false; error: string };
@@ -59,25 +56,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   async handleConnection(client: AuthenticatedSocket): Promise<void> {
     try {
-      const token = this.extractToken(client);
+      const userId = await this.getAuthenticatedUserId(client);
 
-      if (!token) {
-        this.logger.warn('Client connection rejected - no token', { socketId: client.id });
-        client.disconnect();
-        return;
-      }
-
-      const payload = await this.tokensService.verifyAccess(token);
-      const userId = payload.sub;
-
-      if (!userId) {
-        this.logger.warn('Client connection rejected - no userId', { socketId: client.id });
-        client.disconnect();
-        return;
-      }
-
-      client.userId = userId;
-      client.userRole = payload.role;
       this.socketService.trackConnection(this.namespace, userId, client.id);
 
       this.logger.info('Client connected', { userId, socketId: client.id });
@@ -91,26 +71,6 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       });
       client.disconnect();
     }
-  }
-
-  private extractToken(client: Socket): string | null {
-    const auth = client.handshake.auth as Record<string, unknown> | undefined;
-    const authToken = auth?.token;
-    if (typeof authToken === 'string' && authToken.trim()) {
-      return authToken.trim();
-    }
-
-    const headerAuth = client.handshake.headers.authorization;
-    if (typeof headerAuth === 'string' && headerAuth.startsWith('Bearer ')) {
-      return headerAuth.slice(7).trim();
-    }
-
-    const queryToken = client.handshake.query.token;
-    if (typeof queryToken === 'string' && queryToken.trim()) {
-      return queryToken.trim();
-    }
-
-    return null;
   }
 
   handleDisconnect(client: AuthenticatedSocket): void {
@@ -129,7 +89,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @MessageBody() data: { chatId: string },
   ): Promise<ChatActionGatewayResult> {
     try {
-      const userId = client.userId!;
+      const userId = await this.getAuthenticatedUserId(client);
       const { chatId } = data;
 
       // Verify user is member of chat
@@ -163,7 +123,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @MessageBody() data: { chatId: string },
   ): Promise<ChatActionGatewayResult> {
     try {
-      const userId = client.userId!;
+      const userId = await this.getAuthenticatedUserId(client);
       const { chatId } = data;
 
       // Leave Socket.IO room
@@ -194,7 +154,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @MessageBody() data: { chatId: string; content: string },
   ): Promise<MessageGatewayResult> {
     try {
-      const userId = client.userId!;
+      const userId = await this.getAuthenticatedUserId(client);
       const { chatId, content } = data;
 
       // Send message via service
@@ -232,7 +192,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @MessageBody() data: { messageId: string; newContent: string; chatId: string },
   ): Promise<MessageGatewayResult> {
     try {
-      const userId = client.userId!;
+      const userId = await this.getAuthenticatedUserId(client);
       const { messageId, newContent, chatId } = data;
 
       // Edit message via service
@@ -266,7 +226,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @MessageBody() data: { messageId: string; chatId: string },
   ): Promise<GatewayResult> {
     try {
-      const userId = client.userId!;
+      const userId = await this.getAuthenticatedUserId(client);
       const { messageId, chatId } = data;
 
       // Delete message via service
@@ -292,12 +252,12 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('chat:typing')
-  handleTyping(
+  async handleTyping(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { chatId: string; isTyping: boolean },
-  ): GatewayResult {
+  ): Promise<GatewayResult> {
     try {
-      const userId = client.userId!;
+      const userId = await this.getAuthenticatedUserId(client);
       const { chatId, isTyping } = data;
 
       // Broadcast typing indicator to others in the chat (exclude sender)
@@ -324,7 +284,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @MessageBody() data: { chatId: string },
   ): Promise<GatewayResult> {
     try {
-      const userId = client.userId!;
+      const userId = await this.getAuthenticatedUserId(client);
       const { chatId } = data;
 
       // Mark as read via service
@@ -351,6 +311,27 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   private getErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : 'Unknown error';
+  }
+
+  private async getAuthenticatedUserId(client: AuthenticatedSocket): Promise<string> {
+    if (client.userId) {
+      return client.userId;
+    }
+
+    const token = extractSocketToken(client);
+    if (!token) {
+      throw new Error('Unauthorized');
+    }
+
+    const payload = await this.tokensService.verifyAccess(token);
+    if (!payload?.sub) {
+      throw new Error('Unauthorized');
+    }
+
+    client.userId = payload.sub;
+    client.userRole = payload.role;
+
+    return client.userId;
   }
 
   // Helper method to emit events to specific users

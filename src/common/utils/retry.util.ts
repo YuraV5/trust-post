@@ -2,6 +2,7 @@ export interface RetryOptions {
   maxRetries?: number;
   timeoutMs?: number;
   exponentialBackoff?: boolean;
+  retryTimeouts?: boolean;
   retryableStatuses?: number[];
   retryableMessages?: string[];
 }
@@ -9,7 +10,7 @@ export interface RetryOptions {
 export class RetryError extends Error {
   constructor(
     message: string,
-    public readonly originalError: any,
+    public readonly originalError: unknown,
     public readonly isTimeout: boolean = false,
   ) {
     super(message);
@@ -21,54 +22,69 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
   maxRetries: 3,
   timeoutMs: 30000,
   exponentialBackoff: true,
+  retryTimeouts: false,
   retryableStatuses: [408, 429, 500, 502, 503, 504],
   retryableMessages: ['timeout', 'econnrefused', 'enotfound'],
 };
 
-/**
- * Executes a function with retry logic and timeout
- * @param fn - The function to execute
- * @param options - Retry configuration options
- * @param retryCount - Current retry attempt (internal use)
- * @returns Promise that resolves with the function result
- * @throws RetryError if all retries fail
- */
 export async function executeWithRetry<T>(
-  fn: () => Promise<T>,
+  fn: (signal?: AbortSignal) => Promise<T>,
   options: RetryOptions = {},
-  retryCount = 0,
 ): Promise<T> {
   const config = { ...DEFAULT_OPTIONS, ...options };
 
-  try {
-    return await Promise.race([fn(), createTimeoutPromise(config.timeoutMs)]);
-  } catch (error) {
-    if (retryCount < config.maxRetries && isRetryableError(error, config)) {
-      const delayMs = config.exponentialBackoff ? 1000 * Math.pow(2, retryCount) : 1000;
+  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+    try {
+      return await executeWithTimeout(fn, config.timeoutMs);
+    } catch (error) {
+      const err = error as Error;
+      const timeoutError = isTimeoutError(err);
+
+      const canRetryTimeout = !timeoutError || config.retryTimeouts;
+      const retryable = isRetryableError(err, config);
+
+      if (attempt >= config.maxRetries || !canRetryTimeout || !retryable) {
+        throw new RetryError(err.message || 'Request failed after retries', error, timeoutError);
+      }
+
+      const delayMs = config.exponentialBackoff ? 1000 * 2 ** attempt : 1000;
 
       await delay(delayMs);
-      return executeWithRetry(fn, options, retryCount + 1);
     }
-
-    const isTimeout = (error as Error).message?.toLowerCase().includes('timeout');
-    throw new RetryError((error as Error).message || 'Request failed after retries', error, isTimeout);
   }
+
+  throw new Error('Unreachable');
 }
 
-// Creates a promise that rejects after the specified timeout
-function createTimeoutPromise(timeoutMs: number): Promise<never> {
-  return new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), timeoutMs));
+function executeWithTimeout<T>(fn: (signal?: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T> {
+  const controller = new AbortController();
+
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      reject(new Error('Request timeout'));
+    }, timeoutMs);
+
+    fn(controller.signal)
+      .then(resolve)
+      .catch(reject)
+      .finally(() => clearTimeout(timeoutId));
+  });
 }
 
-// Checks if an error is retryable based on status codes and error messages
-function isRetryableError(error: any, config: Required<RetryOptions>): boolean {
+function isRetryableError(error: unknown, config: Required<RetryOptions>): boolean {
+  const err = error as Error;
+
   return (
-    config.retryableStatuses.includes(error?.status) ||
-    config.retryableMessages.some((msg) => (error as Error).message?.toLowerCase().includes(msg))
+    config.retryableStatuses.includes((error as any)?.status) ||
+    config.retryableMessages.some((msg) => err.message?.toLowerCase().includes(msg))
   );
 }
 
-// Delays execution for the specified number of milliseconds
+function isTimeoutError(error: Error): boolean {
+  return error.message?.toLowerCase().includes('timeout') ?? false;
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -139,7 +139,6 @@ export class PaymentsRepo implements IPaymentsRepo {
         if (!payment) {
           return false;
         }
-        const message = input.providerPayload?.reason ?? '';
 
         const attempt = await this.paymentAttemptsRepo.createInTransaction(tx, {
           paymentId: input.paymentId,
@@ -160,7 +159,7 @@ export class PaymentsRepo implements IPaymentsRepo {
             status: PaymentStatus.SUCCESS,
             confirmedAt: new Date(),
             lastAttemptId: attempt.id,
-            message,
+            statusReason: input.providerPayload?.reason ?? null,
           },
         });
 
@@ -191,7 +190,6 @@ export class PaymentsRepo implements IPaymentsRepo {
   async updateStatusWithoutPostIncrement(input: PaymentUpdateWebhookStatusInput): Promise<boolean> {
     try {
       return await this.db.transaction(async (tx) => {
-        const message = input.providerPayload?.reason ?? '';
         const attempt = await this.paymentAttemptsRepo.createInTransaction(tx, {
           paymentId: input.paymentId,
           provider: input.provider,
@@ -211,7 +209,7 @@ export class PaymentsRepo implements IPaymentsRepo {
             status: input.status,
             lastAttemptId: attempt.id,
             ...(input.status === PaymentStatus.EXPIRED ? { expiredAt: new Date() } : {}),
-            message,
+            statusReason: input.providerPayload?.reason ?? null,
           },
         });
 

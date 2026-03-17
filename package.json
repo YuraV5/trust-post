@@ -21,7 +21,6 @@
     "docker:dev": "docker compose --env-file .env.development up -d",
     "mgr:dev": "prisma migrate dev",
     "db:reset": "prisma migrate reset --force",
-    "db:seed": "ts-node tools/seeds.ts full",
     "mgr:deploy": "prisma migrate deploy",
     "pr:gen": "prisma generate",
     "docker:prod": "docker build -t trust-post:latest . && docker-compose -f docker-compose.prod.yml up --abort-on-container-exit --remove-orphans",

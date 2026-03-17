@@ -45,15 +45,9 @@ export class HttpContextInterceptor implements NestInterceptor {
           ctx.duration = duration;
         }
 
-        if (hasError) {
-          this.logger.error('HTTP request failed', {
-            method: req.method,
-            path: req.originalUrl ?? req.url,
-            statusCode: res.statusCode,
-            duration,
-          });
-          return;
-        }
+        // Exception filters log final mapped status codes and payload details.
+        // Logging error here can capture stale status (often 200) before filters run.
+        if (hasError) return;
 
         this.logger.info('HTTP request completed', {
           method: req.method,

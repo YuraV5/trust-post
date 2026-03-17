@@ -1,16 +1,28 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { UserRoles } from '@prisma/client';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../../../common/decorators';
 import { RolesGuard } from '../../../common/guards';
 import { UUIDParamDto } from '../../../common/dtos/req-params.dto';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { ResponseMessage } from '../../../common/types';
+import {
+  BadRequestErrorResponse,
+  ForbiddenErrorResponse,
+  MessageResponseDto,
+  NotFoundErrorResponse,
+  UnauthorizedErrorResponse,
+  ValidationErrorResponse,
+} from '../../../common/swagger/responses';
 import { AdminDeleteDto, AdminUserCreationDto, AdminUsersQueryDto, UpdateRolesDto } from '../../users/dtos';
 import { UserAdminOutput } from '../../users/types';
 import { PaginatedResult } from '../../users/types/paginated';
+import { UserRolePeriodResponseDto } from '../../user-role-periods/dtos';
 import { UserRolePeriodOutput } from '../../user-role-periods/types';
 import { AdminService } from '../services';
 
+@ApiTags('admin-users')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(RolesGuard)
 @Controller('admin/users')
 export class AdminUsersController {
@@ -45,6 +57,13 @@ export class AdminUsersController {
 
   @Roles(UserRoles.ADMIN)
   @Patch('/:id/roles')
+  @ApiOperation({ summary: 'Change user role and track role period history' })
+  @ApiResponse({ status: 200, description: 'User role updated successfully', type: MessageResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid request payload', type: BadRequestErrorResponse })
+  @ApiResponse({ status: 400, description: 'Validation failed', type: ValidationErrorResponse })
+  @ApiResponse({ status: 401, description: 'Missing or invalid token', type: UnauthorizedErrorResponse })
+  @ApiResponse({ status: 403, description: 'Admin role required', type: ForbiddenErrorResponse })
+  @ApiResponse({ status: 404, description: 'Target user not found', type: NotFoundErrorResponse })
   async updateUserRoles(
     @Param() params: UUIDParamDto,
     @Body() data: UpdateRolesDto,
@@ -55,6 +74,16 @@ export class AdminUsersController {
 
   @Roles(UserRoles.ADMIN)
   @Get('/:id/role-history')
+  @ApiOperation({ summary: 'Get role history for a specific user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Role history fetched successfully',
+    type: UserRolePeriodResponseDto,
+    isArray: true,
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid token', type: UnauthorizedErrorResponse })
+  @ApiResponse({ status: 403, description: 'Admin role required', type: ForbiddenErrorResponse })
+  @ApiResponse({ status: 404, description: 'User not found', type: NotFoundErrorResponse })
   async getUserRoleHistory(@Param() params: UUIDParamDto): Promise<UserRolePeriodOutput[]> {
     return this.adminService.getUserRoleHistory(params.id);
   }

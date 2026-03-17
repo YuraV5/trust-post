@@ -16,6 +16,7 @@ import { userAdminMapper, usersAdminMapper } from '../../src/modules/users/mappe
 
 describe('AdminService', () => {
   let service: AdminService;
+  let prismaMock: { transaction: jest.Mock };
 
   const userRolePeriodServiceMock = {
     handleRoleChange: jest.fn(),
@@ -31,6 +32,10 @@ describe('AdminService', () => {
   };
 
   beforeEach(async () => {
+    prismaMock = {
+      transaction: jest.fn((cb) => cb({})),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,
@@ -42,9 +47,7 @@ describe('AdminService', () => {
         { provide: UserRolePeriodRepo, useValue: userRolePeriodRepoMock },
         {
           provide: PrismaService,
-          useValue: {
-            transaction: jest.fn((cb) => cb({})),
-          },
+          useValue: prismaMock,
         },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
@@ -128,7 +131,15 @@ describe('AdminService', () => {
       });
 
       expect(userRolePeriodServiceMock.handleRoleChange).toHaveBeenCalled();
-      expect(mockUsersRepo.updateRoles).toHaveBeenCalledWith('user-id', UserRoles.ADMIN);
+      expect(prismaMock.transaction).toHaveBeenCalled();
+      expect(mockUsersRepo.updateRoles).toHaveBeenCalledWith('user-id', UserRoles.ADMIN, {});
+    });
+
+    it('should throw UserNotFoundError when target user does not exist', async () => {
+      mockUsersRepo.findById.mockResolvedValue(null);
+
+      await expect(service.changeRoles('missing-id', 'admin-id', UserRoles.ADMIN)).rejects.toThrow('User not found');
+      expect(prismaMock.transaction).not.toHaveBeenCalled();
     });
   });
 
@@ -155,6 +166,33 @@ describe('AdminService', () => {
         ...mockPaginatedResult,
         data: usersAdminMapper(mockPaginatedResult.data),
       });
+    });
+  });
+
+  describe('getUserRoleHistory', () => {
+    it('should throw UserNotFoundError when user does not exist', async () => {
+      mockUsersRepo.findById.mockResolvedValue(null);
+
+      await expect(service.getUserRoleHistory('missing-id')).rejects.toThrow('User not found');
+    });
+
+    it('should return role history for existing user', async () => {
+      const history = [
+        {
+          id: 1,
+          role: UserRoles.MODERATOR,
+          startDate: new Date(),
+          endDate: null,
+          changedById: 'admin-id',
+          createdAt: new Date(),
+        },
+      ];
+
+      mockUsersRepo.findById.mockResolvedValue(mockUser);
+      userRolePeriodServiceMock.getUserRoleHistory.mockResolvedValue(history);
+
+      await expect(service.getUserRoleHistory('user-id')).resolves.toEqual(history);
+      expect(userRolePeriodServiceMock.getUserRoleHistory).toHaveBeenCalledWith('user-id');
     });
   });
 });

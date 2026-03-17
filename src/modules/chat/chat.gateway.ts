@@ -22,6 +22,11 @@ import { type MessageWithSenderAndFiles } from '../message/types';
 import { Server } from 'socket.io';
 import { extractSocketToken } from '../../common/utils/extract-socket-token';
 
+const wsOrigins = (process.env.WS_CORS_ALLOW_ORIGIN || process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 type GatewaySuccess = { success: true };
 type GatewayFailure = { success: false; error: string };
 type GatewayResult = GatewaySuccess | GatewayFailure;
@@ -32,7 +37,7 @@ type MessageGatewayResult = GatewayResult & { message?: MessageWithSenderAndFile
 @UseGuards(SocketAuthGuard)
 @WebSocketGateway({
   cors: {
-    origin: '*', // Configure this properly in production
+    origin: wsOrigins,
     credentials: true,
   },
   namespace: '/chat',

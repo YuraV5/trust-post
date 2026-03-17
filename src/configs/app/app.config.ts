@@ -1,9 +1,19 @@
 import { IAppConfig } from './interface';
 
+const parseBoolean = (value: string | undefined, fallback: boolean): boolean => {
+  if (value === undefined) {
+    return fallback;
+  }
+  return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
+};
+
 export default (): IAppConfig => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT!, 10) || 3001,
   corsAllowOrigin: process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001',
+  wsCorsAllowOrigin: process.env.WS_CORS_ALLOW_ORIGIN || process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001',
+  trustProxy: parseBoolean(process.env.TRUST_PROXY, false),
+  swaggerEnabled: parseBoolean(process.env.SWAGGER_ENABLED, process.env.NODE_ENV !== 'production'),
   serviceName: process.env.SERVICE_NAME || 'trust-post',
   loggerLevel: process.env.LOGGER_LEVEL || 'info',
   frontUrl: process.env.FRONTEND_URL!,

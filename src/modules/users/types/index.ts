@@ -1,4 +1,4 @@
-import { UserRoles } from '@prisma/client/index-browser';
+import { UserRoles } from '@prisma/client';
 
 export type NewUserInput = {
   email: string;

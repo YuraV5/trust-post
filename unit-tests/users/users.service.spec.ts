@@ -6,6 +6,7 @@ import { StubAppLogger } from '../__mock__';
 import { UsersService } from '../../src/modules/users/services';
 import { mockPasswordService } from '../security/mock/password.mock';
 import { mockCreateUserInput, mockUser, mockUsersRepo } from './__mock';
+import { UserRoles } from '@prisma/client';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -189,6 +190,80 @@ describe('UsersService', () => {
       await expect(service.activateAccount('existing-id', 'new-password')).resolves.toEqual({
         message: 'Account activated successfully',
       });
+    });
+  });
+
+  describe('remove', () => {
+    it('should throw UserNotFoundError if user does not exist', async () => {
+      mockUsersRepo.findById.mockResolvedValue(null);
+      await expect(service.remove('nonexistent-id')).rejects.toThrow('User not found');
+    });
+
+    it('should remove existing user and return success message', async () => {
+      mockUsersRepo.findById.mockResolvedValue(mockUser);
+      const result = await service.remove('user-id');
+      expect(result).toEqual({ message: 'Removed successfully' });
+      expect(mockUsersRepo.remove).toHaveBeenCalledWith('user-id');
+    });
+  });
+
+  describe('resetPasswordById', () => {
+    it('should throw UserNotFoundError if user is not found', async () => {
+      mockUsersRepo.findById.mockResolvedValue(null);
+      await expect(service.resetPasswordById('nonexistent-id', 'new-pass')).rejects.toThrow('User not found');
+    });
+
+    it('should reset password successfully', async () => {
+      mockUsersRepo.findById.mockResolvedValue(mockUser);
+      mockPasswordService.createHash.mockResolvedValue('hashed-new-pass');
+      await expect(service.resetPasswordById('user-id', 'new-pass')).resolves.toBeUndefined();
+      expect(mockUsersRepo.updatePassword).toHaveBeenCalledWith('user-id', 'hashed-new-pass');
+    });
+  });
+
+  describe('fetchAllModerators', () => {
+    it('should return empty array and log warning when no moderators found', async () => {
+      mockUsersRepo.fetchAllModerators.mockResolvedValue([]);
+      const result = await service.fetchAllModerators();
+      expect(result).toEqual([]);
+    });
+
+    it('should return list of moderators', async () => {
+      const moderators = [{ id: 'mod-1', name: 'moderator1' }];
+      mockUsersRepo.fetchAllModerators.mockResolvedValue(moderators);
+      const result = await service.fetchAllModerators();
+      expect(result).toEqual(moderators);
+    });
+  });
+
+  describe('createByProvider', () => {
+    it('should create a user via OAuth provider and return id and role', async () => {
+      const createdUser = { ...mockUser, id: 'oauth-user-id', role: 'USER' as UserRoles };
+      mockUsersRepo.createByProvider.mockResolvedValue(createdUser);
+
+      const result = await service.createByProvider({
+        email: 'oauth@example.com',
+        name: 'OAuth User',
+        isEmailVerified: true,
+      });
+
+      expect(result).toEqual({ id: 'oauth-user-id', role: 'USER' });
+      expect(mockUsersRepo.createByProvider).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'oauth@example.com', isEmailVerified: true }),
+        undefined,
+      );
+    });
+
+    it('should generate a random name when name is not provided', async () => {
+      const createdUser = { ...mockUser, id: 'oauth-user-id' };
+      mockUsersRepo.createByProvider.mockResolvedValue(createdUser);
+
+      await service.createByProvider({ email: 'oauth@example.com' });
+
+      expect(mockUsersRepo.createByProvider).toHaveBeenCalledWith(
+        expect.objectContaining({ name: expect.stringMatching(/^user_/) }),
+        undefined,
+      );
     });
   });
 

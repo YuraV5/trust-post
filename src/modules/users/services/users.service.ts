@@ -58,6 +58,10 @@ export class UsersService implements IUserService {
   }
 
   async remove(id: string): Promise<ResponseMessage> {
+    const user = await this.repo.findById(id);
+    if (!user) {
+      throw new AppUserNotFoundException();
+    }
     await this.repo.remove(id);
     return { message: `Removed successfully` };
   }

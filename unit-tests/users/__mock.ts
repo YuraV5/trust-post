@@ -9,6 +9,8 @@ export const mockUsersRepo = {
   updatePassword: jest.fn(),
   markEmailAsVerified: jest.fn(),
   updateStatus: jest.fn(),
+  fetchAllModerators: jest.fn(),
+  createByProvider: jest.fn(),
   // Admin methods
   updateRoles: jest.fn(),
   deleteMany: jest.fn(),

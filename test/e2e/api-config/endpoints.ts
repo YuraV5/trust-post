@@ -12,3 +12,11 @@ export const API_BASE_URL = `${API_PREFIX}/${API_VERSION}`;
 export const HEALTH_ENDPOINTS = {
   CHECK: `${API_BASE_URL}/health`,
 };
+
+/**
+ * Users Endpoints
+ */
+export const USERS_ENDPOINTS = {
+  ME: `${API_BASE_URL}/users/me`,
+  ME_PASSWORD: `${API_BASE_URL}/users/me/password`,
+};

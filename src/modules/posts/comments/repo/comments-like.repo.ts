@@ -50,7 +50,7 @@ export class CommentLikeRepo implements ICommentLikeRepo {
     return true;
   }
 
-  async getLikeByUserComment(commentId: number, userId: string): Promise<{ id: number } | null> {
+  async getLikeByUserComment(commentId: number, userId: string): Promise<{ commentId: number; userId: string } | null> {
     const like = await this.db.commentLike.findUnique({
       where: {
         commentId_userId: {
@@ -59,7 +59,8 @@ export class CommentLikeRepo implements ICommentLikeRepo {
         },
       },
       select: {
-        id: true,
+        commentId: true,
+        userId: true,
       },
     });
 

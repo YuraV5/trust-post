@@ -51,7 +51,7 @@ export class PostsLikeRepo {
     return true;
   }
 
-  async getLikeByUserPost(postId: number, userId: string): Promise<{ id: number } | null> {
+  async getLikeByUserPost(postId: number, userId: string): Promise<{ postId: number; userId: string } | null> {
     const like = await this.db.postLike.findUnique({
       where: {
         postId_userId: {
@@ -60,7 +60,8 @@ export class PostsLikeRepo {
         },
       },
       select: {
-        id: true,
+        postId: true,
+        userId: true,
       },
     });
 

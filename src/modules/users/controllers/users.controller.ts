@@ -24,8 +24,16 @@ export class UsersController {
   @Get('/me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Returns the authenticated user profile', type: UserProfileResponseDto })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Missing or invalid access token', type: UnauthorizedErrorResponse })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Returns the authenticated user profile',
+    type: UserProfileResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found', type: NotFoundErrorResponse })
   async getMe(@CurrentUser() user: AuthenticatedUser): Promise<UserProfileOutput> {
     return this.usersService.getUserById(user.userId);
@@ -35,8 +43,16 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update current user profile (name, email, photoUrl)' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Profile updated successfully', type: MessageResponseDto })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'No fields provided to update', type: BadRequestErrorResponse })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Missing or invalid access token', type: UnauthorizedErrorResponse })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'No fields provided to update',
+    type: BadRequestErrorResponse,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Validation failed', type: ValidationErrorResponse })
   async updateMe(@CurrentUser() user: AuthenticatedUser, @Body() inp: UpdateUserDto): Promise<ResponseMessage> {
     return this.usersService.updateProfile(user.userId, inp);
@@ -46,8 +62,16 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Change password for the current user' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Password updated successfully', type: MessageResponseDto })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid current password or validation failed', type: BadRequestErrorResponse })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Missing or invalid access token', type: UnauthorizedErrorResponse })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid current password or validation failed',
+    type: BadRequestErrorResponse,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found', type: NotFoundErrorResponse })
   async updatePassword(
     @CurrentUser() user: AuthenticatedUser,
@@ -60,10 +84,13 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete the current user account permanently' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Account deleted successfully', type: MessageResponseDto })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Missing or invalid access token', type: UnauthorizedErrorResponse })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'User not found', type: NotFoundErrorResponse })
   async deleteMe(@CurrentUser() user: AuthenticatedUser): Promise<ResponseMessage> {
     return this.usersService.remove(user.userId);
   }
 }
-

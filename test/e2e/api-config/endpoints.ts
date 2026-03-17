@@ -29,11 +29,3 @@ export const ADMIN_USERS_ENDPOINTS = {
   CHANGE_ROLE: (id: string): string => `${API_BASE_URL}/admin/users/${id}/roles`,
   ROLE_HISTORY: (id: string): string => `${API_BASE_URL}/admin/users/${id}/role-history`,
 };
-
-/**
- * Users Endpoints
- */
-export const USERS_ENDPOINTS = {
-  ME: `${API_BASE_URL}/users/me`,
-  ME_PASSWORD: `${API_BASE_URL}/users/me/password`,
-};

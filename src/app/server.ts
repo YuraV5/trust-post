@@ -13,7 +13,12 @@ export function setupGlobalSettings(app: INestApplication, config: ConfigService
   app.setGlobalPrefix('api');
 
   // Trust proxy settings for correct client IP and protocol handling
-  // app.set('trust proxy', true);
+  if (config.get<boolean>('trustProxy')) {
+    const httpAdapter = app.getHttpAdapter().getInstance();
+    if (typeof httpAdapter.set === 'function') {
+      httpAdapter.set('trust proxy', true);
+    }
+  }
 
   // CORS configuration
   app.enableCors({
@@ -57,8 +62,10 @@ export function setupGlobalSettings(app: INestApplication, config: ConfigService
     }),
   );
 
-  // Setup Swagger documentation
-  setupSwagger(app);
+  // Setup Swagger documentation only when explicitly enabled.
+  if (config.get<boolean>('swaggerEnabled')) {
+    setupSwagger(app);
+  }
 
   app.enableShutdownHooks();
 }

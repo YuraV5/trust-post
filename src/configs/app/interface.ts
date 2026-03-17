@@ -2,6 +2,9 @@ export interface IAppConfig {
   nodeEnv: string;
   port: number;
   corsAllowOrigin: string;
+  wsCorsAllowOrigin: string;
+  trustProxy: boolean;
+  swaggerEnabled: boolean;
   serviceName: string;
   loggerLevel: string;
   frontUrl: string;

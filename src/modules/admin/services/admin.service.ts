@@ -106,15 +106,21 @@ export class AdminService {
       throw new AppUserNotFoundException();
     }
 
-    await this.userRolePeriodService.handleRoleChange({
-      userId: id,
-      userName: user.name,
-      oldRole: user.role,
-      newRole: role,
-      changedById,
+    const result = await this.prismaService.transaction(async (tx) => {
+      await this.userRolePeriodService.handleRoleChange(
+        {
+          userId: id,
+          userName: user.name,
+          oldRole: user.role,
+          newRole: role,
+          changedById,
+        },
+        tx,
+      );
+
+      return this.usersRepo.updateRoles(id, role, tx);
     });
 
-    const result = await this.usersRepo.updateRoles(id, role);
     if (result === 0) {
       throw new AppUserNotFoundException();
     }

@@ -58,8 +58,8 @@ export class UsersRepo implements IUserRepo {
     return result.count;
   }
 
-  async updateRoles(id: string, role: UserRoles): Promise<number> {
-    const result = await this.db.user.updateMany({ where: { id }, data: { role } });
+  async updateRoles(id: string, role: UserRoles, tx?: Prisma.TransactionClient): Promise<number> {
+    const result = await (tx ?? this.db).user.updateMany({ where: { id }, data: { role } });
     return result.count;
   }
 

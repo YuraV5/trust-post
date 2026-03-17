@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { UserRoles } from '@prisma/client';
+import { Prisma, UserRoles } from '@prisma/client';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 import { IUserRolePeriodService } from '../interfaces';
@@ -13,13 +13,16 @@ export class UserRolePeriodService implements IUserRolePeriodService {
     private readonly repo: UserRolePeriodRepo,
   ) {}
 
-  async handleRoleChange(data: {
-    userId: string;
-    userName: string;
-    oldRole: UserRoles;
-    newRole: UserRoles;
-    changedById: string;
-  }): Promise<void> {
+  async handleRoleChange(
+    data: {
+      userId: string;
+      userName: string;
+      oldRole: UserRoles;
+      newRole: UserRoles;
+      changedById: string;
+    },
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
     const { userId, userName, oldRole, newRole, changedById } = data;
 
     // If the role did not change, do nothing
@@ -41,32 +44,38 @@ export class UserRolePeriodService implements IUserRolePeriodService {
 
     // USER → MODERATOR/ADMIN (create new period)
     if (!isOldRoleTracked && isNewRoleTracked) {
-      await this.repo.createPeriod({
-        userId,
-        name: userName,
-        role: newRole,
-        changedById,
-      });
+      await this.repo.createPeriod(
+        {
+          userId,
+          name: userName,
+          role: newRole,
+          changedById,
+        },
+        tx,
+      );
       this.logger.info('Created new role period', { userId, role: newRole });
       return;
     }
 
     // MODERATOR/ADMIN → USER (close active period)
     if (isOldRoleTracked && !isNewRoleTracked) {
-      await this.repo.closeActivePeriod(userId);
+      await this.repo.closeActivePeriod(userId, tx);
       this.logger.info('Closed active role period', { userId, oldRole });
       return;
     }
 
     // MODERATOR ↔ ADMIN (close previous and create new)
     if (isOldRoleTracked && isNewRoleTracked) {
-      await this.repo.closeActivePeriod(userId);
-      await this.repo.createPeriod({
-        userId,
-        name: userName,
-        role: newRole,
-        changedById,
-      });
+      await this.repo.closeActivePeriod(userId, tx);
+      await this.repo.createPeriod(
+        {
+          userId,
+          name: userName,
+          role: newRole,
+          changedById,
+        },
+        tx,
+      );
       this.logger.info('Switched tracked role', { userId, from: oldRole, to: newRole });
       return;
     }

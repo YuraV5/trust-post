@@ -17,6 +17,10 @@ import { IChatRepo } from '../interfaces';
 export class ChatRepo implements IChatRepo {
   constructor(private readonly db: PrismaService) {}
 
+  private normalizePrivatePair(userId: string, otherUserId: string): [string, string] {
+    return userId < otherUserId ? [userId, otherUserId] : [otherUserId, userId];
+  }
+
   async findPrivateChatBetweenUsers(userId: string, otherUserId: string): Promise<PrivateChatWithChat | null> {
     return this.db.privateChat.findFirst({
       where: {
@@ -33,14 +37,15 @@ export class ChatRepo implements IChatRepo {
 
   async createPrivateChat(input: CreatePrivateChatInput): Promise<ChatWithMembers> {
     const { userId, otherUserId } = input;
+    const [normalizedUser1Id, normalizedUser2Id] = this.normalizePrivatePair(userId, otherUserId);
 
     return this.db.chat.create({
       data: {
         type: ChatType.PRIVATE,
         PrivateChat: {
           create: {
-            user1Id: userId,
-            user2Id: otherUserId,
+            user1Id: normalizedUser1Id,
+            user2Id: normalizedUser2Id,
           },
         },
         members: {

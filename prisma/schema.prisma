@@ -40,8 +40,8 @@ model User {
   privateChats2    PrivateChat[]     @relation("private_chat_user2")
   providerAccounts ProviderAccount[]
 
-  @@index([createdAt])
-  @@index([role])
+  @@index([createdAt(sort: Desc)])
+  @@index([role, isActive])
   @@index([isEmailVerified, createdAt])
   @@map("users")
 }
@@ -69,6 +69,7 @@ model ProviderAccount {
 
   @@unique([provider, providerId])
   @@index([userId])
+  @@index([provider, userId])
   @@map("provider_accounts")
 }
 
@@ -89,6 +90,7 @@ model Session {
   @@index([userId])
   @@index([deviceId])
   @@index([expiresAt])
+  @@index([userId, expiresAt])
   @@map("sessions")
 }
 
@@ -107,7 +109,10 @@ model UserRolePeriod {
   @@index([userId])
   @@index([role])
   @@index([endDate])
+  @@index([userId, startDate])
   @@index([userId, endDate])
+  @@index([userId, endDate, startDate(sort: Desc)])
+  @@index([role, endDate])
   @@map("user_role_periods")
 }
 
@@ -174,6 +179,10 @@ model Payment {
   @@index([postId])
   @@index([userId])
   @@index([status])
+  @@index([status, createdAt])
+  @@index([status, expiredAt])
+  @@index([postId, status])
+  @@index([userId, createdAt(sort: Desc)])
   @@index([lastAttemptId])
   @@index([referencePaymentId])
   @@map("payments")
@@ -196,6 +205,8 @@ model PaymentAttempt {
   @@index([paymentId])
   @@index([paymentId, createdAt])
   @@index([provider])
+  @@index([paymentId, status])
+  @@index([provider, createdAt])
   @@index([providerPaymentId])
   @@map("payment_attempts")
 }
@@ -228,7 +239,10 @@ model Post {
 
   @@index([status])
   @@index([authorId])
-  @@index([createdAt])
+  @@index([createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([authorId, createdAt(sort: Desc)])
+  @@index([status, targetDate])
   @@index([referencePaymentId])
   @@map("posts")
 }
@@ -274,11 +288,12 @@ model Comment {
 
   @@index([postId])
   @@index([authorId])
+  @@index([postId, createdAt(sort: Desc)])
+  @@index([authorId, createdAt(sort: Desc)])
   @@map("comments")
 }
 
 model CommentLike {
-  id        Int      @id @default(autoincrement())
   commentId Int      @map("comment_id")
   userId    String   @map("user_id")
   createdAt DateTime @default(now()) @map("created_at")
@@ -286,14 +301,11 @@ model CommentLike {
   comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([commentId, userId])
-  @@index([commentId])
-  @@index([userId])
+  @@id([commentId, userId])
   @@map("comment_likes")
 }
 
 model PostLike {
-  id        Int      @id @default(autoincrement())
   postId    Int      @map("post_id")
   userId    String   @map("user_id")
   createdAt DateTime @default(now()) @map("created_at")
@@ -301,9 +313,7 @@ model PostLike {
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([postId, userId])
-  @@index([postId])
-  @@index([userId])
+  @@id([postId, userId])
   @@map("post_likes")
 }
 
@@ -365,6 +375,8 @@ model Chat {
 
   @@unique([postId])
   @@index([type])
+  @@index([type, createdAt])
+  @@index([updatedAt(sort: Desc)])
   @@index([title])
   @@index([postId])
   @@map("chats")
@@ -384,6 +396,7 @@ model PrivateChat {
   @@unique([user1Id, user2Id])
   @@index([user1Id])
   @@index([user2Id])
+  @@index([user2Id, user1Id])
   @@map("private_chats")
 }
 
@@ -415,8 +428,9 @@ model Message {
   sender User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
   files  MessageFile[]
 
-  @@index([chatId])
-  @@index([senderId])
+  @@index([chatId, createdAt(sort: Desc)])
+  @@index([chatId, isDeleted, createdAt(sort: Desc)])
+  @@index([senderId, createdAt])
   @@index([createdAt])
   @@map("messages")
 }

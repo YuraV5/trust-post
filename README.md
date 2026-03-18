@@ -1,98 +1,163 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+## 🎯 Project Overview
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+**Trust-Post** is a production-ready Node.js/NestJS backend for a modern social network platform. It provides:
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+- 🔐 **User Authentication** — JWT + OAuth (Google, GitHub, etc.)
+- 💬 **Real-time Messaging** — WebSockets with Socket.io
+- 📝 **Post Management** — Create, edit, delete, like posts
+- 👥 **User System** — Profiles, roles, permissions
+- 🛡️ **Moderation Tools** — Staff dashboard, post review workflow
+- 💳 **Payment Integration** — WayForPay gateway support
+- 📊 **Caching & Queue System** — Redis + BullMQ
+- 🐳 **Docker Ready** — Development and production configs
+- 📚 **Auto-generated API Docs** — Swagger/OpenAPI
 
-## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 🚀 Quick Start
 
-## Project setup
+### Prerequisites
 
+- **Node.js** 18+ (`node --version`)
+- **npm** 9+ (`npm --version`)
+- **Docker & Docker Compose** (for database)
+- **PostgreSQL** 14+ (or use Docker)
+- **Redis** 7+ (or use Docker)
+
+### Installation
+
+#### 1. Clone & Install Dependencies
 ```bash
-$ npm install
+git clone <repo>
+cd trust-post
+npm install
 ```
 
-## Compile and run the project
-
+#### 2. Environment Setup
 ```bash
-# development
-$ npm run start
+# Copy example config
+cp .env.example .env.local
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# Edit environment variables
+# Required:
+# - DATABASE_URL (PostgreSQL)
+# - REDIS_URL (Redis)
+# - JWT_SECRET (any random string)
+# - FRONTEND_URL (http://localhost:3000)
 ```
 
-## Run tests
-
+#### 3. Start Services (Docker)
 ```bash
-# unit tests
-$ npm run test
+# Start PostgreSQL & Redis
+npm run docker:dev
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Or use docker-compose directly
+docker compose --env-file .env.local up -d
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+#### 4. Database Setup
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Run migrations
+npm run mgr:dev
+
+# Seed sample data (optional)
+npm run seed:full
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+#### 5. Start Application
+```bash
+# Development mode (watch)
+npm run dev
 
-## Resources
+# Production mode
+npm run prod
 
-Check out a few resources that may come in handy when working with NestJS:
+# Debug mode
+npm run debug
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Server will be running at: **http://localhost:3001**
 
-## Support
+Swagger docs: **http://localhost:3001/docs** (if `SWAGGER_ENABLED=true`)
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## 🏗️ Architecture
 
-## Stay in touch
+### Modules
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+The application is organized into feature modules:
 
-## License
+```
+src/modules/
+├── auth/              # Authentication & sessions
+├── users/             # User profiles & management
+├── posts/             # Posts, comments, files
+├── chat/              # Real-time chat (WebSocket)
+├── message/           # Chat messages
+├── admin/             # Admin operations
+├── payments/          # Payment processing
+├── files/             # File uploads & storage
+├── emails/            # Email sending queue
+├── cache/             # Redis health check
+└── security/          # Security utilities
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Tech Stack
+
+- **Framework**: [NestJS](https://nestjs.com/) 11
+- **Language**: [TypeScript](https://www.typescriptlang.org/) 5.7
+- **Database**: [PostgreSQL](https://www.postgresql.org/) 16 + [Prisma](https://www.prisma.io/) ORM
+- **Caching**: [Redis](https://redis.io/) 7 + [ioredis](https://github.com/luin/ioredis)
+- **Job Queue**: [BullMQ](https://docs.bullmq.io/)
+- **Real-time**: [Socket.io](https://socket.io/)
+- **Authentication**: JWT + [argon2](https://en.wikipedia.org/wiki/Argon2) for password hashing
+- **File Storage**: [Cloudinary](https://cloudinary.com/) CDN
+- **Validation**: [class-validator](https://github.com/typestack/class-validator)
+- **Documentation**: [Swagger/OpenAPI](https://swagger.io/)
+
+
+## 📦 Build & Deploy
+
+### Production Build
+```bash
+# Build TypeScript
+npm run build
+
+# Check output
+ls -la dist/
+
+# Run production server
+npm run prod
+```
+
+### Docker Production
+
+```bash
+# Build image
+docker build -t trust-post:latest .
+
+# Run with docker-compose
+docker compose -f docker-compose.yml up
+
+# Clean up
+docker compose down -v
+
+## 🛠️ Development
+
+### Code Structure
+```
+src/
+├── app/               # Application setup (Swagger, guards, etc.)
+├── common/            # Shared decorators, guards, utilities
+├── modules/           # Feature modules
+├── shared/            # Global services (logger, config)
+└── main.ts            # Entry point
+
+## 🔒 Security Best Practices
+
+1. **Environment Variables** — Never commit `.env` files
+2. **Password Hashing** — Using Argon2 (industry standard)
+3. **CORS** — Configured for frontend domain only
+4. **Helmet** — Express security headers enabled
+5. **Rate Limiting** — Per-route throttling active
+6. **HTTPS** — Required in production
+7. **Database** — Prepared statements via Prisma
+8. **Input Validation** — class-validator on all DTOs

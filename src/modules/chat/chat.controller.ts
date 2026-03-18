@@ -11,6 +11,7 @@ import {
   JoinLeaveActionResult,
   UserChatsResult,
 } from './types';
+import { ChatResponseDto, PaginatedChatsResponseDto } from './dtos/doc.swagger';
 
 @ApiTags('chats')
 @ApiBearerAuth('JWT-auth')
@@ -20,7 +21,7 @@ export class ChatController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new chat (private or group)' })
-  @ApiResponse({ status: 201, description: 'Chat created successfully' })
+  @ApiResponse({ status: 201, description: 'Chat created successfully', type: ChatResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
   async createChat(
     @CurrentUser() user: AuthenticatedUser,
@@ -45,8 +46,8 @@ export class ChatController {
 
   @Post('posts/:postId/chat')
   @ApiOperation({ summary: 'Create or get chat for a specific post' })
-  @ApiResponse({ status: 201, description: 'Post chat created or retrieved' })
-  @ApiResponse({ status: 404, description: 'Post not found' })
+  @ApiResponse({ status: 201, description: 'Post chat created or retrieved', type: ChatResponseDto })
+  @ApiResponse({ status: 404, description: 'Post not ok' })
   async createPostChat(
     @CurrentUser() user: AuthenticatedUser,
     @Param('postId', ParseIntPipe) postId: number,
@@ -59,7 +60,7 @@ export class ChatController {
 
   @Get()
   @ApiOperation({ summary: 'Get all chats for current user' })
-  @ApiResponse({ status: 200, description: 'List of chats' })
+  @ApiResponse({ status: 200, description: 'List of chats', type: PaginatedChatsResponseDto })
   async getUserChats(
     @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
@@ -72,8 +73,8 @@ export class ChatController {
 
   @Get(':chatId')
   @ApiOperation({ summary: 'Get a specific chat by ID' })
-  @ApiResponse({ status: 200, description: 'Chat details' })
-  @ApiResponse({ status: 404, description: 'Chat not found' })
+  @ApiResponse({ status: 200, description: 'Chat details', type: ChatResponseDto })
+  @ApiResponse({ status: 404, description: 'Chat not ok' })
   @ApiResponse({ status: 403, description: 'Not a member of this chat' })
   async getChat(
     @CurrentUser() user: AuthenticatedUser,
@@ -86,7 +87,7 @@ export class ChatController {
   @ApiOperation({ summary: 'Join a group chat' })
   @ApiResponse({ status: 200, description: 'Successfully joined the chat' })
   @ApiResponse({ status: 400, description: 'Cannot join private chat or already a member' })
-  @ApiResponse({ status: 404, description: 'Chat not found' })
+  @ApiResponse({ status: 404, description: 'Chat not ok' })
   async joinChat(
     @CurrentUser() user: AuthenticatedUser,
     @Param('chatId') chatId: string,
@@ -119,7 +120,7 @@ export class ChatController {
   @Post(':chatId/read')
   @ApiOperation({ summary: 'Mark all messages in chat as read' })
   @ApiResponse({ status: 200, description: 'Messages marked as read' })
-  @ApiResponse({ status: 404, description: 'Chat not found' })
+  @ApiResponse({ status: 404, description: 'Chat not ok' })
   async markChatAsRead(
     @CurrentUser() user: AuthenticatedUser,
     @Param('chatId') chatId: string,

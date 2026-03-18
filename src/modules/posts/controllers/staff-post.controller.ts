@@ -1,5 +1,6 @@
 import { PostsReviewService } from './../services/posts-review.service';
-import { Body, Controller, Delete, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { ResponseMessage } from '../../../common/types';
 import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { PostsService } from '../services';
@@ -10,7 +11,15 @@ import { RolesGuard } from '../../../common/guards';
 import { PostReview, Post as Publication, UserRoles } from '@prisma/client';
 import { PaginatedResult } from '../types';
 import { DeleteManyPostsDto } from '../dtos/delete.dto';
+import {
+  MessageResponseDto,
+  UnauthorizedErrorResponse,
+  NotFoundErrorResponse,
+} from '../../../common/swagger/responses';
+import { PaginatedPostsResponseDto } from '../dtos/doc.swagger';
 
+@ApiTags('posts-moderation')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(RolesGuard)
 @Controller('staff/posts')
 export class StaffPostsController {
@@ -21,6 +30,25 @@ export class StaffPostsController {
 
   @Roles(UserRoles.MODERATOR)
   @Patch('/:id/status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update post review status (Moderator only)' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiBody({ type: PostStatusLifecycleDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Post status updated successfully',
+    type: MessageResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Post not found',
+    type: NotFoundErrorResponse,
+  })
   async updatePostStatus(
     @Param() params: NumericIdParamDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -31,18 +59,64 @@ export class StaffPostsController {
 
   @Roles(UserRoles.MODERATOR)
   @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get posts for moderation (Moderator only)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Posts retrieved for moderation with pagination',
+    type: PaginatedPostsResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
   async getAllPosts(@Query() query: PostsStaffQueryDto): Promise<PaginatedResult<Publication>> {
     return await this.postsService.getAllStaffPosts(query);
   }
 
   @Roles(UserRoles.MODERATOR)
   @Get('/:id/history')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get post status history (Moderator only)' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Post status history retrieved',
+    isArray: true,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Post not found',
+    type: NotFoundErrorResponse,
+  })
   async getPostStatusHistory(@Param() params: NumericIdParamDto): Promise<PostReview[]> {
     return await this.postsReviewService.getPostStatusHistory(params.id);
   }
 
   @Roles(UserRoles.ADMIN)
   @Delete('/remove')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Permanently delete posts (Admin only)' })
+  @ApiBody({ type: DeleteManyPostsDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Posts deleted permanently',
+    type: MessageResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
   async deletePosts(
     @CurrentUser() user: AuthenticatedUser,
     @Body() data: DeleteManyPostsDto,

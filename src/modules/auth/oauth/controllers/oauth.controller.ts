@@ -1,10 +1,13 @@
-import { Controller, Get, Param, Query, Res } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { PublicRoute } from '../../../../common/decorators';
 import { AuthCookiesService } from '../../services';
 import { OAuthService } from '../services/oauth.service';
 import { OAuthStartDto, OAuthCallbackDto } from '../dtos';
+import { BadRequestErrorResponse } from '../../../../common/swagger/responses';
 
+@ApiTags('auth-oauth')
 @Controller('auth/:provider')
 export class OAuthController {
   constructor(
@@ -14,6 +17,20 @@ export class OAuthController {
 
   @Get()
   @PublicRoute()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Redirect to OAuth provider' })
+  @ApiParam({ name: 'provider', type: String, description: 'OAuth provider (google, github, etc)' })
+  @ApiQuery({ name: 'deviceId', required: false, type: String })
+  @ApiQuery({ name: 'redirectTo', required: false, type: String })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Redirects to OAuth provider login page',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid provider or parameters',
+    type: BadRequestErrorResponse,
+  })
   redirect(@Param('provider') provider: string, @Query() query: OAuthStartDto, @Res() res: Response): void {
     const url = this.oauthService.getRedirectUrl(provider, query.deviceId, query.redirectTo);
     res.redirect(url);
@@ -21,6 +38,21 @@ export class OAuthController {
 
   @Get('callback')
   @PublicRoute()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'OAuth provider callback handler' })
+  @ApiParam({ name: 'provider', type: String, description: 'OAuth provider name' })
+  @ApiQuery({ name: 'code', required: false, type: String, description: 'Authorization code from provider' })
+  @ApiQuery({ name: 'state', required: false, type: String, description: 'State parameter for CSRF protection' })
+  @ApiQuery({ name: 'error', required: false, type: String, description: 'Error from provider' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'OAuth successful, redirects to frontend with auth token',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'OAuth authentication failed',
+    type: BadRequestErrorResponse,
+  })
   async callback(
     @Param('provider') provider: string,
     @Query() query: OAuthCallbackDto,

@@ -18,6 +18,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { EmailQueueService } from '../../emails/email-queue.service';
 import { LinksService } from '../../links/links.service';
 import { REDIS_KEYS } from '../../auth/const';
+import { CommentsService } from '../../posts/comments/services/comments.service';
+import { RetryFailedCommentsInput } from '../../posts/comments/types';
 
 @Injectable()
 export class AdminService {
@@ -29,6 +31,7 @@ export class AdminService {
     private readonly passwordService: PasswordService,
     private readonly emailQueueService: EmailQueueService,
     private readonly linksService: LinksService,
+    private readonly commentsService: CommentsService,
     private readonly userRolePeriodService: UserRolePeriodService,
     private readonly userRolePeriodRepo: UserRolePeriodRepo,
     private readonly prismaService: PrismaService,
@@ -169,6 +172,18 @@ export class AdminService {
     }
 
     return moderators;
+  }
+
+  async retryFailedCommentsModeration(
+    params: RetryFailedCommentsInput,
+    adminId: string,
+  ): Promise<{ message: string; queuedCount: number }> {
+    const result = await this.commentsService.retryFailedModerationByAdmin(params, adminId);
+
+    return {
+      message: `Queued ${result.queuedCount} comment(s) for moderation retry`,
+      queuedCount: result.queuedCount,
+    };
   }
 
   private normalizeAdminQuery(query: AdminUsersQueryDto): AdminUsersQueryDto {

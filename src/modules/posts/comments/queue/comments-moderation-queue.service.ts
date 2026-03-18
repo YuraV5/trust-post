@@ -21,7 +21,7 @@ export class CommentsModerationQueueService extends BaseQueueService {
       { commentId, postId, content, actionType: AGENT_ACTION_TYPE.CommentModeration },
       {
         ...COMMENTS_QUEUE_JOB_OPTIONS,
-        jobId: `${COMMENTS_MODERATION_JOB.MODERATE_COMMENT}-${commentId}`,
+        jobId: `${commentId}`,
         priority: 2,
       },
     );

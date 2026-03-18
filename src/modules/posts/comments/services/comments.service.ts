@@ -1,7 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CommentsRepo, CommentLikeRepo } from '../repo';
 import { ResponseMessage } from '../../../../common/types';
-import { CreateCommentInput, UpdateCommentInput, PaginatedResult, NormalizedCommentsQuery } from '../types';
+import {
+  CreateCommentInput,
+  UpdateCommentInput,
+  PaginatedResult,
+  NormalizedCommentsQuery,
+  RetryFailedCommentsInput,
+  RetryFailedCommentsResult,
+  RetryFailedCommentCandidate,
+} from '../types';
 import { Comment } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException } from '../../../../shared/errors/app-errors';
 import { ICommentsService } from '../interfaces';
@@ -9,11 +17,11 @@ import { CommentsQueryDto } from '../dtos';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
 import { CommentsModerationQueueService } from '../queue';
-import { error } from 'console';
 
 @Injectable()
 export class CommentsService implements ICommentsService {
   private readonly MAX_LIMIT = 100;
+  private readonly RETRY_BATCH_SIZE = 25;
 
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
@@ -28,13 +36,16 @@ export class CommentsService implements ICommentsService {
       content: data.content,
     });
 
-    this.moderationQueue.enqueue({ commentId: comment.id, postId, content: comment.content }).catch((error) => {
-      this.logger.error('Failed to enqueue comment moderation job after creation', {
-        commentId: comment.id,
-        postId,
-        error: error as Error,
+    this.moderationQueue
+      .enqueue({ commentId: comment.id, postId, content: comment.content })
+      .then(() => this.commentsRepo.setModerationProcessing(comment.id))
+      .catch((error) => {
+        this.logger.error('Failed to enqueue comment moderation job after creation', {
+          commentId: comment.id,
+          postId,
+          error: error as Error,
+        });
       });
-    });
 
     this.logger.info(`Comment created by user ${authorId} on post ${postId}`, { commentId: comment.id });
 
@@ -61,6 +72,7 @@ export class CommentsService implements ICommentsService {
     if (updatedComment?.id) {
       this.moderationQueue
         .enqueue({ commentId: updatedComment.id, postId: updatedComment.postId, content: updatedComment.content })
+        .then(() => this.commentsRepo.setModerationProcessing(updatedComment.id))
         .catch((error) => {
           this.logger.error('Failed to enqueue comment moderation job after update', {
             commentId: updatedComment.id,
@@ -102,6 +114,62 @@ export class CommentsService implements ICommentsService {
     return { message: `${result.count} comment(s) deleted successfully` };
   }
 
+  async retryFailedModerationByAdmin(
+    params: RetryFailedCommentsInput,
+    adminId: string,
+  ): Promise<RetryFailedCommentsResult> {
+    const startedAt = new Date();
+    const limit = Math.min(Math.max(params.limit ?? 100, 1), this.MAX_LIMIT);
+
+    const candidates = await this.commentsRepo.findFailedForRetry({
+      postId: params.postId,
+      authorId: params.authorId,
+      limit,
+    });
+
+    let queuedCount = 0;
+
+    for (const batch of this.chunkCandidates(candidates, this.RETRY_BATCH_SIZE)) {
+      for (const comment of batch) {
+        const movedToProcessing = await this.commentsRepo.setModerationProcessingIfFailed(comment.id);
+        if (!movedToProcessing) {
+          continue;
+        }
+
+        this.moderationQueue
+          .enqueue({
+            commentId: comment.id,
+            postId: comment.postId,
+            content: comment.content,
+          })
+          .catch((error) => {
+            this.logger.error('Failed to enqueue comment moderation retry job', {
+              adminId,
+              commentId: comment.id,
+              postId: comment.postId,
+              error: error as Error,
+            });
+          });
+
+        queuedCount += 1;
+      }
+    }
+
+    this.logger.info('Admin started retry for failed comments moderation', {
+      adminId,
+      startedAt: startedAt.toISOString(),
+      queuedCount,
+      requestedLimit: params.limit,
+      appliedLimit: limit,
+      filters: {
+        postId: params.postId,
+        authorId: params.authorId,
+      },
+    });
+
+    return { queuedCount };
+  }
+
   // Like/unlike a comment
   async toggleLike(commentId: number, userId: string): Promise<{ message: string; liked: boolean }> {
     const like = await this.commentLikesRepo.getLikeByUserComment(commentId, userId);
@@ -130,5 +198,18 @@ export class CommentsService implements ICommentsService {
       sortBy,
       sortOrder,
     };
+  }
+
+  private chunkCandidates(
+    candidates: RetryFailedCommentCandidate[],
+    chunkSize: number,
+  ): RetryFailedCommentCandidate[][] {
+    const chunks: RetryFailedCommentCandidate[][] = [];
+
+    for (let i = 0; i < candidates.length; i += chunkSize) {
+      chunks.push(candidates.slice(i, i + chunkSize));
+    }
+
+    return chunks;
   }
 }

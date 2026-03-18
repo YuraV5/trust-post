@@ -44,3 +44,19 @@ export type RejectCommentModerationInput = {
   score: number;
   reason: string;
 };
+
+export type RetryFailedCommentsInput = {
+  postId?: number;
+  authorId?: string;
+  limit?: number;
+};
+
+export type RetryFailedCommentCandidate = {
+  id: number;
+  postId: number;
+  content: string;
+};
+
+export type RetryFailedCommentsResult = {
+  queuedCount: number;
+};

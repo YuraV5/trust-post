@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Comment, Prisma, CommentStatus, ModeratorType } from '@prisma/client';
+import { Comment, Prisma, CommentStatus, ModeratorType, ModerationStatus } from '@prisma/client';
 import {
   ApproveCommentModerationInput,
   CreateCommentInput,
@@ -7,6 +7,8 @@ import {
   PaginatedResult,
   NormalizedCommentsQuery,
   DeleteResult,
+  RetryFailedCommentCandidate,
+  RetryFailedCommentsInput,
   RejectCommentModerationInput,
 } from '../types';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -67,11 +69,66 @@ export class CommentsRepo implements ICommentsRepo {
     };
   }
 
+  async setModerationProcessing(id: number): Promise<void> {
+    await this.db.comment.update({
+      where: { id },
+      data: { moderationStatus: ModerationStatus.PROCESSING },
+    });
+  }
+
+  async setModerationProcessingIfFailed(id: number): Promise<boolean> {
+    const result = await this.db.comment.updateMany({
+      where: {
+        id,
+        moderationStatus: ModerationStatus.FAILED,
+        status: {
+          notIn: [CommentStatus.DELETED, CommentStatus.REJECTED],
+        },
+      },
+      data: {
+        moderationStatus: ModerationStatus.PROCESSING,
+      },
+    });
+
+    return result.count === 1;
+  }
+
+  async findFailedForRetry(filters: RetryFailedCommentsInput): Promise<RetryFailedCommentCandidate[]> {
+    const where: Prisma.CommentWhereInput = {
+      moderationStatus: ModerationStatus.FAILED,
+      status: {
+        notIn: [CommentStatus.DELETED, CommentStatus.REJECTED],
+      },
+    };
+
+    if (filters.postId) {
+      where.postId = filters.postId;
+    }
+
+    if (filters.authorId) {
+      where.authorId = filters.authorId;
+    }
+
+    return this.db.comment.findMany({
+      where,
+      take: filters.limit,
+      orderBy: {
+        id: 'asc',
+      },
+      select: {
+        id: true,
+        postId: true,
+        content: true,
+      },
+    });
+  }
+
   async update(id: number, data: UpdateCommentInput): Promise<Comment | null> {
     return await this.db.comment.update({
       where: { id },
       data: {
         content: data.content,
+        moderationStatus: ModerationStatus.PENDING,
       },
       include: {
         author: true,
@@ -213,6 +270,7 @@ export class CommentsRepo implements ICommentsRepo {
           moderationReason: null,
           moderatedAt: new Date(),
           moderatorType: ModeratorType.AGENT,
+          moderationStatus: ModerationStatus.DONE,
         },
       });
 
@@ -258,6 +316,7 @@ export class CommentsRepo implements ICommentsRepo {
           moderationReason: data.reason,
           moderatedAt: new Date(),
           moderatorType: ModeratorType.AGENT,
+          moderationStatus: ModerationStatus.DONE,
         },
       });
 
@@ -282,6 +341,7 @@ export class CommentsRepo implements ICommentsRepo {
         moderationReason: reason,
         moderatorType: ModeratorType.LOCAL,
         moderatedAt: new Date(),
+        moderationStatus: ModerationStatus.FAILED,
       },
     });
   }

@@ -4,13 +4,14 @@ import { SecurityModule } from '../security/security.module';
 import { EmailsModule } from '../emails/emails.module';
 import { LinksModule } from '../links/links.module';
 import { UserRolePeriodsModule } from '../user-role-periods/user-role-periods.module';
-import { AdminUsersController } from './controllers';
+import { AdminCommentsController, AdminUsersController } from './controllers';
 import { AdminService } from './services';
 import { UsersRepo } from '../users/repo/users-repo';
+import { CommentsModule } from '../posts/comments/comments.module';
 
 @Module({
-  imports: [AppLoggerModule, SecurityModule, EmailsModule, LinksModule, UserRolePeriodsModule],
-  controllers: [AdminUsersController],
+  imports: [AppLoggerModule, SecurityModule, EmailsModule, LinksModule, UserRolePeriodsModule, CommentsModule],
+  controllers: [AdminUsersController, AdminCommentsController],
   providers: [AdminService, UsersRepo],
   exports: [AdminService],
 })

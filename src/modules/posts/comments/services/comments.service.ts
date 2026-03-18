@@ -28,13 +28,16 @@ export class CommentsService implements ICommentsService {
       content: data.content,
     });
 
-    this.moderationQueue.enqueue({ commentId: comment.id, postId, content: comment.content }).catch((error) => {
-      this.logger.error('Failed to enqueue comment moderation job after creation', {
-        commentId: comment.id,
-        postId,
-        error: error as Error,
+    this.moderationQueue
+      .enqueue({ commentId: comment.id, postId, content: comment.content })
+      .then(() => this.commentsRepo.setModerationProcessing(comment.id))
+      .catch((error) => {
+        this.logger.error('Failed to enqueue comment moderation job after creation', {
+          commentId: comment.id,
+          postId,
+          error: error as Error,
+        });
       });
-    });
 
     this.logger.info(`Comment created by user ${authorId} on post ${postId}`, { commentId: comment.id });
 
@@ -61,6 +64,7 @@ export class CommentsService implements ICommentsService {
     if (updatedComment?.id) {
       this.moderationQueue
         .enqueue({ commentId: updatedComment.id, postId: updatedComment.postId, content: updatedComment.content })
+        .then(() => this.commentsRepo.setModerationProcessing(updatedComment.id))
         .catch((error) => {
           this.logger.error('Failed to enqueue comment moderation job after update', {
             commentId: updatedComment.id,

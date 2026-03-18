@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Comment, Prisma, CommentStatus, ModeratorType } from '@prisma/client';
+import { Comment, Prisma, CommentStatus, ModeratorType, ModerationStatus } from '@prisma/client';
 import {
   ApproveCommentModerationInput,
   CreateCommentInput,
@@ -67,11 +67,19 @@ export class CommentsRepo implements ICommentsRepo {
     };
   }
 
+  async setModerationProcessing(id: number): Promise<void> {
+    await this.db.comment.update({
+      where: { id },
+      data: { moderationStatus: ModerationStatus.PROCESSING },
+    });
+  }
+
   async update(id: number, data: UpdateCommentInput): Promise<Comment | null> {
     return await this.db.comment.update({
       where: { id },
       data: {
         content: data.content,
+        moderationStatus: ModerationStatus.PENDING,
       },
       include: {
         author: true,
@@ -213,6 +221,7 @@ export class CommentsRepo implements ICommentsRepo {
           moderationReason: null,
           moderatedAt: new Date(),
           moderatorType: ModeratorType.AGENT,
+          moderationStatus: ModerationStatus.DONE,
         },
       });
 
@@ -258,6 +267,7 @@ export class CommentsRepo implements ICommentsRepo {
           moderationReason: data.reason,
           moderatedAt: new Date(),
           moderatorType: ModeratorType.AGENT,
+          moderationStatus: ModerationStatus.DONE,
         },
       });
 
@@ -282,6 +292,7 @@ export class CommentsRepo implements ICommentsRepo {
         moderationReason: reason,
         moderatorType: ModeratorType.LOCAL,
         moderatedAt: new Date(),
+        moderationStatus: ModerationStatus.FAILED,
       },
     });
   }

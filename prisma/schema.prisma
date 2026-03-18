@@ -280,6 +280,15 @@ enum CommentStatus {
   @@map("comment_statuses")
 }
 
+enum ModerationStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  FAILED     @map("failed")
+  DONE       @map("done")
+
+  @@map("moderation_statuses")
+}
+
 model Comment {
   id         Int           @id @default(autoincrement())
   postId     Int           @map("post_id")
@@ -289,11 +298,12 @@ model Comment {
   totalLikes Int           @default(0) @map("total_likes")
 
   // moderation
-  moderationProvider String?        @map("moderation_provider")
-  moderationScore    Float?         @map("moderation_score")
-  moderationReason   String?        @map("moderation_reason") @db.Text
-  moderatedAt        DateTime?      @map("moderated_at")
-  moderatorType      ModeratorType? @map("moderator_type")
+  moderationProvider String?          @map("moderation_provider")
+  moderationScore    Float?           @map("moderation_score")
+  moderationReason   String?          @map("moderation_reason") @db.Text
+  moderatedAt        DateTime?        @map("moderated_at")
+  moderatorType      ModeratorType?   @map("moderator_type")
+  moderationStatus   ModerationStatus @default(PENDING) @map("moderation_status")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -306,6 +316,7 @@ model Comment {
   @@index([authorId])
   @@index([status])
   @@index([moderatorType])
+  @@index([moderationStatus])
   @@index([postId, createdAt(sort: Desc)])
   @@index([authorId, createdAt(sort: Desc)])
   @@map("comments")

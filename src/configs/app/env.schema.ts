@@ -54,4 +54,9 @@ export const configValidation = Joi.object({
   GOOGLE_OAUTH_CLIENT_SECRET: Joi.string().required(),
   GOOGLE_OAUTH_CALLBACK_URL: Joi.string().uri().required(),
   GOOGLE_OAUTH_API_KEY: Joi.string().required(),
+
+  GEMINI_API_KEY: Joi.string().allow('').default(''),
+  GEMINI_MODEL: Joi.string().default('gemini-2.0-flash'),
+  GEMINI_API_BASE_URL: Joi.string().uri().default('https://generativelanguage.googleapis.com/v1beta'),
+  MCP_MODERATION_TIMEOUT_MS: Joi.number().default(5000),
 });

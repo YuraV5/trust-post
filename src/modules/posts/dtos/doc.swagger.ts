@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { PostStatus, UserRoles } from '@prisma/client';
+import { PostStatus } from '@prisma/client';
 
 /**
  * Swagger response schemas for the Posts module.

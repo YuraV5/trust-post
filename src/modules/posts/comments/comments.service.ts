@@ -8,6 +8,7 @@ import { ICommentsService } from './interfaces';
 import { CommentsQueryDto } from './dtos';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { CommentsModerationQueueService } from './queue';
 
 @Injectable()
 export class CommentsService implements ICommentsService {
@@ -17,6 +18,7 @@ export class CommentsService implements ICommentsService {
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly commentsRepo: CommentsRepo,
     private readonly commentLikesRepo: CommentLikeRepo,
+    private readonly moderationQueue: CommentsModerationQueueService,
   ) {}
 
   async create(postId: number, authorId: string, data: CreateCommentInput): Promise<ResponseMessage> {
@@ -24,6 +26,16 @@ export class CommentsService implements ICommentsService {
       postId,
       content: data.content,
     });
+
+    try {
+      await this.moderationQueue.enqueue(comment.id, postId, data.content);
+    } catch (error) {
+      this.logger.error('Failed to enqueue comment moderation job', {
+        commentId: comment.id,
+        postId,
+        error: error as Error,
+      });
+    }
 
     this.logger.info(`Comment created by user ${authorId} on post ${postId}`, { commentId: comment.id });
 

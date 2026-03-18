@@ -33,3 +33,14 @@ export type NormalizedCommentsQuery = {
   sortBy: 'createdAt' | 'updatedAt';
   sortOrder: 'asc' | 'desc';
 };
+
+export type ApproveCommentModerationInput = {
+  provider: string;
+  score: number;
+};
+
+export type RejectCommentModerationInput = {
+  provider: string;
+  score: number;
+  reason: string;
+};

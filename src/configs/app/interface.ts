@@ -62,4 +62,11 @@ export interface IAppConfig {
     callbackUrl: string;
     apiKey: string;
   };
+
+  gemini: {
+    apiKey: string;
+    model: string;
+    baseUrl: string;
+    timeoutMs: number;
+  };
 }

@@ -3,4 +3,5 @@ export const REDIS_DB = {
   EMAIL: 1,
   POSTS: 2,
   CACHE: 3,
+  COMMENTS: 4,
 };

@@ -6,6 +6,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { COMMENTS_MODERATION_JOB, COMMENTS_MODERATION_QUEUE } from '../consts';
 import { COMMENTS_QUEUE_JOB_OPTIONS } from '../configs/comments-queue.config';
+import { AGENT_ACTION_TYPE } from '../../../core-agents/consts';
 
 @Injectable()
 export class CommentsModerationQueueService extends BaseQueueService {
@@ -13,10 +14,11 @@ export class CommentsModerationQueueService extends BaseQueueService {
     super(logger, queue);
   }
 
-  async enqueue(commentId: number, postId: number, content: string): Promise<void> {
+  async enqueue(data: { commentId: number; postId: number; content: string }): Promise<void> {
+    const { commentId, postId, content } = data;
     return this.add(
       COMMENTS_MODERATION_JOB.MODERATE_COMMENT,
-      { commentId, postId, content },
+      { commentId, postId, content, actionType: AGENT_ACTION_TYPE.CommentModeration },
       {
         ...COMMENTS_QUEUE_JOB_OPTIONS,
         jobId: `${COMMENTS_MODERATION_JOB.MODERATE_COMMENT}-${commentId}`,

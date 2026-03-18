@@ -1,5 +1,5 @@
-import { AgentModerationResult } from '../types';
+import { AgentActionConfig, AgentModerationResult } from '../types';
 
 export interface IAgentProvider {
-  commentModerate(text: string): Promise<AgentModerationResult>;
+  commentModerate(text: string, config: AgentActionConfig): Promise<AgentModerationResult>;
 }

@@ -1,41 +1,66 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AppConfigException } from '../../../../shared/errors/app-errors';
 import { IAgentClient } from '../../interfaces/agent-client';
+import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
+import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { GoogleGenAI } from '@google/genai';
+import { AgentGenerateOptions } from '../../types';
+import { AgentClientConfigException, AgentEmptyResponseException, AgentRequestFailedException } from '../../errors';
 
 @Injectable()
 export class GeminiClient implements IAgentClient {
-  constructor(private config: ConfigService) {}
+  constructor(
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
+    private readonly config: ConfigService,
+  ) {}
 
-  async generate(prompt: string, contetnt: string, opts?: { timeoutMs?: number }) {
-    const apiKey = this.config.get<string>('commentModeration.gemini.apiKey');
-    const model = this.config.get<string>('commentModeration.gemini.model') || 'gemini-2.0-flash';
-    const baseUrl = this.config.get<string>('commentModeration.gemini.baseUrl');
-    const temperature = 0;
+  async generate(prompt: string, content: string, model: string, opts?: AgentGenerateOptions): Promise<string> {
+    const apiKey = this.config.get<string>('gemini.apiKey');
 
-    if (!apiKey) throw new AppConfigException('Missing API key');
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), opts?.timeoutMs ?? 5000);
+    if (!apiKey) {
+      throw new AgentClientConfigException('Missing Gemini API key');
+    }
 
     try {
-      const res = await fetch(`${baseUrl}/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        body: JSON.stringify({
-          systemInstruction: { role: 'system', parts: [{ text: prompt }] },
-          contents: [{ role: 'user', parts: [{ text: contetnt }] }],
-          generationConfig: { temperature, responseMimeType: 'application/json' },
-          signal: controller.signal,
-        }),
+      const ai = new GoogleGenAI({ apiKey });
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: content }],
+          },
+        ],
+        config: {
+          systemInstruction: {
+            parts: [{ text: prompt }],
+          },
+          temperature: opts?.temperature ?? 0,
+          maxOutputTokens: opts?.maxOutputTokens ?? 1024,
+          httpOptions: opts?.timeoutMs ? { timeout: opts.timeoutMs } : undefined,
+        },
       });
 
-      if (!res.ok) throw new Error('Gemini error');
+      const text = response.text?.trim();
 
-      const json = await res.json();
+      if (!text) {
+        throw new AgentEmptyResponseException('Gemini returned an empty text response');
+      }
 
-      return json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    } finally {
-      clearTimeout(timeout);
+      return text;
+    } catch (error: unknown) {
+      if (
+        error instanceof AgentClientConfigException ||
+        error instanceof AgentEmptyResponseException ||
+        error instanceof AgentRequestFailedException
+      ) {
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : 'Unknown Gemini error';
+      this.logger.error('Gemini generation error', { error: message, model });
+      throw new AgentRequestFailedException('Failed to generate content with Gemini', [message]);
     }
   }
 }

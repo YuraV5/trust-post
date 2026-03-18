@@ -4,7 +4,7 @@ import { CoreAgentsService } from './services/core-agents.service';
 
 @Module({
   controllers: [],
-  providers: [CoreAgentsService, GeminiAgentsService, GeminiClient, GeminiAgentsService],
+  providers: [CoreAgentsService, GeminiAgentsService, GeminiClient],
   exports: [CoreAgentsService],
 })
 export class CoreAgentsModule {}

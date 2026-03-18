@@ -1,4 +1,3 @@
-import { time } from 'console';
 import { IAppConfig } from './interface';
 
 const parseBoolean = (value: string | undefined, fallback: boolean): boolean => {
@@ -76,8 +75,5 @@ export default (): IAppConfig => ({
 
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
-    model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
-    baseUrl: process.env.GEMINI_API_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta',
-    timeoutMs: process.env.MCP_MODERATION_TIMEOUT_MS ? parseInt(process.env.MCP_MODERATION_TIMEOUT_MS, 10) : 5000,
   },
 });

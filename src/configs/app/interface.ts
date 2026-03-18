@@ -65,8 +65,5 @@ export interface IAppConfig {
 
   gemini: {
     apiKey: string;
-    model: string;
-    baseUrl: string;
-    timeoutMs: number;
   };
 }

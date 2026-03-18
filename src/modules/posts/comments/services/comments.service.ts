@@ -1,14 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CommentsRepo, CommentLikeRepo } from './repo';
-import { ResponseMessage } from '../../../common/types';
-import { CreateCommentInput, UpdateCommentInput, PaginatedResult, NormalizedCommentsQuery } from './types';
+import { CommentsRepo, CommentLikeRepo } from '../repo';
+import { ResponseMessage } from '../../../../common/types';
+import { CreateCommentInput, UpdateCommentInput, PaginatedResult, NormalizedCommentsQuery } from '../types';
 import { Comment } from '@prisma/client';
-import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
-import { ICommentsService } from './interfaces';
-import { CommentsQueryDto } from './dtos';
-import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
-import { CommentsModerationQueueService } from './queue';
+import { AppBadRequestException, AppNotFoundException } from '../../../../shared/errors/app-errors';
+import { ICommentsService } from '../interfaces';
+import { CommentsQueryDto } from '../dtos';
+import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
+import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { CommentsModerationQueueService } from '../queue';
 
 @Injectable()
 export class CommentsService implements ICommentsService {
@@ -28,7 +28,7 @@ export class CommentsService implements ICommentsService {
     });
 
     try {
-      await this.moderationQueue.enqueue(comment.id, postId, data.content);
+      await this.moderationQueue.enqueue({ commentId: comment.id, postId, content: comment.content });
     } catch (error) {
       this.logger.error('Failed to enqueue comment moderation job', {
         commentId: comment.id,

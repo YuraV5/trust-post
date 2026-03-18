@@ -1,3 +1,5 @@
+import { AgentGenerateOptions } from '../types';
+
 export interface IAgentClient {
-  generate(propt: string, content: string, opts?: { timeoutMs?: number }): Promise<string>;
+  generate(prompt: string, content: string, model: string, opts?: AgentGenerateOptions): Promise<string>;
 }

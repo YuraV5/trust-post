@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CoreAgentsModule } from '../../core-agents/core-agents.module';
-import { CommentsService } from './comments.service';
+import { CommentsService } from './services/comments.service';
 import { CommentsController } from './comments.controller';
 import { CommentsRepo, CommentLikeRepo } from './repo';
 import { BullModule } from '@nestjs/bullmq';

@@ -9,6 +9,7 @@ import { LinksService } from '../../src/modules/links/links.service';
 import { UserRolePeriodService } from '../../src/modules/user-role-periods/services';
 import { UserRolePeriodRepo } from '../../src/modules/user-role-periods/repo/user-role-period.repo';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
+import { CommentsService } from '../../src/modules/posts/comments/services/comments.service';
 import { EmailQueueServiceMock, StubAppLogger } from '../__mock__';
 import { mockPasswordService } from '../security/mock/password.mock';
 import { mockUser, mockUserAdminOutput, mockUsersRepo } from '../users/__mock';
@@ -31,6 +32,10 @@ describe('AdminService', () => {
     generateTemporaryLink: jest.fn().mockResolvedValue('https://app.local/activate/token-1'),
   };
 
+  const commentsServiceMock = {
+    retryFailedModerationByAdmin: jest.fn(),
+  };
+
   beforeEach(async () => {
     prismaMock = {
       transaction: jest.fn((cb) => cb({})),
@@ -43,6 +48,7 @@ describe('AdminService', () => {
         { provide: PasswordService, useValue: mockPasswordService },
         { provide: EmailQueueService, useValue: EmailQueueServiceMock },
         { provide: LinksService, useValue: linksServiceMock },
+        { provide: CommentsService, useValue: commentsServiceMock },
         { provide: UserRolePeriodService, useValue: userRolePeriodServiceMock },
         { provide: UserRolePeriodRepo, useValue: userRolePeriodRepoMock },
         {
@@ -193,6 +199,24 @@ describe('AdminService', () => {
 
       await expect(service.getUserRoleHistory('user-id')).resolves.toEqual(history);
       expect(userRolePeriodServiceMock.getUserRoleHistory).toHaveBeenCalledWith('user-id');
+    });
+  });
+
+  describe('retryFailedCommentsModeration', () => {
+    it('should queue failed comments moderation retry and return the count', async () => {
+      commentsServiceMock.retryFailedModerationByAdmin.mockResolvedValue({ queuedCount: 3 });
+
+      await expect(
+        service.retryFailedCommentsModeration({ limit: 5, olderThanMinutes: 30 }, 'admin-id'),
+      ).resolves.toEqual({
+        message: 'Queued 3 comment(s) for moderation retry',
+        queuedCount: 3,
+      });
+
+      expect(commentsServiceMock.retryFailedModerationByAdmin).toHaveBeenCalledWith(
+        { limit: 5, olderThanMinutes: 30 },
+        'admin-id',
+      );
     });
   });
 });

@@ -265,9 +265,17 @@ model PostReview {
   @@map("post_reviews")
 }
 
+enum ModeratorType {
+  LOCAL @map("local")
+  AGENT @map("agent")
+
+  @@map("moderators")
+}
+
 enum CommentStatus {
-  VISIBLE
-  DELETED
+  REJECTED @map("rejected")
+  VISIBLE  @map("visible")
+  DELETED  @map("deleted")
 
   @@map("comment_statuses")
 }
@@ -279,8 +287,16 @@ model Comment {
   content    String        @db.Text
   status     CommentStatus @default(VISIBLE)
   totalLikes Int           @default(0) @map("total_likes")
-  createdAt  DateTime      @default(now()) @map("created_at")
-  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  // moderation
+  moderationProvider String?        @map("moderation_provider")
+  moderationScore    Float?         @map("moderation_score")
+  moderationReason   String?        @map("moderation_reason") @db.Text
+  moderatedAt        DateTime?      @map("moderated_at")
+  moderatorType      ModeratorType? @map("moderator_type")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   author User          @relation(fields: [authorId], references: [id])
   post   Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -288,6 +304,8 @@ model Comment {
 
   @@index([postId])
   @@index([authorId])
+  @@index([status])
+  @@index([moderatorType])
   @@index([postId, createdAt(sort: Desc)])
   @@index([authorId, createdAt(sort: Desc)])
   @@map("comments")

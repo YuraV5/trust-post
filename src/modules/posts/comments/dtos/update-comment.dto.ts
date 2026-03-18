@@ -7,7 +7,7 @@ export class UpdateCommentDto {
     description: 'The updated content of the comment',
   })
   @IsString({ message: 'Content must be a string' })
-  @MinLength(1, { message: 'Content must be at least 1 character long' })
+  @MinLength(3, { message: 'Content must be at least 3 characters long' })
   @MaxLength(1000, { message: 'Content must be at most 1000 characters long' })
   content: string;
 }

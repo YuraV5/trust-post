@@ -15,7 +15,6 @@ export class EmailQueueService extends BaseQueueService {
   }
 
   async sendVerificationEmail(data: EmailVerificationTask): Promise<void> {
-    // TODO improve type and add validation
     return this.add<EmailVerificationTask>(
       EMAIL_JOB.VERIFICATION_EMAIL,
       {
@@ -28,7 +27,6 @@ export class EmailQueueService extends BaseQueueService {
   }
 
   async sendPasswordResetEmail(data: PasswordResetTask): Promise<void> {
-    // TODO improve type and add validation
     return this.add<PasswordResetTask>(
       EMAIL_JOB.PASSWORD_RESET_EMAIL,
       {

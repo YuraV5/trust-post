@@ -1,13 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CommentsRepo, CommentLikeRepo } from './repo';
-import { ResponseMessage } from '../../../common/types';
-import { CreateCommentInput, UpdateCommentInput, PaginatedResult, NormalizedCommentsQuery } from './types';
+import { CommentsRepo, CommentLikeRepo } from '../repo';
+import { ResponseMessage } from '../../../../common/types';
+import { CreateCommentInput, UpdateCommentInput, PaginatedResult, NormalizedCommentsQuery } from '../types';
 import { Comment } from '@prisma/client';
-import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
-import { ICommentsService } from './interfaces';
-import { CommentsQueryDto } from './dtos';
-import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { AppBadRequestException, AppNotFoundException } from '../../../../shared/errors/app-errors';
+import { ICommentsService } from '../interfaces';
+import { CommentsQueryDto } from '../dtos';
+import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
+import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { CommentsModerationQueueService } from '../queue';
+import { error } from 'console';
 
 @Injectable()
 export class CommentsService implements ICommentsService {
@@ -17,12 +19,21 @@ export class CommentsService implements ICommentsService {
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly commentsRepo: CommentsRepo,
     private readonly commentLikesRepo: CommentLikeRepo,
+    private readonly moderationQueue: CommentsModerationQueueService,
   ) {}
 
   async create(postId: number, authorId: string, data: CreateCommentInput): Promise<ResponseMessage> {
     const comment = await this.commentsRepo.create(authorId, {
       postId,
       content: data.content,
+    });
+
+    this.moderationQueue.enqueue({ commentId: comment.id, postId, content: comment.content }).catch((error) => {
+      this.logger.error('Failed to enqueue comment moderation job after creation', {
+        commentId: comment.id,
+        postId,
+        error: error as Error,
+      });
     });
 
     this.logger.info(`Comment created by user ${authorId} on post ${postId}`, { commentId: comment.id });
@@ -45,9 +56,19 @@ export class CommentsService implements ICommentsService {
       throw new AppNotFoundException('Comment not found');
     }
 
-    await this.commentsRepo.update(id, data);
-
+    const updatedComment = await this.commentsRepo.update(id, data);
     this.logger.info(`Comment ${id} updated`);
+    if (updatedComment?.id) {
+      this.moderationQueue
+        .enqueue({ commentId: updatedComment.id, postId: updatedComment.postId, content: updatedComment.content })
+        .catch((error) => {
+          this.logger.error('Failed to enqueue comment moderation job after update', {
+            commentId: updatedComment.id,
+            postId: updatedComment.postId,
+            error: error as Error,
+          });
+        });
+    }
 
     return { message: 'Comment updated successfully' };
   }

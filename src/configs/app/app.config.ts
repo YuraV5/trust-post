@@ -72,4 +72,8 @@ export default (): IAppConfig => ({
     callbackUrl: process.env.GOOGLE_OAUTH_CALLBACK_URL!,
     apiKey: process.env.GOOGLE_OAUTH_API_KEY!,
   },
+
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || '',
+  },
 });

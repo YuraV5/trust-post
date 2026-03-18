@@ -27,6 +27,7 @@ import { MessageModule } from './modules/message/message.module';
 import { SocketModule } from './modules/socket/socket.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { CoreAgentsModule } from './modules/core-agents/core-agents.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { AdminModule } from './modules/admin/admin.module';
     SocketModule,
     PaymentsModule,
     AdminModule,
+    CoreAgentsModule,
   ],
   controllers: [],
   providers: [

@@ -12,7 +12,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
-import { CommentsService } from './comments.service';
+import { CommentsService } from './services/comments.service';
 import { ResponseMessage } from '../../../common/types';
 import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { CurrentUser, PublicRoute, Roles } from '../../../common/decorators';

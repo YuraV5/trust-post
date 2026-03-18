@@ -54,4 +54,6 @@ export const configValidation = Joi.object({
   GOOGLE_OAUTH_CLIENT_SECRET: Joi.string().required(),
   GOOGLE_OAUTH_CALLBACK_URL: Joi.string().uri().required(),
   GOOGLE_OAUTH_API_KEY: Joi.string().required(),
+
+  GEMINI_API_KEY: Joi.string().allow('').default(''),
 });

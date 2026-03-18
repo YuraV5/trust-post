@@ -62,4 +62,8 @@ export interface IAppConfig {
     callbackUrl: string;
     apiKey: string;
   };
+
+  gemini: {
+    apiKey: string;
+  };
 }

@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { Comment, Prisma, CommentStatus } from '@prisma/client';
+import { Comment, Prisma, CommentStatus, ModeratorType } from '@prisma/client';
 import {
+  ApproveCommentModerationInput,
   CreateCommentInput,
   UpdateCommentInput,
   PaginatedResult,
   NormalizedCommentsQuery,
   DeleteResult,
+  RejectCommentModerationInput,
 } from '../types';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ICommentsRepo } from '../interfaces';
@@ -15,23 +17,12 @@ export class CommentsRepo implements ICommentsRepo {
   constructor(private readonly db: PrismaService) {}
 
   async create(authorId: string, data: CreateCommentInput): Promise<Comment> {
-    return await this.db.$transaction(async (tx) => {
-      const resp = await tx.comment.create({
-        data: {
-          postId: data.postId,
-          authorId,
-          content: data.content,
-        },
-      });
-      await tx.post.update({
-        where: { id: data.postId },
-        data: {
-          totalComments: {
-            increment: 1,
-          },
-        },
-      });
-      return resp;
+    return await this.db.comment.create({
+      data: {
+        postId: data.postId,
+        authorId,
+        content: data.content,
+      },
     });
   }
 
@@ -90,6 +81,24 @@ export class CommentsRepo implements ICommentsRepo {
 
   async delete(id: number): Promise<Comment | null> {
     return await this.db.$transaction(async (tx) => {
+      const existing = await tx.comment.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          postId: true,
+          status: true,
+          moderatorType: true,
+          moderationReason: true,
+          moderatedAt: true,
+        },
+      });
+
+      if (!existing) {
+        return null;
+      }
+
+      const shouldDecrement = this.isCountedComment(existing);
+
       const comment = await tx.comment.update({
         where: { id },
         data: {
@@ -100,14 +109,16 @@ export class CommentsRepo implements ICommentsRepo {
         },
       });
 
-      await tx.post.update({
-        where: { id: comment.postId },
-        data: {
-          totalComments: {
-            decrement: 1,
+      if (shouldDecrement) {
+        await tx.post.update({
+          where: { id: comment.postId },
+          data: {
+            totalComments: {
+              decrement: 1,
+            },
           },
-        },
-      });
+        });
+      }
 
       return comment;
     });
@@ -123,13 +134,22 @@ export class CommentsRepo implements ICommentsRepo {
           },
         },
         select: {
+          id: true,
           postId: true,
+          status: true,
+          moderatorType: true,
+          moderationReason: true,
+          moderatedAt: true,
         },
       });
 
       // Групуємо по postId і рахуємо кількість
       const postCounts = comments.reduce(
         (acc, comment) => {
+          if (!this.isCountedComment(comment)) {
+            return acc;
+          }
+
           acc[comment.postId] = (acc[comment.postId] || 0) + 1;
           return acc;
         },
@@ -163,5 +183,121 @@ export class CommentsRepo implements ICommentsRepo {
         count: result.count,
       };
     });
+  }
+
+  async markModeratedApproved(id: number, data: ApproveCommentModerationInput): Promise<void> {
+    await this.db.$transaction(async (tx) => {
+      const comment = await tx.comment.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          postId: true,
+          status: true,
+          moderatorType: true,
+          moderationReason: true,
+          moderatedAt: true,
+        },
+      });
+
+      if (!comment || comment.status !== CommentStatus.VISIBLE) {
+        return;
+      }
+
+      const alreadyCounted = this.isCountedComment(comment);
+
+      await tx.comment.update({
+        where: { id },
+        data: {
+          moderationProvider: data.provider,
+          moderationScore: data.score,
+          moderationReason: null,
+          moderatedAt: new Date(),
+          moderatorType: ModeratorType.AGENT,
+        },
+      });
+
+      if (!alreadyCounted) {
+        await tx.post.update({
+          where: { id: comment.postId },
+          data: {
+            totalComments: {
+              increment: 1,
+            },
+          },
+        });
+      }
+    });
+  }
+
+  async markModeratedRejected(id: number, data: RejectCommentModerationInput): Promise<void> {
+    await this.db.$transaction(async (tx) => {
+      const comment = await tx.comment.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          postId: true,
+          status: true,
+          moderatorType: true,
+          moderationReason: true,
+          moderatedAt: true,
+        },
+      });
+
+      if (!comment) {
+        return;
+      }
+
+      const alreadyCounted = this.isCountedComment(comment);
+
+      await tx.comment.update({
+        where: { id },
+        data: {
+          status: CommentStatus.REJECTED,
+          moderationProvider: data.provider,
+          moderationScore: data.score,
+          moderationReason: data.reason,
+          moderatedAt: new Date(),
+          moderatorType: ModeratorType.AGENT,
+        },
+      });
+
+      if (alreadyCounted) {
+        await tx.post.update({
+          where: { id: comment.postId },
+          data: {
+            totalComments: {
+              decrement: 1,
+            },
+          },
+        });
+      }
+    });
+  }
+
+  async markModerationServiceUnavailable(id: number, reason: string): Promise<void> {
+    await this.db.comment.updateMany({
+      where: { id },
+      data: {
+        moderationProvider: 'local',
+        moderationReason: reason,
+        moderatorType: ModeratorType.LOCAL,
+        moderatedAt: new Date(),
+      },
+    });
+  }
+
+  // Checks if the comment should be counted in totalComments based on its moderation status
+  private isCountedComment(comment: {
+    status: CommentStatus;
+    moderatorType: ModeratorType | null;
+    moderationReason: string | null;
+    moderatedAt: Date | null;
+  }): boolean {
+    return (
+      comment.status === CommentStatus.VISIBLE &&
+      comment.moderatorType === ModeratorType.AGENT &&
+      comment.moderatedAt !== null &&
+      comment.moderationReason === null
+    );
   }
 }

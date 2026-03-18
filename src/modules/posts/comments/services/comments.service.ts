@@ -9,6 +9,7 @@ import { CommentsQueryDto } from '../dtos';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
 import { CommentsModerationQueueService } from '../queue';
+import { error } from 'console';
 
 @Injectable()
 export class CommentsService implements ICommentsService {
@@ -27,15 +28,13 @@ export class CommentsService implements ICommentsService {
       content: data.content,
     });
 
-    try {
-      await this.moderationQueue.enqueue({ commentId: comment.id, postId, content: comment.content });
-    } catch (error) {
-      this.logger.error('Failed to enqueue comment moderation job', {
+    this.moderationQueue.enqueue({ commentId: comment.id, postId, content: comment.content }).catch((error) => {
+      this.logger.error('Failed to enqueue comment moderation job after creation', {
         commentId: comment.id,
         postId,
         error: error as Error,
       });
-    }
+    });
 
     this.logger.info(`Comment created by user ${authorId} on post ${postId}`, { commentId: comment.id });
 
@@ -57,9 +56,19 @@ export class CommentsService implements ICommentsService {
       throw new AppNotFoundException('Comment not found');
     }
 
-    await this.commentsRepo.update(id, data);
-
+    const updatedComment = await this.commentsRepo.update(id, data);
     this.logger.info(`Comment ${id} updated`);
+    if (updatedComment?.id) {
+      this.moderationQueue
+        .enqueue({ commentId: updatedComment.id, postId: updatedComment.postId, content: updatedComment.content })
+        .catch((error) => {
+          this.logger.error('Failed to enqueue comment moderation job after update', {
+            commentId: updatedComment.id,
+            postId: updatedComment.postId,
+            error: error as Error,
+          });
+        });
+    }
 
     return { message: 'Comment updated successfully' };
   }

@@ -87,12 +87,19 @@ export class PostsReviewService {
       await this.postsRepo.updateStatus(postId, { postStatus, statusReason: finalStatusReason }, tx);
     });
 
-    // --- SIDE EFFECT ---
     if (reviewStatus === PostReviewStatus.REJECTED) {
-      await this.emailQueue.enqueuePostRejectedEmail(user.email, {
-        postTitle: post.title,
-        reason: reviewReason!,
-      });
+      this.emailQueue
+        .enqueuePostRejectedEmail(user.email, {
+          postTitle: post.title,
+          reason: reviewReason!,
+        })
+        .catch((error) => {
+          this.logger.error('Failed to enqueue post rejected email job', {
+            postId,
+            userId: user.id,
+            error: error as Error,
+          });
+        });
     }
 
     this.logger.debug(

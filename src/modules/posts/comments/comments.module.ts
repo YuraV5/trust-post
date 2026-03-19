@@ -8,10 +8,12 @@ import { REDIS_DB } from '../../../configs/redis/redis-db';
 import { COMMENTS_MODERATION_QUEUE } from './consts';
 import { CommentsModerationQueueProcessor, CommentsModerationQueueService } from './queue';
 import { CommentsModerationService } from './moderation/comments-moderation.service';
+import { SecurityModule } from '../../security/security.module';
 
 @Module({
   imports: [
     CoreAgentsModule,
+    SecurityModule,
     BullModule.registerQueue({
       name: COMMENTS_MODERATION_QUEUE,
       connection: {

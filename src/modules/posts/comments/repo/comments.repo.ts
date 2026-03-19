@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Comment, Prisma, CommentStatus, ModeratorType, ModerationStatus } from '@prisma/client';
+import { Comment, Prisma, CommentStatus, ModeratorType } from '@prisma/client';
 import {
   ApproveCommentModerationInput,
   CreateCommentInput,
@@ -24,6 +24,7 @@ export class CommentsRepo implements ICommentsRepo {
         postId: data.postId,
         authorId,
         content: data.content,
+        status: CommentStatus.PENDING,
       },
     });
   }
@@ -37,14 +38,31 @@ export class CommentsRepo implements ICommentsRepo {
     });
   }
 
-  async findByPostIdPaginated(postId: number, query: NormalizedCommentsQuery): Promise<PaginatedResult<Comment>> {
+  async findByPostIdPaginated(
+    postId: number,
+    query: NormalizedCommentsQuery,
+    viewerId?: string,
+  ): Promise<PaginatedResult<Comment>> {
     const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
 
-    const where: Prisma.CommentWhereInput = {
-      postId,
-      status: CommentStatus.VISIBLE,
-    };
+    const where: Prisma.CommentWhereInput = viewerId
+      ? {
+          postId,
+          OR: [
+            { status: CommentStatus.APPROVED },
+            {
+              authorId: viewerId,
+              status: {
+                in: [CommentStatus.PENDING, CommentStatus.PROCESSING],
+              },
+            },
+          ],
+        }
+      : {
+          postId,
+          status: CommentStatus.APPROVED,
+        };
 
     const orderBy: Prisma.CommentOrderByWithRelationInput = {
       [sortBy]: sortOrder,
@@ -72,7 +90,9 @@ export class CommentsRepo implements ICommentsRepo {
   async setModerationProcessing(id: number): Promise<void> {
     await this.db.comment.update({
       where: { id },
-      data: { moderationStatus: ModerationStatus.PROCESSING },
+      data: {
+        status: CommentStatus.PROCESSING,
+      },
     });
   }
 
@@ -80,13 +100,10 @@ export class CommentsRepo implements ICommentsRepo {
     const result = await this.db.comment.updateMany({
       where: {
         id,
-        moderationStatus: ModerationStatus.FAILED,
-        status: {
-          notIn: [CommentStatus.DELETED, CommentStatus.REJECTED],
-        },
+        status: CommentStatus.FAILED,
       },
       data: {
-        moderationStatus: ModerationStatus.PROCESSING,
+        status: CommentStatus.PROCESSING,
       },
     });
 
@@ -95,10 +112,7 @@ export class CommentsRepo implements ICommentsRepo {
 
   async findFailedForRetry(filters: RetryFailedCommentsInput): Promise<RetryFailedCommentCandidate[]> {
     const where: Prisma.CommentWhereInput = {
-      moderationStatus: ModerationStatus.FAILED,
-      status: {
-        notIn: [CommentStatus.DELETED, CommentStatus.REJECTED],
-      },
+      status: CommentStatus.FAILED,
     };
 
     if (filters.postId) {
@@ -128,7 +142,7 @@ export class CommentsRepo implements ICommentsRepo {
       where: { id },
       data: {
         content: data.content,
-        moderationStatus: ModerationStatus.PENDING,
+        status: CommentStatus.PENDING,
       },
       include: {
         author: true,
@@ -200,7 +214,7 @@ export class CommentsRepo implements ICommentsRepo {
         },
       });
 
-      // Групуємо по postId і рахуємо кількість
+      // Group comments by postId and count how many з них повинні бути враховані в totalComments
       const postCounts = comments.reduce(
         (acc, comment) => {
           if (!this.isCountedComment(comment)) {
@@ -213,7 +227,7 @@ export class CommentsRepo implements ICommentsRepo {
         {} as Record<number, number>,
       );
 
-      // Видаляємо коментарі
+      // Remove comments
       const result = await tx.comment.deleteMany({
         where: {
           id: {
@@ -222,7 +236,7 @@ export class CommentsRepo implements ICommentsRepo {
         },
       });
 
-      // Декрементуємо totalComments для кожного поста
+      // Decrement totalComments for each affected post
       await Promise.all(
         Object.entries(postCounts).map(([postId, count]) =>
           tx.post.update({
@@ -256,7 +270,7 @@ export class CommentsRepo implements ICommentsRepo {
         },
       });
 
-      if (!comment || comment.status !== CommentStatus.VISIBLE) {
+      if (!comment || comment.status === CommentStatus.DELETED || comment.status === CommentStatus.REJECTED) {
         return;
       }
 
@@ -265,12 +279,12 @@ export class CommentsRepo implements ICommentsRepo {
       await tx.comment.update({
         where: { id },
         data: {
+          status: CommentStatus.APPROVED,
           moderationProvider: data.provider,
           moderationScore: data.score,
           moderationReason: null,
           moderatedAt: new Date(),
           moderatorType: ModeratorType.AGENT,
-          moderationStatus: ModerationStatus.DONE,
         },
       });
 
@@ -316,7 +330,6 @@ export class CommentsRepo implements ICommentsRepo {
           moderationReason: data.reason,
           moderatedAt: new Date(),
           moderatorType: ModeratorType.AGENT,
-          moderationStatus: ModerationStatus.DONE,
         },
       });
 
@@ -337,11 +350,11 @@ export class CommentsRepo implements ICommentsRepo {
     await this.db.comment.updateMany({
       where: { id },
       data: {
+        status: CommentStatus.FAILED,
         moderationProvider: 'local',
         moderationReason: reason,
         moderatorType: ModeratorType.LOCAL,
         moderatedAt: new Date(),
-        moderationStatus: ModerationStatus.FAILED,
       },
     });
   }
@@ -354,7 +367,7 @@ export class CommentsRepo implements ICommentsRepo {
     moderatedAt: Date | null;
   }): boolean {
     return (
-      comment.status === CommentStatus.VISIBLE &&
+      comment.status === CommentStatus.APPROVED &&
       comment.moderatorType === ModeratorType.AGENT &&
       comment.moderatedAt !== null &&
       comment.moderationReason === null

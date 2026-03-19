@@ -17,6 +17,7 @@ import { CommentsQueryDto } from '../dtos';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
 import { CommentsModerationQueueService } from '../queue';
+import { TokensService } from '../../../security/services';
 
 @Injectable()
 export class CommentsService implements ICommentsService {
@@ -28,6 +29,7 @@ export class CommentsService implements ICommentsService {
     private readonly commentsRepo: CommentsRepo,
     private readonly commentLikesRepo: CommentLikeRepo,
     private readonly moderationQueue: CommentsModerationQueueService,
+    private readonly tokensService: TokensService,
   ) {}
 
   async create(postId: number, authorId: string, data: CreateCommentInput): Promise<ResponseMessage> {
@@ -52,9 +54,13 @@ export class CommentsService implements ICommentsService {
     return { message: 'Comment created successfully' };
   }
 
-  async getCommentsByPostId(postId: number, query: CommentsQueryDto): Promise<PaginatedResult<Comment>> {
+  async getCommentsByPostId(
+    postId: number,
+    query: CommentsQueryDto,
+    viewerId?: string,
+  ): Promise<PaginatedResult<Comment>> {
     const normalized = this.normalizeQuery(query);
-    return await this.commentsRepo.findByPostIdPaginated(postId, normalized);
+    return await this.commentsRepo.findByPostIdPaginated(postId, normalized, viewerId);
   }
 
   async update(id: number, data: UpdateCommentInput): Promise<ResponseMessage> {
@@ -198,6 +204,19 @@ export class CommentsService implements ICommentsService {
       sortBy,
       sortOrder,
     };
+  }
+
+  async resolveViewerId(authorization?: string): Promise<string | undefined> {
+    if (!authorization?.startsWith('Bearer ')) {
+      return undefined;
+    }
+
+    try {
+      const payload = await this.tokensService.verifyAccess(authorization.slice('Bearer '.length));
+      return payload.sub;
+    } catch {
+      return undefined;
+    }
   }
 
   private chunkCandidates(

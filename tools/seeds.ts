@@ -302,7 +302,7 @@ async function seedCommentsAndLikes() {
             postId: post.id,
             authorId: randomUser.id,
             content: generateCommentContent(),
-            status: CommentStatus.VISIBLE,
+            status: CommentStatus.APPROVED,
           },
         });
 

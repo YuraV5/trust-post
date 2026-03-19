@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -21,6 +22,7 @@ import { CreateCommentDto, UpdateCommentDto, CommentsQueryDto, PostIdParamDto, D
 import { RolesGuard, OwnershipGuard } from '../../../common/guards';
 import { UserRoles, Comment } from '@prisma/client';
 import { PaginatedResult } from './types';
+import { TokensService } from '../../security/services';
 import {
   MessageResponseDto,
   BadRequestErrorResponse,
@@ -120,8 +122,10 @@ export class CommentsController {
   async getCommentsByPostId(
     @Param() params: PostIdParamDto,
     @Query() query: CommentsQueryDto,
+    @Headers('authorization') authorization?: string,
   ): Promise<PaginatedResult<Comment>> {
-    return await this.commentsService.getCommentsByPostId(params.postId, query);
+    const viewerId = await this.commentsService.resolveViewerId(authorization);
+    return await this.commentsService.getCommentsByPostId(params.postId, query, viewerId);
   }
 
   @UseGuards(OwnershipGuard({ model: 'comment' }))

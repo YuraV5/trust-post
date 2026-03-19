@@ -14,7 +14,11 @@ import {
 export interface ICommentsRepo {
   create(authorId: string, data: CreateCommentInput): Promise<Comment>;
   getById(id: number): Promise<Comment | null>;
-  findByPostIdPaginated(postId: number, query: NormalizedCommentsQuery): Promise<PaginatedResult<Comment>>;
+  findByPostIdPaginated(
+    postId: number,
+    query: NormalizedCommentsQuery,
+    viewerId?: string,
+  ): Promise<PaginatedResult<Comment>>;
   update(id: number, data: UpdateCommentInput): Promise<Comment | null>;
   delete(id: number): Promise<Comment | null>;
   hardDeleteMany(ids: number[]): Promise<DeleteResult>;

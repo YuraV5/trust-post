@@ -41,7 +41,16 @@ export class CommentsService implements ICommentsService {
     this.moderationQueue
       .enqueue({ commentId: comment.id, postId, content: comment.content })
       .then(() => this.commentsRepo.setModerationProcessing(comment.id))
-      .catch((error) => {
+      .catch(async (error) => {
+        try {
+          await this.commentsRepo.markModerationServiceUnavailable(comment.id, 'queue enqueue failed');
+        } catch (markError) {
+          this.logger.error('Failed to mark comment as failed after enqueue error', {
+            commentId: comment.id,
+            postId,
+            error: markError as Error,
+          });
+        }
         this.logger.error('Failed to enqueue comment moderation job after creation', {
           commentId: comment.id,
           postId,
@@ -79,7 +88,16 @@ export class CommentsService implements ICommentsService {
       this.moderationQueue
         .enqueue({ commentId: updatedComment.id, postId: updatedComment.postId, content: updatedComment.content })
         .then(() => this.commentsRepo.setModerationProcessing(updatedComment.id))
-        .catch((error) => {
+        .catch(async (error) => {
+          try {
+            await this.commentsRepo.markModerationServiceUnavailable(updatedComment.id, 'queue enqueue failed');
+          } catch (markError) {
+            this.logger.error('Failed to mark comment as failed after enqueue error', {
+              commentId: updatedComment.id,
+              postId: updatedComment.postId,
+              error: markError as Error,
+            });
+          }
           this.logger.error('Failed to enqueue comment moderation job after update', {
             commentId: updatedComment.id,
             postId: updatedComment.postId,
@@ -148,7 +166,17 @@ export class CommentsService implements ICommentsService {
             postId: comment.postId,
             content: comment.content,
           })
-          .catch((error) => {
+          .catch(async (error) => {
+            try {
+              await this.commentsRepo.markModerationServiceUnavailable(comment.id, 'queue enqueue failed');
+            } catch (markError) {
+              this.logger.error('Failed to rollback comment to failed after retry enqueue error', {
+                adminId,
+                commentId: comment.id,
+                postId: comment.postId,
+                error: markError as Error,
+              });
+            }
             this.logger.error('Failed to enqueue comment moderation retry job', {
               adminId,
               commentId: comment.id,

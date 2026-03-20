@@ -28,7 +28,11 @@ export class PostsService implements IPostsService {
     try {
       await this.postQueue.assignReviewerToPost(post.id);
     } catch (error) {
-      this.logger.error('Error creating post', { authorId, error: error as Error });
+      this.logger.error('Failed to enqueue reviewer assignment after post creation', {
+        authorId,
+        postId: post.id,
+        error: error as Error,
+      });
     }
     return post;
   }

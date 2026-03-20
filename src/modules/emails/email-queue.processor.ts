@@ -25,21 +25,33 @@ export class EmailProcessor extends WorkerHost {
   }
 
   async process(job: Job<unknown>): Promise<void> {
-    switch (job.name as EMAIL_JOB) {
-      case EMAIL_JOB.VERIFICATION_EMAIL:
-        await this.processSendVerificationEmail(job as Job<EmailVerificationTask>);
-        break;
-      case EMAIL_JOB.PASSWORD_RESET_EMAIL:
-        await this.processSendPasswordResetEmail(job as Job<PasswordResetTask>);
-        break;
-      case EMAIL_JOB.ACCOUNT_ACTIVATION_EMAIL:
-        await this.processSendAccountActivationEmail(job as Job<AccountActivationTask>);
-        break;
-      case EMAIL_JOB.REJECT_POST_EMAIL:
-        await this.processSendRejectPostEmail(job as Job<RejectPostEmailTask>);
-        break;
-      default:
-        this.logger.warn(`No processor defined for job ${job.name}`);
+    try {
+      switch (job.name as EMAIL_JOB) {
+        case EMAIL_JOB.VERIFICATION_EMAIL:
+          await this.processSendVerificationEmail(job as Job<EmailVerificationTask>);
+          break;
+        case EMAIL_JOB.PASSWORD_RESET_EMAIL:
+          await this.processSendPasswordResetEmail(job as Job<PasswordResetTask>);
+          break;
+        case EMAIL_JOB.ACCOUNT_ACTIVATION_EMAIL:
+          await this.processSendAccountActivationEmail(job as Job<AccountActivationTask>);
+          break;
+        case EMAIL_JOB.REJECT_POST_EMAIL:
+          await this.processSendRejectPostEmail(job as Job<RejectPostEmailTask>);
+          break;
+        default:
+          throw new Error(`No processor defined for job ${job.name}`);
+      }
+    } catch (error) {
+      this.logger.error('Email queue job processing failed', {
+        jobId: job.id,
+        jobName: job.name,
+        attemptsMade: job.attemptsMade,
+        maxAttempts: job.opts.attempts,
+        error: error as Error,
+      });
+
+      throw error;
     }
   }
 

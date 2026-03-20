@@ -61,10 +61,11 @@ export abstract class BaseQueueService implements IQueueService {
         queueName: this.queue.name,
       });
     } catch (err: unknown) {
+      const queueName = this.queue?.name ?? 'unknown';
       this.logger.error(`Failed to add job "${jobName}" to queue`, {
         error: err as Error,
         jobName,
-        queueName: this.queue.name,
+        queueName,
       });
 
       throw err;

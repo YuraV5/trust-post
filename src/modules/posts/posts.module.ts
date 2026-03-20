@@ -35,6 +35,6 @@ import { PostsFilesModule } from './posts-files/posts-files.module';
     PostsQueueService,
     PostsQueueProcessor,
   ],
-  exports: [PostsService],
+  exports: [PostsService, PostsReviewService],
 })
 export class PostsModule {}

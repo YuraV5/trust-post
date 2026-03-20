@@ -23,6 +23,9 @@ describe('PostsQueueProcessor', () => {
     const job = {
       name: POSTS_JOB.ASSIGN_REVIWER,
       data: { postId: 7 },
+      id: 'test-job-id',
+      attemptsMade: 0,
+      opts: { attempts: 3 },
     } as unknown as Job<unknown>;
 
     await expect(processor.process(job)).rejects.toThrow('queue temporary error');
@@ -30,13 +33,16 @@ describe('PostsQueueProcessor', () => {
     expect(StubAppLogger.error).toHaveBeenCalled();
   });
 
-  it('logs warning for unknown job names without throwing', async () => {
+  it('throws and logs error for unknown job names so BullMQ can fail the job', async () => {
     const job = {
       name: 'unknown-job',
       data: { postId: 1 },
+      id: 'test-job-id',
+      attemptsMade: 0,
+      opts: { attempts: 3 },
     } as unknown as Job<unknown>;
 
-    await expect(processor.process(job)).resolves.toBeUndefined();
-    expect(StubAppLogger.warn).toHaveBeenCalledWith('No processor defined for job unknown-job');
+    await expect(processor.process(job)).rejects.toThrow('No processor defined for job unknown-job');
+    expect(StubAppLogger.error).toHaveBeenCalled();
   });
 });

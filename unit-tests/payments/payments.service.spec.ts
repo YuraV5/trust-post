@@ -7,42 +7,10 @@ import { PaymentsService } from '../../src/modules/payments/services/payments.se
 import { PaymentsRepo } from '../../src/modules/payments/repo';
 import { PaymentGatewayFactory } from '../../src/modules/payments/providers';
 import { StubAppLogger } from '../__mock__';
+import { mockPaymentsRepo, mockGatewayFactory, mockConfig, mockGateway } from './__mock__';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
-
-  // Mock for the payment gateway (WayForPay)
-  const mockGateway = {
-    createCheckout: jest.fn(),
-    verifyWebhookSignature: jest.fn(),
-    parseWebhook: jest.fn(),
-    buildWebhookAcknowledge: jest.fn(),
-  };
-
-  const mockGatewayFactory = {
-    get: jest.fn(() => mockGateway),
-  };
-
-  const mockPaymentsRepo = {
-    create: jest.fn(),
-    findById: jest.fn(),
-    getPostForDonation: jest.fn(),
-    getPaymentForRegeneration: jest.fn(),
-    updatePaymentCheckoutState: jest.fn(),
-    listByUserId: jest.fn(),
-    updateStatusWithPostIncrement: jest.fn(),
-    updateStatusWithoutPostIncrement: jest.fn(),
-  };
-
-  const mockConfig = {
-    get: jest.fn(),
-    getOrThrow: jest.fn((key: string) => {
-      const config: Record<string, string> = {
-        'wayforpay.orderExpiresAt': '3600',
-      };
-      return config[key] ?? null;
-    }),
-  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -66,23 +34,26 @@ describe('PaymentsService', () => {
 
   describe('createPayment', () => {
     it('throws when amount is zero or negative', async () => {
-      await expect(
-        service.createPayment({ postId: 1, amount: 0, userId: 'u1' }),
-      ).rejects.toThrow('Amount must be greater than zero');
+      await expect(service.createPayment({ postId: 1, amount: 0, userId: 'u1' })).rejects.toThrow(
+        'Amount must be greater than zero',
+      );
     });
 
     it('throws when post is not found', async () => {
       mockPaymentsRepo.getPostForDonation.mockResolvedValue(null);
 
-      await expect(
-        service.createPayment({ postId: 99, amount: 100, userId: 'u1' }),
-      ).rejects.toThrow('Post for donation not found');
+      await expect(service.createPayment({ postId: 99, amount: 100, userId: 'u1' })).rejects.toThrow(
+        'Post for donation not found',
+      );
     });
 
     it('throws when payment currency does not match post currency', async () => {
       // Post currency is UAH; passing 'USD' forces a mismatch
       mockPaymentsRepo.getPostForDonation.mockResolvedValue({
-        id: 1, title: 'Post', currency: Currencies.UAH, referencePaymentId: 'ref-1',
+        id: 1,
+        title: 'Post',
+        currency: Currencies.UAH,
+        referencePaymentId: 'ref-1',
       });
 
       await expect(
@@ -110,9 +81,7 @@ describe('PaymentsService', () => {
         checkoutUrl: 'https://pay.link',
         qrCodeUrl: 'https://qr.link',
       });
-      expect(mockPaymentsRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ postId: 1, userId: 'u1' }),
-      );
+      expect(mockPaymentsRepo.create).toHaveBeenCalledWith(expect.objectContaining({ postId: 1, userId: 'u1' }));
       // Checkout state must be updated to PENDING after gateway call
       expect(mockPaymentsRepo.updatePaymentCheckoutState).toHaveBeenCalled();
     });
@@ -122,9 +91,9 @@ describe('PaymentsService', () => {
     it('throws when payment is not eligible for regeneration', async () => {
       mockPaymentsRepo.getPaymentForRegeneration.mockResolvedValue(null);
 
-      await expect(
-        service.regeneratePaymentLink({ paymentId: 'pay-x', userId: 'u1' }),
-      ).rejects.toThrow('Payment cannot be regenerated');
+      await expect(service.regeneratePaymentLink({ paymentId: 'pay-x', userId: 'u1' })).rejects.toThrow(
+        'Payment cannot be regenerated',
+      );
     });
 
     it('creates a new payment and returns a new checkout url', async () => {
@@ -173,7 +142,10 @@ describe('PaymentsService', () => {
     it('throws when payment is not found by id', async () => {
       mockGateway.verifyWebhookSignature.mockReturnValue(true);
       mockGateway.parseWebhook.mockReturnValue({
-        paymentId: 'pay-1', status: 'SUCCESS', providerPaymentId: 'tx-1', payload: basePayload,
+        paymentId: 'pay-1',
+        status: 'SUCCESS',
+        providerPaymentId: 'tx-1',
+        payload: basePayload,
       });
       mockPaymentsRepo.findById.mockResolvedValue(null);
 
@@ -185,11 +157,17 @@ describe('PaymentsService', () => {
     it('throws when webhook amount does not match stored payment amount', async () => {
       mockGateway.verifyWebhookSignature.mockReturnValue(true);
       mockGateway.parseWebhook.mockReturnValue({
-        paymentId: 'pay-1', status: 'SUCCESS', providerPaymentId: 'tx-1', payload: basePayload,
+        paymentId: 'pay-1',
+        status: 'SUCCESS',
+        providerPaymentId: 'tx-1',
+        payload: basePayload,
       });
       // Stored amount 50, but webhook says 100
       mockPaymentsRepo.findById.mockResolvedValue({
-        id: 'pay-1', amount: new Prisma.Decimal('50'), currency: Currencies.UAH, postId: 1,
+        id: 'pay-1',
+        amount: new Prisma.Decimal('50'),
+        currency: Currencies.UAH,
+        postId: 1,
       });
 
       await expect(
@@ -200,11 +178,17 @@ describe('PaymentsService', () => {
     it('throws when webhook currency does not match stored payment currency', async () => {
       mockGateway.verifyWebhookSignature.mockReturnValue(true);
       mockGateway.parseWebhook.mockReturnValue({
-        paymentId: 'pay-1', status: 'SUCCESS', providerPaymentId: 'tx-1', payload: basePayload,
+        paymentId: 'pay-1',
+        status: 'SUCCESS',
+        providerPaymentId: 'tx-1',
+        payload: basePayload,
       });
       // Stored currency is 'USD' (cast), but webhook payload says 'UAH'
       mockPaymentsRepo.findById.mockResolvedValue({
-        id: 'pay-1', amount: new Prisma.Decimal('100'), currency: 'USD' as Currencies, postId: 1,
+        id: 'pay-1',
+        amount: new Prisma.Decimal('100'),
+        currency: 'USD' as Currencies,
+        postId: 1,
       });
 
       await expect(
@@ -215,14 +199,23 @@ describe('PaymentsService', () => {
     it('confirms successful payment and returns gateway acknowledge', async () => {
       mockGateway.verifyWebhookSignature.mockReturnValue(true);
       mockGateway.parseWebhook.mockReturnValue({
-        paymentId: 'pay-1', status: 'SUCCESS', providerPaymentId: 'tx-1', payload: basePayload,
+        paymentId: 'pay-1',
+        status: 'SUCCESS',
+        providerPaymentId: 'tx-1',
+        payload: basePayload,
       });
       mockPaymentsRepo.findById.mockResolvedValue({
-        id: 'pay-1', amount: new Prisma.Decimal('100'), currency: Currencies.UAH, postId: 1,
+        id: 'pay-1',
+        amount: new Prisma.Decimal('100'),
+        currency: Currencies.UAH,
+        postId: 1,
       });
       mockPaymentsRepo.updateStatusWithPostIncrement.mockResolvedValue(true);
       mockGateway.buildWebhookAcknowledge.mockReturnValue({
-        orderReference: 'pay-1', status: 'accept', time: 1234, signature: 'ack-sig',
+        orderReference: 'pay-1',
+        status: 'accept',
+        time: 1234,
+        signature: 'ack-sig',
       });
 
       const result = await service.handleWebhook({
@@ -241,14 +234,23 @@ describe('PaymentsService', () => {
 
       mockGateway.verifyWebhookSignature.mockReturnValue(true);
       mockGateway.parseWebhook.mockReturnValue({
-        paymentId: 'pay-1', status: 'FAILED', providerPaymentId: null, payload: failedPayload,
+        paymentId: 'pay-1',
+        status: 'FAILED',
+        providerPaymentId: null,
+        payload: failedPayload,
       });
       mockPaymentsRepo.findById.mockResolvedValue({
-        id: 'pay-1', amount: new Prisma.Decimal('100'), currency: Currencies.UAH, postId: 1,
+        id: 'pay-1',
+        amount: new Prisma.Decimal('100'),
+        currency: Currencies.UAH,
+        postId: 1,
       });
       mockPaymentsRepo.updateStatusWithoutPostIncrement.mockResolvedValue(true);
       mockGateway.buildWebhookAcknowledge.mockReturnValue({
-        orderReference: 'pay-1', status: 'accept', time: 1234, signature: 'ack-sig',
+        orderReference: 'pay-1',
+        status: 'accept',
+        time: 1234,
+        signature: 'ack-sig',
       });
 
       await service.handleWebhook({ provider: PaymentProvider.WAYFORPAY, payload: failedPayload as any });
@@ -263,9 +265,7 @@ describe('PaymentsService', () => {
 
       await service.listMyPayments({ userId: 'u1', limit: 999 });
 
-      expect(mockPaymentsRepo.listByUserId).toHaveBeenCalledWith('u1',
-        expect.objectContaining({ limit: 100 }),
-      );
+      expect(mockPaymentsRepo.listByUserId).toHaveBeenCalledWith('u1', expect.objectContaining({ limit: 100 }));
     });
 
     it('uses default page 1 and limit 10 when omitted', async () => {
@@ -273,9 +273,7 @@ describe('PaymentsService', () => {
 
       await service.listMyPayments({ userId: 'u1' });
 
-      expect(mockPaymentsRepo.listByUserId).toHaveBeenCalledWith('u1',
-        expect.objectContaining({ page: 1, limit: 10 }),
-      );
+      expect(mockPaymentsRepo.listByUserId).toHaveBeenCalledWith('u1', expect.objectContaining({ page: 1, limit: 10 }));
     });
   });
 });

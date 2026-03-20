@@ -3,8 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { LinksService } from '../../src/modules/links/links.service';
 import { RedisService } from '../../src/modules/cache/services';
-import { StubAppLogger } from '../__mock__';
-import { mockRedisService } from '../redis/__mock__';
+import { mockRedisService, StubAppLogger } from '../__mock__';
 
 jest.mock('uuid', () => ({
   v4: jest.fn(() => 'token-123'),

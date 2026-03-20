@@ -4,27 +4,10 @@ import { MessageService } from '../../src/modules/message/services/message.servi
 import { MessageRepo } from '../../src/modules/message/repos';
 import { FilesService } from '../../src/modules/files/services';
 import { StubAppLogger } from '../__mock__';
+import { mockMessageRepo, mockFilesService } from './__mock__';
 
 describe('MessageService', () => {
   let service: MessageService;
-
-  const mockMessageRepo = {
-    findChatMember: jest.fn(),
-    createMessage: jest.fn(),
-    touchChat: jest.fn(),
-    findMessages: jest.fn(),
-    findMessageById: jest.fn(),
-    updateMessageContent: jest.fn(),
-    softDeleteMessage: jest.fn(),
-    createMessageFile: jest.fn(),
-    findFileById: jest.fn(),
-    deleteFile: jest.fn(),
-  };
-
-  const mockFilesService = {
-    upload: jest.fn(),
-    delete: jest.fn(),
-  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -47,17 +30,17 @@ describe('MessageService', () => {
 
   describe('sendMessage', () => {
     it('throws when message content is empty', async () => {
-      await expect(
-        service.sendMessage({ chatId: 'c-1', senderId: 'u-1', content: '   ' }),
-      ).rejects.toThrow('Message content cannot be empty');
+      await expect(service.sendMessage({ chatId: 'c-1', senderId: 'u-1', content: '   ' })).rejects.toThrow(
+        'Message content cannot be empty',
+      );
     });
 
     it('throws when sender is not a chat member', async () => {
       mockMessageRepo.findChatMember.mockResolvedValue(null);
 
-      await expect(
-        service.sendMessage({ chatId: 'c-1', senderId: 'u-1', content: 'Hello' }),
-      ).rejects.toThrow('You are not a member of this chat');
+      await expect(service.sendMessage({ chatId: 'c-1', senderId: 'u-1', content: 'Hello' })).rejects.toThrow(
+        'You are not a member of this chat',
+      );
     });
 
     it('creates message, updates chat timestamp and returns message', async () => {
@@ -78,9 +61,7 @@ describe('MessageService', () => {
     it('throws when user is not a member of the chat', async () => {
       mockMessageRepo.findChatMember.mockResolvedValue(null);
 
-      await expect(
-        service.getMessages('c-1', 'u-1'),
-      ).rejects.toThrow('You are not a member of this chat');
+      await expect(service.getMessages('c-1', 'u-1')).rejects.toThrow('You are not a member of this chat');
     });
 
     it('returns messages in chronological order with pagination', async () => {
@@ -100,37 +81,41 @@ describe('MessageService', () => {
 
   describe('editMessage', () => {
     it('throws when new content is empty', async () => {
-      await expect(
-        service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: '' }),
-      ).rejects.toThrow('Message content cannot be empty');
+      await expect(service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: '' })).rejects.toThrow(
+        'Message content cannot be empty',
+      );
     });
 
     it('throws when message does not exist', async () => {
       mockMessageRepo.findMessageById.mockResolvedValue(null);
 
-      await expect(
-        service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: 'Updated' }),
-      ).rejects.toThrow('Message not found');
+      await expect(service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: 'Updated' })).rejects.toThrow(
+        'Message not found',
+      );
     });
 
     it('throws when user is not the message sender', async () => {
       mockMessageRepo.findMessageById.mockResolvedValue({
-        id: 'msg-1', senderId: 'other-user', isDeleted: false,
+        id: 'msg-1',
+        senderId: 'other-user',
+        isDeleted: false,
       });
 
-      await expect(
-        service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: 'Updated' }),
-      ).rejects.toThrow('You can only edit your own messages');
+      await expect(service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: 'Updated' })).rejects.toThrow(
+        'You can only edit your own messages',
+      );
     });
 
     it('throws when trying to edit a deleted message', async () => {
       mockMessageRepo.findMessageById.mockResolvedValue({
-        id: 'msg-1', senderId: 'u-1', isDeleted: true,
+        id: 'msg-1',
+        senderId: 'u-1',
+        isDeleted: true,
       });
 
-      await expect(
-        service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: 'Updated' }),
-      ).rejects.toThrow('Cannot edit deleted message');
+      await expect(service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: 'Updated' })).rejects.toThrow(
+        'Cannot edit deleted message',
+      );
     });
 
     it('updates message content and returns updated message', async () => {

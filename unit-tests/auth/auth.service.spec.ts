@@ -9,14 +9,13 @@ import { EmailQueueService } from '../../src/modules/emails/email-queue.service'
 import { RedisService } from '../../src/modules/cache/services';
 import { UsersService } from '../../src/modules/users/services';
 import { LinksService } from '../../src/modules/links/links.service';
-import { ConfigServiceMock, StubAppLogger } from '../__mock__';
+import { ConfigServiceMock, mockRedisService, StubAppLogger } from '../__mock__';
 import { mockUsersService } from '../__mock__/users-service.mock';
 import { mockPasswordService } from '../security/mock/password.mock';
 import { mockSessionsService } from '../sessions/__mock__';
 import { mockTokensService } from '../security/mock/token.mock';
 import { mockEmailQueueService } from '../emailQueue/__mock__';
 import { mockLinksService } from '../links/__mock__';
-import { mockRedisService } from '../redis/__mock__';
 
 describe('AuthService', () => {
   let service: AuthService;

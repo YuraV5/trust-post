@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { PostReviewStatus, PostStatus } from '@prisma/client';
-import { IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
+import { IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
 
 const POST_STATUS_VALUES = ['ARCHIVED', 'COMPLETED'] as const;
 export type PostCondition = (typeof POST_STATUS_VALUES)[number];
@@ -13,6 +13,7 @@ export class UpdatePostDto {
   @IsOptional()
   @IsString()
   @MinLength(10)
+  @MaxLength(100)
   title?: string;
 
   @ApiProperty({
@@ -22,6 +23,7 @@ export class UpdatePostDto {
   @IsOptional()
   @IsString()
   @MinLength(50)
+  @MaxLength(2000)
   content?: string;
 }
 
@@ -59,7 +61,9 @@ export class PostStatusLifecycleDto {
     example: 'Reached funding goal',
   })
   @IsOptional()
+  @IsString()
   @MinLength(20)
+  @MaxLength(1000)
   statusReason?: string;
 
   @ApiProperty({
@@ -76,7 +80,9 @@ export class PostStatusLifecycleDto {
     example: 'Reviewed and approved',
   })
   @IsOptional()
+  @IsString()
   @MinLength(20)
+  @MaxLength(1000)
   @ValidateIf((o) => o.reviewStatus === PostReviewStatus.REJECTED) // Only require reviewReason if reviewStatus is REJECTED
   reviewReason?: string;
 }

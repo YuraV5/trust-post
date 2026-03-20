@@ -32,6 +32,7 @@ export class PostsQueueProcessor extends WorkerHost {
       await this.postReviewService.assignReviewer(data.postId);
     } catch (error) {
       this.logger.error('Failed to assign reviewer', { error: error as Error, postId: data.postId });
+      throw error;
     }
   }
 }

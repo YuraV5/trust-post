@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FileProvider } from '@prisma/client';
 import { FilesService } from '../../src/modules/files/services/files.service';
 import { CloudinaryClient } from '../../src/modules/files/services/clients';
-import { FileFolder } from '../../src/modules/files/types';
+import { FileFolder, FileStorageInfo } from '../../src/modules/files/types';
 
 describe('FilesService', () => {
   let service: FilesService;
@@ -16,10 +16,7 @@ describe('FilesService', () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        FilesService,
-        { provide: CloudinaryClient, useValue: mockCloudinaryClient },
-      ],
+      providers: [FilesService, { provide: CloudinaryClient, useValue: mockCloudinaryClient }],
     }).compile();
 
     service = module.get<FilesService>(FilesService);
@@ -30,7 +27,12 @@ describe('FilesService', () => {
   });
 
   describe('upload', () => {
-    const storageInfo = { storage: FileProvider.CLOUDINARY, folder: FileFolder.POSTS };
+    const storageInfo = {
+      resourceId: 123,
+      userId: 'user-1',
+      storage: FileProvider.CLOUDINARY,
+      fileFolder: FileFolder.POSTS,
+    };
 
     it('throws when no files are provided', async () => {
       await expect(service.upload([], storageInfo)).rejects.toThrow('No files provided');
@@ -51,7 +53,12 @@ describe('FilesService', () => {
       const files = [{ buffer: Buffer.from('data'), originalname: 'img.png', mimetype: 'image/png', size: 100 }];
 
       await expect(
-        service.upload(files, { storage: 'S3' as FileProvider, folder: FileFolder.POSTS }),
+        service.upload(files, {
+          resourceId: 123,
+          userId: 'user-1',
+          storage: 'S3' as FileProvider,
+          fileFolder: FileFolder.POSTS,
+        }),
       ).rejects.toThrow('Unsupported storage');
     });
   });
@@ -72,9 +79,7 @@ describe('FilesService', () => {
     });
 
     it('throws for unsupported storage provider', async () => {
-      await expect(
-        service.delete(['key-1'], 'S3' as FileProvider),
-      ).rejects.toThrow('Unsupported storage');
+      await expect(service.delete(['key-1'], 'S3' as FileProvider)).rejects.toThrow('Unsupported storage');
     });
   });
 });

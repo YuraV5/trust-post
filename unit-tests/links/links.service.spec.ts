@@ -43,7 +43,7 @@ describe('LinksService', () => {
 
   describe('generateTemporaryLink', () => {
     it('stores token mapping in redis with ttl and returns generated link', async () => {
-      mockRedisService.set.mockResolvedValue(undefined);
+      (mockRedisService.set as jest.Mock).mockResolvedValue(undefined);
 
       const result = await service.generateTemporaryLink('user-1', 'email-verify', 3600);
 

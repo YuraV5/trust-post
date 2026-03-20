@@ -9,6 +9,10 @@ export interface IAppConfig {
   loggerLevel: string;
   frontUrl: string;
   serviceUrl: string;
+  idempotency: {
+    interceptorTtl: number;
+    enabled: boolean;
+  };
 
   redis: {
     host: string;

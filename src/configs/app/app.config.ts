@@ -18,6 +18,10 @@ export default (): IAppConfig => ({
   loggerLevel: process.env.LOGGER_LEVEL || 'info',
   frontUrl: process.env.FRONTEND_URL!,
   serviceUrl: process.env.SERVICE_URL || 'http://localhost:3001',
+  idempotency: {
+    interceptorTtl: parseInt(process.env.IDEMPOTENCY_INTERCEPTOR_TTL!, 10) || 300,
+    enabled: parseBoolean(process.env.IDEMPOTENCY_ENABLED, false),
+  },
 
   redis: {
     host: process.env.REDIS_HOST || 'localhost',

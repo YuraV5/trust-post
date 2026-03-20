@@ -1,6 +1,7 @@
 export interface IRedisService {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, ttlSeconds?: number): Promise<void>;
+  setIfNotExists(key: string, value: string, ttlSeconds: number): Promise<boolean>;
   del(key: string): Promise<void>;
   ttl(key: string): Promise<number>;
   exists(key: string): Promise<boolean>;

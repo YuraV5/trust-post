@@ -14,7 +14,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiConsumes, ApiBody
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../../common/decorators';
 import { type AuthenticatedUser } from '../../../common/interfaces';
-import { FileUploadResponse, type FileStorageInfo } from '../types';
+import { FileUploadResponse } from '../types';
 import { DeleteFilesDto, UploadDocumentsDto } from '../dtos';
 import { FilesService } from '../services';
 import {

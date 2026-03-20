@@ -23,6 +23,12 @@ export default (): IAppConfig => ({
     enabled: parseBoolean(process.env.IDEMPOTENCY_ENABLED, false),
   },
 
+  throttling: {
+    globalLimit: parseInt(process.env.THROTTLE_GLOBAL_LIMIT!, 10) || 120,
+    globalTtlMs: parseInt(process.env.THROTTLE_GLOBAL_TTL_MS!, 10) || 60000,
+    blockTtlMs: parseInt(process.env.THROTTLE_BLOCK_TTL_MS!, 10) || 300000,
+  },
+
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     password: process.env.REDIS_PASSWORD || '12345',

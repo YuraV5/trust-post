@@ -17,7 +17,7 @@ import { IdempotencyInterceptor } from './infrastructure/http/interceptors/idemp
 import { QueuesModule } from './modules/queues/queues.module';
 import { EmailsModule } from './modules/emails/emails.module';
 import { CacheModule } from './modules/cache/cache.module';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { LinksModule } from './modules/links/links.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -29,6 +29,7 @@ import { SocketModule } from './modules/socket/socket.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CoreAgentsModule } from './modules/core-agents/core-agents.module';
+import { AppThrottlerModule } from './infrastructure/http/throttling/app-throttler.module';
 
 @Module({
   imports: [
@@ -38,12 +39,7 @@ import { CoreAgentsModule } from './modules/core-agents/core-agents.module';
       validationSchema: configValidation,
     }),
     ScheduleModule.forRoot(),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 10,
-      },
-    ]),
+    AppThrottlerModule,
     AppLoggerModule,
     ExceptionFiltersModule,
     HealthModule,
@@ -74,6 +70,10 @@ import { CoreAgentsModule } from './modules/core-agents/core-agents.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: IdempotencyInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
     {
       provide: APP_GUARD,

@@ -14,6 +14,12 @@ export interface IAppConfig {
     enabled: boolean;
   };
 
+  throttling: {
+    globalLimit: number;
+    globalTtlMs: number;
+    blockTtlMs: number;
+  };
+
   redis: {
     host: string;
     port: number;

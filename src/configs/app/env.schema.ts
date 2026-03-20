@@ -13,6 +13,9 @@ export const configValidation = Joi.object({
   SERVICE_URL: Joi.string().uri().default('http://localhost:3001'),
   IDEMPOTENCY_ENABLED: Joi.boolean().truthy('true', '1', 'yes', 'on').falsy('false', '0', 'no', 'off').default(false),
   IDEMPOTENCY_INTERCEPTOR_TTL: Joi.number().default(300),
+  THROTTLE_GLOBAL_LIMIT: Joi.number().integer().min(1).default(120),
+  THROTTLE_GLOBAL_TTL_MS: Joi.number().integer().min(1000).default(60000),
+  THROTTLE_BLOCK_TTL_MS: Joi.number().integer().min(1000).default(300000),
 
   DB_USER: Joi.string().required(),
   DB_PASSWORD: Joi.string().required(),

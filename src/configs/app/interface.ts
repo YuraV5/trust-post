@@ -25,8 +25,6 @@ export interface IAppConfig {
     port: number;
     password: string;
     ttl: number;
-    dbCache: number;
-    dbQueue: number;
     maxRetries: number;
     retryDelayMs: number;
     gracefulShutdownTimeoutMs: number;

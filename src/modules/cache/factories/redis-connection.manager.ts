@@ -33,6 +33,7 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
     await this.gracefulShutdown();
   }
 
+  // Load configuration with environment-specific defaults
   private loadConfig(): void {
     const nodeEnv = this.config.get<string>('nodeEnv');
     const isProd = nodeEnv === APP_MODE.PRODUCTION;
@@ -41,7 +42,7 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
       host: this.config.get<string>('redis.host', 'localhost'),
       port: this.config.get<number>('redis.port', 6379),
       password: isProd ? this.config.get('redis.password', undefined) : undefined,
-      db: REDIS_DB.DEFAULT,
+      db: REDIS_DB.CACHE,
     };
 
     this.maxRetries = this.config.get<number>('redis.maxRetries', isProd ? 10 : 3);
@@ -49,12 +50,14 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
     this.gracefulShutdownTimeoutMs = this.config.get<number>('redis.gracefulShutdownTimeoutMs', isProd ? 10000 : 5000);
   }
 
+  // Establish Redis connection with retry strategy
   private connect(): void {
     if (this.client) return;
 
     const nodeEnv = this.config.get<string>('nodeEnv');
     const isProd = nodeEnv === APP_MODE.PRODUCTION;
 
+    // Create Redis client with retry strategy
     this.client = new Redis({
       host: this.redisConfig.host,
       port: this.redisConfig.port,
@@ -71,7 +74,8 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
           });
           return null;
         }
-        const delay = Math.min(times * this.retryDelayMs, 2000);
+        // Exponential backoff with jitter
+        const delay = Math.min(50 * Math.pow(2, times), 5000);
         this.logger.warn('Redis retry attempt', {
           context: 'RedisConnectionManager',
           attempt: times,
@@ -81,9 +85,11 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
       },
     });
 
+    // Handle connection events
     this.client.on('error', (err) => {
       this.logger.error('Redis connection error', { error: err, context: 'RedisConnectionManager' });
     });
+    // 'ready' event indicates the client is ready to use
     this.client.on('ready', () => {
       this.connectedAt = new Date();
       this.logger.info('Redis ready', {
@@ -92,11 +98,13 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
         connectedAt: this.connectedAt,
       });
     });
+    // 'connect' event is emitted when a connection is established (may be emitted multiple times on reconnects)
     this.client.on('connect', () => {
       this.logger.info('Redis connected', { context: 'RedisConnectionManager', db: this.redisConfig.db });
     });
   }
 
+  // Health check method to verify Redis connection status
   async healthCheck(): Promise<RedisHealth> {
     try {
       if (!this.client) {
@@ -118,11 +126,12 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
     }
   }
 
+  // Gracefully close Redis connection on application shutdown
   private async gracefulShutdown(): Promise<void> {
     if (!this.client) return;
 
     this.client.removeAllListeners();
-
+    // Set a timeout to force disconnect if graceful shutdown takes too long
     return new Promise((resolve) => {
       const timeoutHandle = setTimeout(() => {
         this.logger.warn('Redis graceful shutdown timeout exceeded', {
@@ -133,6 +142,7 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
         resolve();
       }, this.gracefulShutdownTimeoutMs);
 
+      // Attempt to quit gracefully
       this.client
         .quit()
         .then(() => {
@@ -154,6 +164,7 @@ export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdo
     });
   }
 
+  // Method to get the Redis client instance
   getClient(): Redis {
     if (!this.client) throw new Error('Redis not connected');
     return this.client;

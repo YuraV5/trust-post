@@ -13,6 +13,9 @@ export const configValidation = Joi.object({
   SERVICE_URL: Joi.string().uri().default('http://localhost:3001'),
   IDEMPOTENCY_ENABLED: Joi.boolean().truthy('true', '1', 'yes', 'on').falsy('false', '0', 'no', 'off').default(false),
   IDEMPOTENCY_INTERCEPTOR_TTL: Joi.number().default(300),
+  THROTTLE_GLOBAL_LIMIT: Joi.number().integer().min(1).default(120),
+  THROTTLE_GLOBAL_TTL_MS: Joi.number().integer().min(1000).default(60000),
+  THROTTLE_BLOCK_TTL_MS: Joi.number().integer().min(1000).default(300000),
 
   DB_USER: Joi.string().required(),
   DB_PASSWORD: Joi.string().required(),
@@ -23,8 +26,6 @@ export const configValidation = Joi.object({
   REDIS_PORT: Joi.number().required(),
   REDIS_PASSWORD: Joi.string().required(),
   REDIS_TTL: Joi.number().default(300),
-  REDIS_DB_CACHE: Joi.number().default(0), // For caching frequently accessed data
-  REDIS_DB_QUEUE: Joi.number().default(1), // For managing background job queues
   REDIS_MAX_RETRIES: Joi.number().default(5),
   REDIS_RETRY_DELAY_MS: Joi.number().default(2000),
   REDIS_GRACEFUL_SHUTDOWN_TIMEOUT_MS: Joi.number().default(10000),

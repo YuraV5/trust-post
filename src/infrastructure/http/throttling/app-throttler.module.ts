@@ -1,0 +1,41 @@
+import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { RedisThrottlerStorage } from './redis-throttler.storage';
+
+@Module({
+  imports: [
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        storage: new RedisThrottlerStorage(config),
+        skipIf: (context) => {
+          const request = context.switchToHttp().getRequest();
+          return request?.url?.startsWith('/health');
+        },
+        throttlers: [
+          {
+            name: 'burst',
+            ttl: 1000,
+            limit: 5,
+          },
+          {
+            name: 'ip',
+            ttl: config.get<number>('throttling.globalTtlMs', 60000),
+            limit: config.get<number>('throttling.globalLimit', 120),
+            blockDuration: config.get<number>('throttling.blockTtlMs', 300000),
+            generateKey: (_context, tracker, name) => `${name}:${tracker}`,
+          },
+          {
+            name: 'long',
+            ttl: 3600000,
+            limit: 2000,
+          },
+        ],
+      }),
+    }),
+  ],
+  providers: [RedisThrottlerStorage],
+  exports: [RedisThrottlerStorage],
+})
+export class AppThrottlerModule {}

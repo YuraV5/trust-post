@@ -14,13 +14,17 @@ export interface IAppConfig {
     enabled: boolean;
   };
 
+  throttling: {
+    globalLimit: number;
+    globalTtlMs: number;
+    blockTtlMs: number;
+  };
+
   redis: {
     host: string;
     port: number;
     password: string;
     ttl: number;
-    dbCache: number;
-    dbQueue: number;
     maxRetries: number;
     retryDelayMs: number;
     gracefulShutdownTimeoutMs: number;

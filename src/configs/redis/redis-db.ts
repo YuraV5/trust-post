@@ -4,4 +4,5 @@ export const REDIS_DB = {
   POSTS: 2,
   CACHE: 3,
   COMMENTS: 4,
+  THROTTHLE: 5,
 };

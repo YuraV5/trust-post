@@ -23,13 +23,17 @@ export default (): IAppConfig => ({
     enabled: parseBoolean(process.env.IDEMPOTENCY_ENABLED, false),
   },
 
+  throttling: {
+    globalLimit: parseInt(process.env.THROTTLE_GLOBAL_LIMIT!, 10) || 120,
+    globalTtlMs: parseInt(process.env.THROTTLE_GLOBAL_TTL_MS!, 10) || 60000,
+    blockTtlMs: parseInt(process.env.THROTTLE_BLOCK_TTL_MS!, 10) || 300000,
+  },
+
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     password: process.env.REDIS_PASSWORD || '12345',
     port: parseInt(process.env.REDIS_PORT!, 10) || 6379,
     ttl: parseInt(process.env.REDIS_TTL!, 10) || 300,
-    dbCache: parseInt(process.env.REDIS_DB_CACHE!, 10) || 0,
-    dbQueue: parseInt(process.env.REDIS_DB_QUEUE!, 10) || 1,
     maxRetries: parseInt(process.env.REDIS_MAX_RETRIES!, 10) || 3,
     retryDelayMs: parseInt(process.env.REDIS_RETRY_DELAY_MS!, 10) || 100,
     gracefulShutdownTimeoutMs: parseInt(process.env.REDIS_GRACEFUL_SHUTDOWN_TIMEOUT_MS!, 10) || 5000,

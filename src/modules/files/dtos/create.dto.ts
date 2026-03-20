@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, Min } from 'class-validator';
 import { FileFolder } from '../types';
-import { FileProvider } from '@prisma/client/wasm';
+import { FileProvider } from '@prisma/client';
 
 export class UploadDocumentsDto {
   @ApiProperty({ description: 'ID of the resource the file is associated with' })

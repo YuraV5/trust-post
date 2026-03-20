@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { type IFileStorage } from '../interfaces';
 import { FileStorageInfo, FileUploadResponse } from '../types';
-import { CloudinaryClientService } from './clients';
+import { CloudinaryClient } from './clients';
 import { AppBadRequestException } from '../../../shared/errors/app-errors';
 import { FileProvider } from '@prisma/client';
 
 @Injectable()
 export class FilesService implements IFileStorage {
-  constructor(private readonly cloudinary: CloudinaryClientService) {}
+  constructor(private readonly cloudinary: CloudinaryClient) {}
 
   async upload(
     files: { buffer: Buffer; originalname: string; mimetype: string; size: number }[],

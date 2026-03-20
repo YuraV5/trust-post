@@ -14,7 +14,7 @@ import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { ICloudinaryClient } from '../../interfaces/cloudinary';
 import { executeWithRetry } from '../../../../common/utils';
 import { CONCURRENCY_LIMIT, MAX_RETRIES, RATE_LIMIT_DELAY_MS, RETRYABLE_STATUSES, TIMEOUT_MS } from '../../consts';
-import { FileProvider } from '@prisma/client/wasm';
+import { FileProvider } from '@prisma/client';
 
 type ResourceType = 'auto' | 'image' | 'video' | 'raw';
 
@@ -24,7 +24,7 @@ type CloudinarySearchResult = {
 };
 
 @Injectable()
-export class CloudinaryClientService implements ICloudinaryClient {
+export class CloudinaryClient implements ICloudinaryClient {
   private client: typeof cloudinary;
   private lastRequestTime = 0;
 

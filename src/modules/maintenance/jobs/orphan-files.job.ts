@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
-import { CloudinaryClientService } from '../../files/services/clients/cloudinary-client.service';
+import { CloudinaryClient } from '../../files/services/clients/cloudinary-client.service';
 import { FileFolder } from '../../files/types';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class OrphanFilesJob {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly cloudinary: CloudinaryClientService,
+    private readonly cloudinary: CloudinaryClient,
     private readonly config: ConfigService,
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
   ) {}

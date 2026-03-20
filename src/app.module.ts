@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AccessTokenGuard } from './common/guards';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { HttpContextInterceptor } from './infrastructure/http/interceptors/http-context.interceptor';
+import { IdempotencyInterceptor } from './infrastructure/http/interceptors/idempotency.interceptor';
 import { QueuesModule } from './modules/queues/queues.module';
 import { EmailsModule } from './modules/emails/emails.module';
 import { CacheModule } from './modules/cache/cache.module';
@@ -69,6 +70,10 @@ import { CoreAgentsModule } from './modules/core-agents/core-agents.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: HttpContextInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: IdempotencyInterceptor,
     },
     {
       provide: APP_GUARD,

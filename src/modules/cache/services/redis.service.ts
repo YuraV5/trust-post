@@ -23,6 +23,11 @@ export class RedisService implements IRedisService {
     }
   }
 
+  async setIfNotExists(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    const result = await this.connectionManager.getClient().set(key, value, 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  }
+
   async del(key: string): Promise<void> {
     await this.connectionManager.getClient().del(key);
   }

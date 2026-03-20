@@ -1,5 +1,5 @@
 import { PostsReviewService } from './../services/posts-review.service';
-import { Body, Controller, Delete, Get, Param, Patch, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { ResponseMessage } from '../../../common/types';
 import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
@@ -10,7 +10,6 @@ import { PostsStaffQueryDto, PostStatusLifecycleDto } from '../dtos';
 import { RolesGuard } from '../../../common/guards';
 import { PostReview, Post as Publication, UserRoles } from '@prisma/client';
 import { PaginatedResult } from '../types';
-import { DeleteManyPostsDto } from '../dtos/delete.dto';
 import {
   MessageResponseDto,
   UnauthorizedErrorResponse,
@@ -100,27 +99,5 @@ export class StaffPostsController {
   })
   async getPostStatusHistory(@Param() params: NumericIdParamDto): Promise<PostReview[]> {
     return await this.postsReviewService.getPostStatusHistory(params.id);
-  }
-
-  @Roles(UserRoles.ADMIN)
-  @Delete('/remove')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Permanently delete posts (Admin only)' })
-  @ApiBody({ type: DeleteManyPostsDto })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Posts deleted permanently',
-    type: MessageResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Missing or invalid access token',
-    type: UnauthorizedErrorResponse,
-  })
-  async deletePosts(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() data: DeleteManyPostsDto,
-  ): Promise<ResponseMessage> {
-    return await this.postsReviewService.purgePostReviewDataByAdmin(data.postIds, user.userId);
   }
 }

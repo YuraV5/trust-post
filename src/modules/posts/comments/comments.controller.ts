@@ -22,7 +22,6 @@ import { CreateCommentDto, UpdateCommentDto, CommentsQueryDto, PostIdParamDto, D
 import { RolesGuard, OwnershipGuard } from '../../../common/guards';
 import { UserRoles, Comment } from '@prisma/client';
 import { PaginatedResult } from './types';
-import { TokensService } from '../../security/services';
 import {
   MessageResponseDto,
   BadRequestErrorResponse,

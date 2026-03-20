@@ -7,6 +7,7 @@ import {
   ParseFilePipeBuilder,
   Post,
   UploadedFiles,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
@@ -16,8 +17,13 @@ import { type AuthenticatedUser } from '../../../common/interfaces';
 import { FileUploadResponse, type FileStorageInfo } from '../types';
 import { DeleteFilesDto, UploadDocumentsDto } from '../dtos';
 import { FilesService } from '../services';
-import { BadRequestErrorResponse, UnauthorizedErrorResponse } from '../../../common/swagger/responses';
+import {
+  BadRequestErrorResponse,
+  ForbiddenErrorResponse,
+  UnauthorizedErrorResponse,
+} from '../../../common/swagger/responses';
 import { FileUploadResponseDto } from '../dtos/doc.swagger';
+import { FileOwnershipGuard } from '../guards/file-ownership.guard';
 
 @ApiTags('files')
 @ApiBearerAuth('JWT-auth')
@@ -66,7 +72,7 @@ export class FilesController {
     )
     files: Express.Multer.File[],
     @CurrentUser() user: AuthenticatedUser,
-    @Body() body: FileStorageInfo,
+    @Body() body: UploadDocumentsDto,
   ): Promise<FileUploadResponse> {
     return this.filesService.upload(files, { ...body, userId: user.userId });
   }
@@ -120,9 +126,10 @@ export class FilesController {
     return this.filesService.upload(files, { ...body, userId: user.userId });
   }
 
+  @UseGuards(FileOwnershipGuard)
   @Delete('/delete')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete files' })
+  @ApiOperation({ summary: 'Delete files by storage keys' })
   @ApiBody({ type: DeleteFilesDto })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -137,6 +144,11 @@ export class FilesController {
     status: HttpStatus.UNAUTHORIZED,
     description: 'Missing or invalid access token',
     type: UnauthorizedErrorResponse,
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Attempting to delete files that do not belong to you',
+    type: ForbiddenErrorResponse,
   })
   async deleteFiles(@Body() body: DeleteFilesDto): Promise<void> {
     return this.filesService.delete(body.keys, body.storage);

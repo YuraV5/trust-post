@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { FilesController } from './controllers';
-import { CloudinaryClientService } from './services/clients';
+import { CloudinaryClient } from './services/clients';
 import { FilesService } from './services';
 
 @Module({
   controllers: [FilesController],
-  providers: [FilesService, CloudinaryClientService],
-  exports: [FilesService, CloudinaryClientService],
+  providers: [FilesService, CloudinaryClient],
+  exports: [FilesService, CloudinaryClient],
 })
 export class FilesModule {}

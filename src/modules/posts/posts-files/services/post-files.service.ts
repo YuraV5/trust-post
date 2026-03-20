@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PostFilesRepo } from '../repos';
 import { FilesService } from '../../../files/services/files.service';
 import { ResponseMessage } from '../../../../common/types';
-import { GroupedPostFileKeysRow, NewFileRecordData } from '../types';
+import { NewFileRecordData } from '../types';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
 import { FileProvider, PostFile } from '@prisma/client';
@@ -57,11 +57,9 @@ export class PostFilesService {
   }
 
   async deleteFilesByPostId(postId: number): Promise<ResponseMessage> {
-    const groupedRows = await this.postFilesRepo.getGroupedFilesByPostId(postId);
-    const groupedFiles = this.groupStorageKeysByProvider(groupedRows);
-    const providers = Object.keys(groupedFiles) as FileProvider[];
+    const files = await this.postFilesRepo.getFilesByPostId(postId);
 
-    if (!providers.length) {
+    if (!files.length) {
       this.logger.debug(`No files found for post ${postId}`);
       return { message: 'No files to delete' };
     }
@@ -69,23 +67,44 @@ export class PostFilesService {
     const deletionErrors: string[] = [];
     const successfullyDeletedKeys: string[] = [];
 
-    for (const provider of providers) {
-      const keys = groupedFiles[provider];
-      if (!keys || !keys.length) continue;
-
+    if (files.length === 1) {
+      const file = files[0];
       try {
-        await this.fileService.delete(keys, provider);
-        successfullyDeletedKeys.push(...keys);
-        this.logger.debug(`Deleted ${keys.length} files from ${provider} for post ${postId}`);
+        await this.fileService.delete([file.storageKey], file.provider);
+        successfullyDeletedKeys.push(file.storageKey);
+        this.logger.debug(`Deleted 1 file from ${file.provider} for post ${postId}`);
       } catch (error: unknown) {
-        const errorMessage = `Failed to delete files from ${provider}: ${this.getErrorMessage(error)}`;
+        const errorMessage = `Failed to delete file from ${file.provider}: ${this.getErrorMessage(error)}`;
         this.logger.error(errorMessage, {
           error: error instanceof Error ? error : String(error),
           postId,
-          provider,
-          keys,
+          provider: file.provider,
+          keys: [file.storageKey],
         });
         deletionErrors.push(errorMessage);
+      }
+    } else {
+      const groupedFiles = this.groupFilesByProvider(files);
+      const providers = Object.keys(groupedFiles) as FileProvider[];
+
+      for (const provider of providers) {
+        const keys = groupedFiles[provider];
+        if (!keys || !keys.length) continue;
+
+        try {
+          await this.fileService.delete(keys, provider);
+          successfullyDeletedKeys.push(...keys);
+          this.logger.debug(`Deleted ${keys.length} files from ${provider} for post ${postId}`);
+        } catch (error: unknown) {
+          const errorMessage = `Failed to delete files from ${provider}: ${this.getErrorMessage(error)}`;
+          this.logger.error(errorMessage, {
+            error: error instanceof Error ? error : String(error),
+            postId,
+            provider,
+            keys,
+          });
+          deletionErrors.push(errorMessage);
+        }
       }
     }
 
@@ -183,18 +202,19 @@ export class PostFilesService {
     });
   }
 
-  private groupStorageKeysByProvider(rows: GroupedPostFileKeysRow[]): Partial<Record<FileProvider, string[]>> {
+  private groupFilesByProvider(
+    files: { storageKey: string; provider: FileProvider }[],
+  ): Partial<Record<FileProvider, string[]>> {
     const grouped: Partial<Record<FileProvider, string[]>> = {};
 
-    for (const row of rows) {
-      const normalizedProvider = row.provider as FileProvider;
-
-      if (!Object.values(FileProvider).includes(normalizedProvider)) {
-        this.logger.warn(`Skipping unknown file provider "${row.provider}" from grouped SQL result`);
+    for (const file of files) {
+      if (!Object.values(FileProvider).includes(file.provider)) {
+        this.logger.warn(`Skipping unknown file provider "${file.provider}"`);
         continue;
       }
 
-      grouped[normalizedProvider] = row.storageKeys ?? [];
+      if (!grouped[file.provider]) grouped[file.provider] = [];
+      grouped[file.provider]!.push(file.storageKey);
     }
 
     return grouped;

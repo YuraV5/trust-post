@@ -1,4 +1,4 @@
-import { FileProvider } from '@prisma/client/edge';
+import { FileProvider } from '@prisma/client';
 
 export type FileStorageInfo = {
   resourceId: number | string;

@@ -16,12 +16,24 @@ export class PostsQueueProcessor extends WorkerHost {
     super();
   }
   async process(job: Job<unknown>): Promise<void> {
-    switch (job.name as POSTS_JOB) {
-      case POSTS_JOB.ASSIGN_REVIWER:
-        await this.handleAssignReviewer(job as Job<AssignReviewerJobData>);
-        break;
-      default:
-        this.logger.warn(`No processor defined for job ${job.name}`);
+    try {
+      switch (job.name as POSTS_JOB) {
+        case POSTS_JOB.ASSIGN_REVIWER:
+          await this.handleAssignReviewer(job as Job<AssignReviewerJobData>);
+          break;
+        default:
+          throw new Error(`No processor defined for job ${job.name}`);
+      }
+    } catch (error) {
+      this.logger.error('Posts queue job processing failed', {
+        jobId: job.id,
+        jobName: job.name,
+        attemptsMade: job.attemptsMade,
+        maxAttempts: job.opts.attempts,
+        error: error as Error,
+      });
+
+      throw error;
     }
   }
 

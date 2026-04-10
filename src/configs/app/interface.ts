@@ -35,6 +35,7 @@ export interface IAppConfig {
     accessExpiration: string;
     refreshSecret: string;
     refreshExpiration: string;
+    oauthStateSecret: string;
     issuer: string;
     audience?: string;
   };

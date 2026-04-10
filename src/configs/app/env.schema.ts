@@ -34,6 +34,7 @@ export const configValidation = Joi.object({
   JWT_ACCESS_EXPIRATION: Joi.string().default('15m'),
   JWT_REFRESH_SECRET: Joi.string().required(),
   JWT_REFRESH_EXPIRATION: Joi.string().default('7d'),
+  JWT_OAUTH_STATE_SECRET: Joi.string().required(),
   JWT_ISSUER: Joi.string().required().default('trust-post-service'),
 
   SESSION_EXPIRES: Joi.string().default('7d'), // Default to 7 days

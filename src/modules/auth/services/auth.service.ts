@@ -125,7 +125,7 @@ export class AuthService implements IAuthService {
   }
 
   async refresh(userId: string): Promise<{ accessToken: string }> {
-    const user = await this.usersService.findAuthUserbyId(userId);
+    const user = await this.usersService.findAuthUserById(userId);
     if (!user) {
       this.logger.warn('Token refresh failed: user not found');
       throw new AppBadRequestException('Invalid credentials');

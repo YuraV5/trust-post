@@ -122,7 +122,7 @@ export class OAuthService {
         tokenExpiresAt: new Date(Date.now() + (authenticationDetails.expiresIn ?? 0) * 1000),
       });
 
-      const existingUser = await this.usersService.findAuthUserbyId(providerAccount.userId);
+      const existingUser = await this.usersService.findAuthUserById(providerAccount.userId);
       if (!existingUser) {
         throw new AppOAuthAccountConflictException('OAuth account is linked to an invalid user');
       }

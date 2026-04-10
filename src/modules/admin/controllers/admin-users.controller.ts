@@ -50,7 +50,7 @@ export class AdminUsersController {
   }
 
   @Roles(UserRoles.ADMIN)
-  @Get('/:id/toggle-status')
+  @Patch('/:id/toggle-status')
   async updateStatus(@Param() params: UUIDParamDto): Promise<ResponseMessage> {
     return this.adminService.updateStatus(params.id);
   }

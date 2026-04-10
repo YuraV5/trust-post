@@ -25,7 +25,7 @@ export type UserProfileOutput = UserOutput & {
   isEmailVerified: boolean;
 };
 
-export type UserSecyredOutput = UserOutput & {
+export type UserSecuredOutput = UserOutput & {
   password: string | null;
   role: 'USER' | 'ADMIN' | 'MODERATOR';
   isActive: boolean;
@@ -38,7 +38,7 @@ export type UpdatePasswordInput = {
   currentPassword: string;
 };
 
-export type UserAdminOutput = Omit<UserSecyredOutput, 'password'>;
+export type UserAdminOutput = Omit<UserSecuredOutput, 'password'>;
 
 export type ModeratorsListOutput = {
   id: string;

@@ -18,7 +18,7 @@ export class PostsQueueProcessor extends WorkerHost {
   async process(job: Job<unknown>): Promise<void> {
     try {
       switch (job.name as POSTS_JOB) {
-        case POSTS_JOB.ASSIGN_REVIWER:
+        case POSTS_JOB.ASSIGN_REVIEWER:
           await this.handleAssignReviewer(job as Job<AssignReviewerJobData>);
           break;
         default:

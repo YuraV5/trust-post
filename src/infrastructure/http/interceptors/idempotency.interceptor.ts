@@ -7,7 +7,6 @@ import { RedisService } from '../../../modules/cache/services';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 import { ConfigService } from '@nestjs/config/dist/config.service';
-import { APP_MODE } from '../../../common/consts';
 
 type CachedResponse = {
   requestHash: string;
@@ -32,7 +31,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly config: ConfigService,
   ) {
-    const baseTtl = this.config.get<number>('idempotencyInterceptorTtl') || 300; // Base TTL of 5 minutes for idempotency keys
+    const baseTtl = this.config.get<number>('idempotency.interceptorTtl') || 300; // Base TTL of 5 minutes for idempotency keys
     this.idempotencyTtlSeconds = Math.max(30, Math.min(baseTtl, 3600));
     this.lockTtlSeconds = Math.max(5, Math.min(Math.floor(this.idempotencyTtlSeconds / 4), 60));
     this.waitTimeoutMs = 8000;
@@ -43,9 +42,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
    * idempotency logic for incoming HTTP requests.
    */
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    // Dev/test – bypass interceptor
-    if (this.config.get('nodeEnv') !== APP_MODE.PRODUCTION) {
-      this.logger.debug('Idempotency interceptor disabled in dev/test mode');
+    const isEnabled = this.config.get<boolean>('idempotency.enabled') ?? false;
+    if (!isEnabled) {
+      this.logger.debug('Idempotency interceptor disabled by config');
       return next.handle();
     }
 

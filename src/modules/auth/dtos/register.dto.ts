@@ -9,9 +9,9 @@ export class RegisterDto {
 
   @ApiProperty({ example: 'strongPassword123' })
   @IsString()
-  @MinLength(6)
+  @MinLength(8)
   @Matches(PASSWORD_REGEX, {
-    message: 'Password must contain at least one letter and one number',
+    message: 'Password must be at least 8 characters long and contain at least one letter and one number',
   })
   password: string;
 

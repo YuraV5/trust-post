@@ -9,7 +9,7 @@ import { IUserService } from '../interfaces';
 import { userMapper } from '../mappers';
 import { UsersRepo } from '../repo/users-repo';
 import {
-  UserSecyredOutput,
+  UserSecuredOutput,
   UserProfileOutput,
   NewUserInput,
   UpdateUserInput,
@@ -28,7 +28,7 @@ export class UsersService implements IUserService {
     private readonly passwordService: PasswordService,
   ) {}
 
-  async findByEmail(email: string): Promise<UserSecyredOutput | null> {
+  async findByEmail(email: string): Promise<UserSecuredOutput | null> {
     const user = await this.repo.findByEmail(email);
     if (!user) return null;
     return user;
@@ -91,7 +91,7 @@ export class UsersService implements IUserService {
     return { message: `Password updated successfully` };
   }
 
-  async findAuthUserbyId(id: string): Promise<UserSecyredOutput | null> {
+  async findAuthUserById(id: string): Promise<UserSecuredOutput | null> {
     const user = await this.repo.findById(id);
     if (!user) throw new AppUserNotFoundException();
     return user;

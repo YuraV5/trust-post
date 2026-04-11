@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { TransformableInfo } from 'logform';
 import { createLogger, format, Logger, transports } from 'winston';
 import { APP_MODE } from '../../../common/consts/node-mode';
-import { IAppLogger, LoggerInfo, LogMeta } from '../intefaces/interface';
+import { IAppLogger, LoggerInfo, LogMeta } from '../interfaces/interface';
 import { Context } from '../../contex/context.service';
 
 export const APP_LOGGER = Symbol('APP_LOGGER');

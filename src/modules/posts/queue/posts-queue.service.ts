@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { BaseQueueService } from '../../queues/base-queue.service';
 import { POSTS_JOB, POSTS_QUEUE } from '../consts';
 import { InjectQueue } from '@nestjs/bullmq/dist/decorators/inject-queue.decorator';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Queue } from 'bullmq';
 

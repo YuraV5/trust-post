@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { APP_LOGGER } from '../../shared/logger/services/app-logger';
 import { RedisService } from '../cache/services';
 import { v4 as uuidv4 } from 'uuid';
-import { type IAppLogger } from '../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../shared/logger/interfaces/interface';
 import { ILinksService } from './interfaces/links-service';
 
 @Injectable()

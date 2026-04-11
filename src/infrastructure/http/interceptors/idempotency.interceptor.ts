@@ -5,7 +5,7 @@ import { Observable, catchError, from, of, switchMap, throwError } from 'rxjs';
 import { createHash } from 'node:crypto';
 import { RedisService } from '../../../modules/cache/services';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 
 type CachedResponse = {

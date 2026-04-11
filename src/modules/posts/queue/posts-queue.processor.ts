@@ -1,6 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { POSTS_JOB, POSTS_QUEUE } from '../consts';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Inject } from '@nestjs/common/decorators/core/inject.decorator';
 import { PostsReviewService } from '../services';

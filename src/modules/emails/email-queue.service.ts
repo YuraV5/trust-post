@@ -6,7 +6,7 @@ import { APP_LOGGER } from '../../shared/logger/services/app-logger';
 import { EMAIL_NOTIFICATION_QUEUE, EMAIL_JOB } from './const';
 import { EMAIL_JOB_OPTIONS } from './configs';
 import { AccountActivationTask, EmailVerificationTask, PasswordResetTask } from './types';
-import { type IAppLogger } from '../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../shared/logger/interfaces/interface';
 
 @Injectable()
 export class EmailQueueService extends BaseQueueService {

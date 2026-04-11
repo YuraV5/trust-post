@@ -6,7 +6,7 @@ import { WayForPayCheckoutPayload, WayForPayWebhookAcknowledge, WayForPayWebhook
 import { IPaymentGateway } from '../interfaces';
 import { executeWithRetry } from '../../../common/utils';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { PaymentGatewayCreateInput, PaymentGatewayInitResult, PaymentWebhookResult } from '../types/payments-gateway';
 
 @Injectable()

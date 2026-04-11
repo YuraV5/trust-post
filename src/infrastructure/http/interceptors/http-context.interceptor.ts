@@ -3,7 +3,7 @@ import { Observable, finalize, tap } from 'rxjs';
 import { Context } from '../../../shared/contex/context.service';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Response, Request } from 'express';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 
 @Injectable()
 export class HttpContextInterceptor implements NestInterceptor {

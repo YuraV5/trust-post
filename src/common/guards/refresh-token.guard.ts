@@ -4,7 +4,7 @@ import { AppUnauthorizedException } from '../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../shared/logger/services/app-logger';
 import { RefreshTokenRequest } from '../interfaces';
 import { SessionsService } from '../../modules/auth/sessions/services';
-import { type IAppLogger } from '../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../shared/logger/interfaces/interface';
 
 @Injectable()
 export class RefreshTokenGuard implements CanActivate {

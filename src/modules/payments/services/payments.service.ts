@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Currencies, PaymentProvider, PaymentStatus, Prisma } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { IPaymentsService } from '../interfaces';
 import { PaymentGatewayFactory } from '../providers';
 import { PaymentsRepo } from '../repo';

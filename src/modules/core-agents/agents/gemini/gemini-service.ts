@@ -3,7 +3,7 @@ import { IAgentProvider } from '../../interfaces';
 import { AgentActionConfig, AgentModerationResult, AgentProvider } from '../../types';
 import { GeminiClient } from './gemini-client';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { AgentInvalidResponseException } from '../../errors';
 
 @Injectable()

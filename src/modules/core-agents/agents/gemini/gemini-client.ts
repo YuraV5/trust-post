@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IAgentClient } from '../../interfaces/agent-client';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { GoogleGenAI } from '@google/genai';
 import { AgentGenerateOptions } from '../../types';
 import { AgentClientConfigException, AgentEmptyResponseException, AgentRequestFailedException } from '../../errors';

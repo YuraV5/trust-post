@@ -10,7 +10,7 @@ import { PostsQueryDto, PostsStaffQueryDto, UserPostsQueryDto } from '../dtos';
 import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from '../types';
 import { PostsQueueService } from '../queue';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 
 @Injectable()
 export class PostsService implements IPostsService {

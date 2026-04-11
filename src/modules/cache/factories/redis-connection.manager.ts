@@ -4,8 +4,8 @@ import Redis from 'ioredis';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { APP_MODE } from '../../../common/consts';
 import { RedisConnectionConfig, RedisHealth } from '../interfaces';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
 import { REDIS_DB } from '../../../configs/redis/redis-db';
+import { type IAppLogger } from '@app/shared/logger/interfaces/interface';
 
 @Injectable()
 export class RedisConnectionManager implements OnModuleInit, OnApplicationShutdown {

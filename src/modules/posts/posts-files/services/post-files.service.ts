@@ -4,7 +4,7 @@ import { FilesService } from '../../../files/services/files.service';
 import { ResponseMessage } from '../../../../common/types';
 import { NewFileRecordData } from '../types';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { FileProvider, PostFile } from '@prisma/client';
 
 @Injectable()

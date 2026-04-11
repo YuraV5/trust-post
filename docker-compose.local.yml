@@ -1,23 +1,14 @@
 services:
-  app:
-    image: trust-post:latest
-    container_name: trust_post_app
-    env_file:
-      - .env.local
-    ports:
-      - "3001:3001"
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
   db:
     image: postgres:15
-    container_name: trust_post_db
+    container_name: postgres_dev
+    restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -25,107 +16,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
   redis:
     image: redis:7
-    container_name: trust_post_redis
-    command: >  
-      redis-server
-      --appendonly yes
-      --requirepass ${REDIS_PASSWORD}
+    container_name: redis_dev
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 10
-    restart: unless-stopped
-
-  prometheus:
-    image: prom/prometheus:v2.54.1
-    container_name: trust_post_prometheus
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --web.enable-lifecycle
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
-      - prometheusdata:/prometheus
-    depends_on:
-      app:
-        condition: service_started
-      alertmanager:
-        condition: service_started
-    restart: unless-stopped
-
-  alertmanager:
-    image: prom/alertmanager:v0.27.0
-    container_name: trust_post_alertmanager
-    command:
-      - --config.file=/etc/alertmanager/alertmanager.yml
-      - --storage.path=/alertmanager
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanagerdata:/alertmanager
-    restart: unless-stopped
-
-  loki:
-    image: grafana/loki:3.1.1
-    container_name: trust_post_loki
-    command: -config.file=/etc/loki/loki-config.yml
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
-      - lokidata:/loki
-    restart: unless-stopped
-
-  promtail:
-    image: grafana/promtail:3.1.1
-    container_name: trust_post_promtail
-    command: -config.file=/etc/promtail/promtail-config.yml
-    volumes:
-      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
-      - ./logs:/var/log/trust-post:ro
-      - promtailpositions:/tmp
-    depends_on:
-      loki:
-        condition: service_started
-    restart: unless-stopped
-
-  grafana:
-    image: grafana/grafana:11.1.4
-    container_name: trust_post_grafana
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_USERS_ALLOW_SIGN_UP: "false"
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafanadata:/var/lib/grafana
-      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    depends_on:
-      prometheus:
-        condition: service_started
-      loki:
-        condition: service_started
-    restart: unless-stopped
+      retries: 5
 
 volumes:
   pgdata:
   redisdata:
-  prometheusdata:
-  alertmanagerdata:
-  grafanadata:
-  lokidata:
-  promtailpositions:

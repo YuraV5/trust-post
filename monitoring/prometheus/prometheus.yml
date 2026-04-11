@@ -30,11 +30,17 @@ scrape_configs:
     static_configs:
       - targets: ["host.docker.internal:3001"]
 
-  # Optional exporters to monitor DB/Redis internals in the future.
-  # - job_name: postgres-exporter
-  #   static_configs:
-  #     - targets: ["postgres-exporter:9187"]
-  #
-  # - job_name: redis-exporter
-  #   static_configs:
-  #     - targets: ["redis-exporter:9121"]
+  # Postgres infrastructure metrics (connections, DB up/down, etc.).
+  - job_name: postgres-exporter
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # Redis infrastructure metrics (memory, clients, commands, up/down).
+  - job_name: redis-exporter
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  # Host-level CPU/RAM/disk/network metrics for Node Exporter dashboards (e.g., 1860).
+  - job_name: node-exporter
+    static_configs:
+      - targets: ["host.docker.internal:9100"]

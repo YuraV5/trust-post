@@ -37,6 +37,12 @@ export class AppConflictException extends AppError {
   }
 }
 
+export class AppServiceUnavailableException extends AppError {
+  constructor(message = 'Service unavailable', details?: string[]) {
+    super(AppErrorCode.SERVICE_UNAVAILABLE, 503, message, details);
+  }
+}
+
 export class AppBadRequestException extends AppError {
   constructor(message = 'Bad Request') {
     super(AppErrorCode.BAD_REQUEST, 400, message);

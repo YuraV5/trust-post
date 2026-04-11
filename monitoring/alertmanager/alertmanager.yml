@@ -1,11 +1,19 @@
+# resolve_timeout: how long to wait before considering an alert resolved
+# when no new updates are received.
 global:
   resolve_timeout: 5m
 
+# Default routing behavior for all incoming alerts.
 route:
+  # Alerts with same values in group_by are batched together.
   group_by: ["alertname", "severity", "team"]
+  # Wait before sending first notification in a new group.
   group_wait: 30s
+  # Wait before sending additional alerts for existing group.
   group_interval: 5m
+  # Resend reminder while alert is still firing.
   repeat_interval: 2h
+  # Default receiver (safe sink until real integrations are enabled).
   receiver: dev-null
 
   # Future routing example (uncomment when integrations are added):
@@ -18,14 +26,18 @@ route:
   #     receiver: telegram
 
 receivers:
+  # Sink receiver: accepts alerts but sends nowhere.
   - name: dev-null
 
-  # Placeholders for phase 3 integration.
+  # Placeholders for integration.
   # Add slack_configs/webhook_configs here when ready.
   - name: slack
 
   - name: telegram
 
+# Prevent duplicate noise:
+# if critical and warning of same alert are firing,
+# suppress warning and keep only critical notification.
 inhibit_rules:
   - source_matchers:
       - severity="critical"

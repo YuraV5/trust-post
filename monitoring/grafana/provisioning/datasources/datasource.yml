@@ -1,5 +1,7 @@
 apiVersion: 1
 
+# Grafana datasource provisioning.
+# uid is referenced by dashboard JSON panels.
 datasources:
   - name: Prometheus
     type: prometheus

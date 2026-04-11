@@ -7,6 +7,8 @@ export interface IAppConfig {
   swaggerEnabled: boolean;
   serviceName: string;
   loggerLevel: string;
+  loggerFileMaxSizeMb: number;
+  loggerFileMaxFiles: number;
   frontUrl: string;
   serviceUrl: string;
   idempotency: {

@@ -1,0 +1,33 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  # Promtail stores read offsets here to avoid re-reading old lines after restart.
+  filename: /tmp/positions.yaml
+
+clients:
+  # Loki push endpoint.
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Regular application logs.
+  - job_name: trust-post-normal-logs
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: trust-post-normal-logs
+          service: trust-post
+          env: local
+          # File mask that Promtail tails continuously.
+          __path__: /var/log/trust-post/normal/*.log
+
+  # Error and exception logs.
+  - job_name: trust-post-error-logs
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: trust-post-error-logs
+          service: trust-post
+          env: local
+          __path__: /var/log/trust-post/error/*.log

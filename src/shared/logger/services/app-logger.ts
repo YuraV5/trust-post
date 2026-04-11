@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { TransformableInfo } from 'logform';
 import { createLogger, format, Logger, transports } from 'winston';
 import { APP_MODE } from '../../../common/consts/node-mode';
-import { IAppLogger, LoggerInfo, LogMeta } from '../interfaces/interface';
+import { IAppLogger, type LoggerInfo, LogMeta } from '../interfaces/interface';
 import { Context } from '../../contex/context.service';
 
 export const APP_LOGGER = Symbol('APP_LOGGER');
@@ -14,11 +16,21 @@ export class AppLogger implements IAppLogger {
   private readonly nodeEnv: string;
   private readonly logLevel: string;
   private readonly cwdPattern: RegExp;
+  private readonly normalLogsDir: string;
+  private readonly errorLogsDir: string;
+  private readonly fileMaxSizeBytes: number;
+  private readonly fileMaxFiles: number;
 
   constructor(private readonly config: ConfigService) {
     this.nodeEnv = this.config.getOrThrow<string>('nodeEnv');
     this.logLevel = this.config.get('loggerLevel') || 'info';
     this.cwdPattern = this.buildCwdPattern(process.cwd());
+    this.normalLogsDir = join(process.cwd(), 'logs', 'normal');
+    this.errorLogsDir = join(process.cwd(), 'logs', 'error');
+    // TODO: add to env and config
+    this.fileMaxSizeBytes = (this.config.get<number>('loggerFileMaxSizeMb') || 10) * 1024 * 1024;
+    this.fileMaxFiles = this.config.get<number>('loggerFileMaxFiles') || 5;
+    this.ensureLogDirs();
     this.logger = this.createLogger();
   }
 
@@ -93,9 +105,9 @@ export class AppLogger implements IAppLogger {
           return JSON.stringify(logData);
         }),
       ),
-      transports: [new transports.Console()],
-      exceptionHandlers: [new transports.Console()],
-      rejectionHandlers: [new transports.Console()],
+      transports: [new transports.Console(), ...this.createFileTransports()],
+      exceptionHandlers: [new transports.Console(), ...this.createErrorFileHandlers()],
+      rejectionHandlers: [new transports.Console(), ...this.createErrorFileHandlers()],
     });
   }
 
@@ -105,7 +117,7 @@ export class AppLogger implements IAppLogger {
       format: format.combine(
         format.colorize({ all: true }),
         format.timestamp({ format: 'HH:mm:ss' }),
-        format.printf((info: LoggerInfo) => {
+        format.printf((info: TransformableInfo) => {
           const ctx = Context.get();
           const safeInfo = this.sanitizeInfo(info);
           const userId = this.formatScalar(ctx?.userId ?? safeInfo.userId);
@@ -141,10 +153,45 @@ export class AppLogger implements IAppLogger {
           return log;
         }),
       ),
-      transports: [new transports.Console()],
-      exceptionHandlers: [new transports.Console()],
-      rejectionHandlers: [new transports.Console()],
+      transports: [new transports.Console(), ...this.createFileTransports()],
+      exceptionHandlers: [new transports.Console(), ...this.createErrorFileHandlers()],
+      rejectionHandlers: [new transports.Console(), ...this.createErrorFileHandlers()],
     });
+  }
+
+  private ensureLogDirs(): void {
+    mkdirSync(this.normalLogsDir, { recursive: true });
+    mkdirSync(this.errorLogsDir, { recursive: true });
+  }
+
+  private createFileTransports(): transports.FileTransportInstance[] {
+    return [
+      new transports.File({
+        filename: join(this.normalLogsDir, 'app.log'),
+        level: this.logLevel || 'info',
+        maxsize: this.fileMaxSizeBytes,
+        maxFiles: this.fileMaxFiles,
+        tailable: true,
+      }),
+      new transports.File({
+        filename: join(this.errorLogsDir, 'error.log'),
+        level: 'error',
+        maxsize: this.fileMaxSizeBytes,
+        maxFiles: this.fileMaxFiles,
+        tailable: true,
+      }),
+    ];
+  }
+
+  private createErrorFileHandlers(): transports.FileTransportInstance[] {
+    return [
+      new transports.File({
+        filename: join(this.errorLogsDir, 'exceptions.log'),
+        maxsize: this.fileMaxSizeBytes,
+        maxFiles: this.fileMaxFiles,
+        tailable: true,
+      }),
+    ];
   }
 
   private sanitizeInfo(info: TransformableInfo): LoggerInfo {

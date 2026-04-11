@@ -76,6 +76,30 @@ services:
       - alertmanagerdata:/alertmanager
     restart: unless-stopped
 
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: trust_post_loki
+    command: -config.file=/etc/loki/loki-config.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - lokidata:/loki
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: trust_post_promtail
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - ./logs:/var/log/trust-post:ro
+      - promtailpositions:/tmp
+    depends_on:
+      loki:
+        condition: service_started
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:11.1.4
     container_name: trust_post_grafana
@@ -93,6 +117,8 @@ services:
     depends_on:
       prometheus:
         condition: service_started
+      loki:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
@@ -101,3 +127,5 @@ volumes:
   prometheusdata:
   alertmanagerdata:
   grafanadata:
+  lokidata:
+  promtailpositions:

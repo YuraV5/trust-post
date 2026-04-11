@@ -1,0 +1,53 @@
+groups:
+  - name: trust-post.rules
+    interval: 30s
+    rules:
+      - alert: TrustPostAppDown
+        expr: up{job="trust-post-app"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "trust-post app is down"
+          description: "Prometheus cannot scrape trust-post-app for more than 2 minutes."
+
+      - alert: TrustPostHigh5xxRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="trust-post-app",status_code=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(http_requests_total{job="trust-post-app"}[5m])), 0.001)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High 5xx error rate"
+          description: "5xx ratio is above 5% for 5 minutes."
+
+      - alert: TrustPostHighP95Latency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket{job="trust-post-app"}[5m]))
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High P95 latency"
+          description: "P95 latency is above 500ms for 10 minutes."
+
+      # Manual smoke-test alert. Enable when you want to test routing in Alertmanager.
+      - alert: TrustPostManualTestAlert
+        expr: vector(1)
+        for: 1m
+        labels:
+          severity: info
+          team: backend
+        annotations:
+          summary: "Manual test alert"
+          description: "Used to verify notification routing (Slack/Telegram)."

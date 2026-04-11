@@ -79,6 +79,43 @@ Server will be running at: **http://localhost:3001**
 
 Swagger docs: **http://localhost:3001/docs** (if `SWAGGER_ENABLED=true`)
 
+## Monitoring Stack (Phase 2)
+
+Run the app with monitoring services:
+
+```bash
+docker compose -f docker-compose.local.yml --env-file .env.local up -d app db redis prometheus alertmanager grafana
+```
+
+Monitoring URLs:
+
+- Prometheus: **http://localhost:9090**
+- Alertmanager: **http://localhost:9093**
+- Grafana: **http://localhost:3000** (default login: `admin` / `admin`)
+
+Preconfigured files:
+
+- Prometheus scrape + alerting config: `monitoring/prometheus/prometheus.yml`
+- Alert rules (up/down, 5xx ratio, p95 latency): `monitoring/prometheus/rules.yml`
+- Alertmanager routing + placeholder receivers: `monitoring/alertmanager/alertmanager.yml`
+- Grafana provisioning + dashboard: `monitoring/grafana/`
+
+Note:
+
+- Slack/Telegram notifications are intentionally left as placeholders for the next phase.
+- Receiver names (`slack`, `telegram`) are already prepared in Alertmanager config, so integrations can be added later without compose changes.
+
+Manual test alert flow (without Slack/Telegram integration):
+
+1. Uncomment `TrustPostManualTestAlert` rule in `monitoring/prometheus/rules.yml`.
+2. Reload Prometheus config:
+
+```bash
+curl -X POST http://localhost:9090/-/reload
+```
+
+3. Verify alert in Alertmanager UI (`http://localhost:9093`) and in Grafana alert views.
+
 ## 🏗️ Architecture
 
 ### Modules

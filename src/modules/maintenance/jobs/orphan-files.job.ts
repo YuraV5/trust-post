@@ -57,15 +57,12 @@ export class OrphanFilesJob {
         const chatFileKeys = candidates.map((c) => c.public_id).filter((key) => key.includes(`/${FileFolder.CHATS}/`));
 
         if (chatFileKeys.length > 0) {
-          // TODO: Un-comment and adjust when Chat models/tables are implemented
-          /*
-          const existingChatRecords = await this.prisma.chatFile.findMany({
+          const existingChatRecords = await this.prisma.messageFile.findMany({
             where: { storageKey: { in: chatFileKeys } },
             select: { storageKey: true },
           });
           const existingChatKeysSet = new Set(existingChatRecords.map((r) => r.storageKey));
           orphansToDelete.push(...chatFileKeys.filter((key) => !existingChatKeysSet.has(key)));
-          */
         }
 
         // 3. Delete gathered orphans in chunks to avoid Cloudinary URL length limits

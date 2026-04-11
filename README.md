@@ -79,25 +79,49 @@ Server will be running at: **http://localhost:3001**
 
 Swagger docs: **http://localhost:3001/docs** (if `SWAGGER_ENABLED=true`)
 
-## Monitoring Stack (Phase 2)
+## 📊 Monitoring Stack
 
-Run the app with monitoring services:
+The monitoring stack is **optional** and can be toggled via Docker Compose **profiles**. 
+
+### Dev Mode (Without Monitoring) — Fast Startup ⚡
 
 ```bash
-docker compose -f docker-compose.local.yml --env-file .env.local up -d app db redis prometheus alertmanager grafana
+# Start only app + postgres + redis (fastest)
+npm run docker:dev
+# or
+docker compose --env-file .env.local up -d
 ```
 
-Monitoring URLs:
+### With Monitoring Stack
 
-- Prometheus: **http://localhost:9090**
-- Alertmanager: **http://localhost:9093**
-- Grafana: **http://localhost:3000** (default login: `admin` / `admin`)
+```bash
+# Start app + postgres + redis + prometheus + grafana + loki + exporters
+docker compose --profile monitoring --env-file .env.local up -d
+```
 
-Preconfigured files:
+**Monitoring URLs:**
 
-- Prometheus scrape + alerting config: `monitoring/prometheus/prometheus.yml`
-- Alert rules (up/down, 5xx ratio, p95 latency): `monitoring/prometheus/rules.yml`
-- Alertmanager routing + placeholder receivers: `monitoring/alertmanager/alertmanager.yml`
+- Prometheus: http://localhost:9090 — Metrics database
+- Alertmanager: http://localhost:9093 — Alert routing
+- Grafana: http://localhost:3000 — Dashboards (admin/admin)
+- Loki: http://localhost:3100 — Log aggregation
+
+**Services in "monitoring" profile:**
+- `postgres-exporter` — DB metrics
+- `redis-exporter` — Redis metrics  
+- `node-exporter` — Host/OS metrics
+- `prometheus` — Metrics scraper
+- `alertmanager` — Alert manager
+- `loki` — Log aggregation
+- `promtail` — Log collector
+- `grafana` — Dashboard UI
+
+**Configuration files:**
+- `monitoring/prometheus/prometheus.yml` — Scrape jobs + storage
+- `monitoring/prometheus/rules.yml` — Alert rules (5xx rate, service down)
+- `monitoring/alertmanager/alertmanager.yml` — Alert routing
+- `monitoring/loki/loki-config.yml` — Log storage config
+- `monitoring/promtail/promtail-config.yml` — Log collection jobs
 - Grafana provisioning + dashboard: `monitoring/grafana/`
 
 Note:

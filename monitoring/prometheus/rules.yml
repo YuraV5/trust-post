@@ -1,4 +1,30 @@
 groups:
+  # Recording rules for pre-computed metrics to optimize dashboard queries.
+  # These rules aggregate high-cardinality metrics into lower-cardinality time series.
+  # interval: 15s means metrics are updated every 15 seconds.
+  - name: trust-post.recording
+    interval: 15s
+    rules:
+      # Percentile latency: P95 over 5-minute sliding window.
+      - record: http_request_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="trust-post-app"}[5m])) by (le, method, route))
+
+      # Percentile latency: P99 over 5-minute sliding window.
+      - record: http_request_duration_seconds:p99_5m
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="trust-post-app"}[5m])) by (le, method, route))
+
+      # Request rate per second (total across all endpoints).
+      - record: http_requests:rate1m
+        expr: sum(rate(http_requests_total{job="trust-post-app"}[1m])) by (method, status_code)
+
+      # 5xx error rate over 5-minute window.
+      - record: http_5xx:rate5m
+        expr: sum(rate(http_requests_total{job="trust-post-app",status_code=~"5.."}[5m])) by (method)
+
+      # Average request duration over 5-minute window (for trend analysis).
+      - record: http_request_duration_seconds:avg5m
+        expr: avg(rate(http_request_duration_seconds_sum{job="trust-post-app"}[5m]) / rate(http_request_duration_seconds_count{job="trust-post-app"}[5m])) by (method, route)
+
   # One rules group for trust-post service.
   # interval: how often Prometheus re-evaluates rules in this group.
   - name: trust-post.rules

@@ -1,20 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
-import { collectDefaultMetrics, Counter, Histogram, Registry } from 'prom-client';
+import { collectDefaultMetrics, Counter, Gauge, Histogram, Registry } from 'prom-client';
 
 type HttpMetricLabels = 'method' | 'route' | 'status_code';
 
 @Injectable()
 export class MetricsService {
   private readonly registry = new Registry();
+
+  // HTTP metrics.
   private readonly httpRequestsTotal: Counter<HttpMetricLabels>;
   private readonly httpRequestDuration: Histogram<HttpMetricLabels>;
   private readonly http5xxTotal: Counter<HttpMetricLabels>;
+
+  // Business metrics.
+  private readonly activeUsersGauge: Gauge<string>;
+  private readonly postsTotal: Counter<string>;
+  private readonly chatsTotal: Counter<string>;
+  private readonly commentsTotal: Counter<string>;
+  private readonly likesTotal: Counter<string>;
 
   constructor() {
     // Register Node.js process/runtime metrics (cpu, memory, event loop, etc.).
     collectDefaultMetrics({ register: this.registry });
 
+    // HTTP metrics - standard REST API observability.
     this.httpRequestsTotal = new Counter({
       name: 'http_requests_total',
       help: 'Total number of processed HTTP requests',
@@ -34,6 +44,40 @@ export class MetricsService {
       name: 'http_5xx_total',
       help: 'Total number of HTTP responses with 5xx status code',
       labelNames: ['method', 'route', 'status_code'],
+      registers: [this.registry],
+    });
+
+    // Business metrics - KPI tracking for platform user activity & content.
+    this.activeUsersGauge = new Gauge({
+      name: 'active_users',
+      help: 'Number of currently active users (logged in / last seen within 15min)',
+      registers: [this.registry],
+    });
+
+    this.postsTotal = new Counter({
+      name: 'posts_total',
+      help: 'Total number of posts created on the platform',
+      labelNames: ['status'],
+      registers: [this.registry],
+    });
+
+    this.chatsTotal = new Counter({
+      name: 'chats_total',
+      help: 'Total number of chat conversations created',
+      registers: [this.registry],
+    });
+
+    this.commentsTotal = new Counter({
+      name: 'comments_total',
+      help: 'Total number of comments made on posts',
+      labelNames: ['status'],
+      registers: [this.registry],
+    });
+
+    this.likesTotal = new Counter({
+      name: 'likes_total',
+      help: 'Total number of likes/reactions across all content',
+      labelNames: ['content_type'],
       registers: [this.registry],
     });
   }
@@ -75,6 +119,34 @@ export class MetricsService {
     if (statusCode >= 500) {
       this.http5xxTotal.inc(labels);
     }
+  }
+
+  // Business metrics recording methods.
+  // Call these from relevant services (UserService, PostService, ChatService, etc.)
+
+  // Set the current count of active users. Call periodically (e.g., every 30s) from a scheduled job.
+  setActiveUsers(count: number): void {
+    this.activeUsersGauge.set(count);
+  }
+
+  // Increment post counter when a new post is created.
+  recordPostCreated(status: 'published' | 'draft' | 'deleted' = 'published'): void {
+    this.postsTotal.inc({ status });
+  }
+
+  // Increment chat counter when a new chat is created.
+  recordChatCreated(): void {
+    this.chatsTotal.inc();
+  }
+
+  // Increment comment counter when a new comment is posted.
+  recordCommentCreated(status: 'posted' | 'deleted' = 'posted'): void {
+    this.commentsTotal.inc({ status });
+  }
+
+  // Increment likes counter when a like/reaction is added.
+  recordLikeAdded(contentType: 'post' | 'comment' | 'profile' = 'post'): void {
+    this.likesTotal.inc({ content_type: contentType });
   }
 
   // Normalize path values to avoid noisy labels in Prometheus.

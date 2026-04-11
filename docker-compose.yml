@@ -46,6 +46,7 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.16.0
     container_name: trust_post_postgres_exporter
+    profiles: ["monitoring"]
     environment:
       DATA_SOURCE_NAME: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
     depends_on:
@@ -56,6 +57,7 @@ services:
   redis-exporter:
     image: oliver006/redis_exporter:v1.62.0
     container_name: trust_post_redis_exporter
+    profiles: ["monitoring"]
     environment:
       REDIS_ADDR: redis://redis:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -67,6 +69,7 @@ services:
   node-exporter:
     image: prom/node-exporter:v1.8.2
     container_name: trust_post_node_exporter
+    profiles: ["monitoring"]
     ports:
       - "9100:9100"
     restart: unless-stopped
@@ -74,6 +77,7 @@ services:
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: trust_post_prometheus
+    profiles: ["monitoring"]
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -94,6 +98,7 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.27.0
     container_name: trust_post_alertmanager
+    profiles: ["monitoring"]
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
@@ -107,6 +112,7 @@ services:
   loki:
     image: grafana/loki:3.1.1
     container_name: trust_post_loki
+    profiles: ["monitoring"]
     command: -config.file=/etc/loki/loki-config.yml
     ports:
       - "3100:3100"
@@ -118,6 +124,7 @@ services:
   promtail:
     image: grafana/promtail:3.1.1
     container_name: trust_post_promtail
+    profiles: ["monitoring"]
     command: -config.file=/etc/promtail/promtail-config.yml
     volumes:
       - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
@@ -131,6 +138,7 @@ services:
   grafana:
     image: grafana/grafana:11.1.4
     container_name: trust_post_grafana
+    profiles: ["monitoring"]
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin

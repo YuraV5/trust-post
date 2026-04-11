@@ -9,8 +9,8 @@ import { setupSwagger } from './setup/swagger';
 type RequestWithRawBody = Request & { rawBody?: Buffer };
 
 export function setupGlobalSettings(app: INestApplication, config: ConfigService): void {
-  // Set global API prefix
-  app.setGlobalPrefix('api');
+  // Keep API routes under /api while exposing /metrics without prefix.
+  app.setGlobalPrefix('api', { exclude: ['metrics'] });
 
   // Trust proxy settings for correct client IP and protocol handling
   if (config.get<boolean>('trustProxy')) {

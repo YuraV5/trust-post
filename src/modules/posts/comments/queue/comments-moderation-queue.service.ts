@@ -16,12 +16,13 @@ export class CommentsModerationQueueService extends BaseQueueService {
 
   async enqueue(data: { commentId: number; postId: number; content: string }): Promise<void> {
     const { commentId, postId, content } = data;
+
     return this.add(
       COMMENTS_MODERATION_JOB.MODERATE_COMMENT,
       { commentId, postId, content, actionType: AGENT_ACTION_TYPE.CommentModeration },
       {
         ...COMMENTS_QUEUE_JOB_OPTIONS,
-        jobId: `${commentId}`,
+        jobId: `${COMMENTS_MODERATION_JOB.MODERATE_COMMENT}-${commentId}-post-${postId}`,
         priority: 2,
       },
     );

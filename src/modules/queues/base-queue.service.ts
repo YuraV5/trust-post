@@ -7,7 +7,7 @@ import { type IAppLogger } from '../../shared/logger/interfaces/interface';
 
 export abstract class BaseQueueService implements IQueueService {
   constructor(
-    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
+    @Inject(APP_LOGGER) protected readonly logger: IAppLogger,
     private readonly queue: Queue,
   ) {}
 

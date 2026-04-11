@@ -29,7 +29,7 @@ import { FileOwnershipGuard } from '../guards/file-ownership.guard';
 @ApiBearerAuth('JWT-auth')
 @Controller('files')
 export class FilesController {
-  constructor(private readonly filesService: FilesService) { }
+  constructor(private readonly filesService: FilesService) {}
 
   @Post('/images')
   @HttpCode(HttpStatus.CREATED)

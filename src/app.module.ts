@@ -30,6 +30,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CoreAgentsModule } from './modules/core-agents/core-agents.module';
 import { AppThrottlerModule } from './infrastructure/http/throttling/app-throttler.module';
+import { MetricsModule } from './infrastructure/metrics/metrics.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { AppThrottlerModule } from './infrastructure/http/throttling/app-throttl
     ScheduleModule.forRoot(),
     AppThrottlerModule,
     AppLoggerModule,
+    MetricsModule,
     ExceptionFiltersModule,
     HealthModule,
     PrismaModule,

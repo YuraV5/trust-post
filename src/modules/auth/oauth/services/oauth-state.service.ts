@@ -13,7 +13,7 @@ export class OAuthStateService {
 
   sign(payload: OAuthStatePayload): string {
     return this.jwt.sign(payload, {
-      secret: this.config.getOrThrow<string>('jwt.accessSecret'),
+      secret: this.config.getOrThrow<string>('jwt.oauthStateSecret'),
       expiresIn: '10m',
       issuer: 'oauth-state',
     });
@@ -22,7 +22,7 @@ export class OAuthStateService {
   verify(token: string): OAuthStatePayload {
     try {
       const decoded = this.jwt.verify<OAuthStatePayload>(token, {
-        secret: this.config.getOrThrow<string>('jwt.accessSecret'),
+        secret: this.config.getOrThrow<string>('jwt.oauthStateSecret'),
         issuer: 'oauth-state',
       });
 

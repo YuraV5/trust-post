@@ -7,7 +7,7 @@ export const configValidation = Joi.object({
   WS_CORS_ALLOW_ORIGIN: Joi.string().default(Joi.ref('CORS_ALLOW_ORIGIN')),
   TRUST_PROXY: Joi.boolean().truthy('true', '1', 'yes', 'on').falsy('false', '0', 'no', 'off').default(false),
   SWAGGER_ENABLED: Joi.boolean().truthy('true', '1', 'yes', 'on').falsy('false', '0', 'no', 'off').default(false),
-  SERVICE_NAME: Joi.string().default('work-link-service'),
+  SERVICE_NAME: Joi.string().default('trust-post-service'),
   LOGGER_LEVEL: Joi.string().default('info'),
   FRONTEND_URL: Joi.string().uri().required(),
   SERVICE_URL: Joi.string().uri().default('http://localhost:3001'),
@@ -34,7 +34,8 @@ export const configValidation = Joi.object({
   JWT_ACCESS_EXPIRATION: Joi.string().default('15m'),
   JWT_REFRESH_SECRET: Joi.string().required(),
   JWT_REFRESH_EXPIRATION: Joi.string().default('7d'),
-  JWT_ISSUER: Joi.string().required().default('work-link-service'),
+  JWT_OAUTH_STATE_SECRET: Joi.string().required(),
+  JWT_ISSUER: Joi.string().required().default('trust-post-service'),
 
   SESSION_EXPIRES: Joi.string().default('7d'), // Default to 7 days
 

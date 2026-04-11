@@ -7,4 +7,5 @@ export const mockRedisService: IRedisService = {
   ttl: jest.fn(),
   exists: jest.fn(),
   flushDb: jest.fn(),
+  setIfNotExists: jest.fn(),
 } 

@@ -37,8 +37,7 @@ export default tseslint.config(
 
   {
     rules: {
-      // Allow `any` in development, but should be reduced over time
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
 
       // Prevent unhandled promises (runtime safety)
       '@typescript-eslint/no-floating-promises': 'error',

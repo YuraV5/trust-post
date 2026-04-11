@@ -50,7 +50,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
-          tags: work-link-service:${{ github.sha }}
+          tags: trust-post-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
         

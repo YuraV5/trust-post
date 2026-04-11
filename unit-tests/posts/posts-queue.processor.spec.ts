@@ -21,7 +21,7 @@ describe('PostsQueueProcessor', () => {
     (postReviewServiceMock.assignReviewer as jest.Mock).mockRejectedValue(processingError);
 
     const job = {
-      name: POSTS_JOB.ASSIGN_REVIWER,
+      name: POSTS_JOB.ASSIGN_REVIEWER,
       data: { postId: 7 },
       id: 'test-job-id',
       attemptsMade: 0,

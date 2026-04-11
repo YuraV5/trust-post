@@ -44,6 +44,7 @@ export default (): IAppConfig => ({
     accessExpiration: process.env.JWT_ACCESS_EXPIRATION || '15m',
     refreshSecret: process.env.JWT_REFRESH_SECRET!,
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION || '7d',
+    oauthStateSecret: process.env.JWT_OAUTH_STATE_SECRET!,
     issuer: process.env.JWT_ISSUER!,
   },
 

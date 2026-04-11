@@ -15,9 +15,9 @@ export class PostsQueueService extends BaseQueueService {
 
   async assignReviewerToPost(postId: number): Promise<void> {
     return this.add(
-      POSTS_JOB.ASSIGN_REVIWER,
+      POSTS_JOB.ASSIGN_REVIEWER,
       { postId },
-      { ...POST_QUEUE_JOB_OPTIONS, jobId: `${POSTS_JOB.ASSIGN_REVIWER}-${postId}`, priority: 1 }, // High priority
+      { ...POST_QUEUE_JOB_OPTIONS, jobId: `${POSTS_JOB.ASSIGN_REVIEWER}-${postId}`, priority: 1 }, // High priority
     );
   }
 }

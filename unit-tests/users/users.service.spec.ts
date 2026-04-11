@@ -146,12 +146,12 @@ describe('UsersService', () => {
   describe('findAuthUserbyId', () => {
     it('should throw UserNotFoundError if user is not found', async () => {
       mockUsersRepo.findById.mockResolvedValue(null);
-      await expect(service.findAuthUserbyId('nonexistent-id')).rejects.toThrow('User not found');
+      await expect(service.findAuthUserById('nonexistent-id')).rejects.toThrow('User not found');
     });
 
     it('should return user if found', async () => {
       mockUsersRepo.findById.mockResolvedValue(mockUser);
-      const result = await service.findAuthUserbyId('existing-id');
+      const result = await service.findAuthUserById('existing-id');
       expect(result).toEqual(mockUser);
     });
   });

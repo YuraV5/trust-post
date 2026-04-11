@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthProvider } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { Context } from '../../../../shared/contex/context.service';
 import { parseDuration } from '../../../../common/utils';
 import { TokensService, PasswordService } from '../../../security/services';

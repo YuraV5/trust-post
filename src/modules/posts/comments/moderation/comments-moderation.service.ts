@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CoreAgentsService } from '../../../core-agents/services';
 import { AgentModerationResult } from '../../../core-agents/types';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { CommentsRepo } from '../repo';
 import { AgentActionSelector } from '../../../core-agents/consts';
 import { ModerateCommentJobData } from '../queue/types/types';

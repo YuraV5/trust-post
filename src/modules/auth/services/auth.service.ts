@@ -17,7 +17,7 @@ import { RedisService } from '../../cache/services';
 import { REDIS_KEYS } from '../const';
 import { UsersService } from '../../users/services';
 import { LinksService } from '../../links/links.service';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 
 @Injectable()
 export class AuthService implements IAuthService {

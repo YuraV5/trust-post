@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { setupGlobalSettings } from './app/server';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { APP_LOGGER } from './shared/logger/services/app-logger';
-import { IAppLogger } from './shared/logger/intefaces/interface';
+import { IAppLogger } from './shared/logger/interfaces/interface';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {

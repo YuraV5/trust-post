@@ -18,7 +18,7 @@ import {
 } from '../types';
 import { Prisma, UserRoles } from '@prisma/client';
 import { generateRandomUsername } from '../../../common/utils/generate-name.util';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 
 @Injectable()
 export class UsersService implements IUserService {

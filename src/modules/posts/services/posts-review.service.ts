@@ -6,7 +6,7 @@ import { PostsReviewRepo } from './../repos/posts-review.repo';
 import { Inject, Injectable } from '@nestjs/common';
 import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { PostLifecycleStatus } from '../types/common';
 import { ResponseMessage } from '../../../common/types';
 import { EmailQueueService } from '../../emails/email-queue.service';

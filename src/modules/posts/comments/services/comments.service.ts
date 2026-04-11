@@ -15,7 +15,7 @@ import { AppBadRequestException, AppNotFoundException } from '../../../../shared
 import { ICommentsService } from '../interfaces';
 import { CommentsQueryDto } from '../dtos';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { CommentsModerationQueueService } from '../queue';
 import { TokensService } from '../../../security/services';
 

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { BaseQueueService } from '../../../queues/base-queue.service';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { COMMENTS_MODERATION_JOB, COMMENTS_MODERATION_QUEUE } from '../consts';

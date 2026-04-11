@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Prisma, UserRoles } from '@prisma/client';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { IUserRolePeriodService } from '../interfaces';
 import { UserRolePeriodRepo } from '../repo/user-role-period.repo';
 import { UserRolePeriodOutput } from '../types';

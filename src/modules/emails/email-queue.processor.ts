@@ -11,7 +11,7 @@ import {
 } from './patterns';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { AccountActivationTask, EmailVerificationTask, PasswordResetTask, RejectPostEmailTask } from './types';
-import { type IAppLogger } from '../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../shared/logger/interfaces/interface';
 import { EmailsProviderService } from './emails-provider/services';
 
 @Processor(EMAIL_NOTIFICATION_QUEUE, { limiter: { max: 20, duration: 1000 } }) // Limit to 20 jobs per second

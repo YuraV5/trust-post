@@ -5,7 +5,7 @@ import { generateRandomUsername } from '../../../common/utils/generate-name.util
 import { AppUserAlreadyExistsException, AppUserNotFoundException } from '../../users/errors';
 import { UsersRepo } from '../../users/repo/users-repo';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { PasswordService } from '../../security/services';
 import { CreateByAdminInput, ModeratorsListOutput, UserAdminOutput } from '../../users/types';
 import { userAdminMapper, usersAdminMapper } from '../../users/mappers';

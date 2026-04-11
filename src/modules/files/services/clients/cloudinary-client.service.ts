@@ -9,7 +9,7 @@ import {
   AppInternalServerException,
 } from '../../../../shared/errors/app-errors';
 import { FileFolder, FileUploadResult, FileStorageInfo, FileUploadResponse } from '../../types';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { ICloudinaryClient } from '../../interfaces/cloudinary';
 import { executeWithRetry } from '../../../../common/utils';

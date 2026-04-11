@@ -6,7 +6,7 @@ import { APP_MODE } from '../../../common/consts/node-mode';
 import { AppInternalServerException, AppUnauthorizedException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { AccessPayload, RefreshPayload } from '../types';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { ITokensService } from '../interfaces';
 
 enum TokenType {

@@ -3,7 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 
 @Injectable()
 export class ExpiredPendingPaymentsCleanupJob {

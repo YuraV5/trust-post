@@ -12,7 +12,7 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { ChatService } from './services/chat.service';
 import { MessageService } from '../message/services/message.service';
 import { APP_LOGGER } from '../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../shared/logger/interfaces/interface';
 import { SocketService } from '../socket/socket.service';
 import { SocketAuthGuard } from '../../common/guards';
 import type { AuthenticatedSocket } from '../../common/guards/socket-auth.guard';

@@ -6,7 +6,7 @@ import { SessionsRepo } from '../repo/session-repo';
 import { mapSessions } from '../mappers';
 import { HashingService } from '../../../security/services';
 import { ResponseMessage } from '../../../../common/types';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { AppForbiddenException } from '../../../../shared/errors/app-errors';
 import { SessionNotFoundError } from '../errors/session-not-found';
 

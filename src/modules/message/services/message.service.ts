@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { FileProvider } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException, AppForbiddenException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { IMessageService } from '../interfaces';
 import {
   EditMessageInput,

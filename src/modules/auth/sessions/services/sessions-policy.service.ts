@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { SessionsRepo } from '../repo/session-repo';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { ISessionsPolicy } from '../interfaces/session-policy';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 
 @Injectable()
 export class SessionsPolicy implements ISessionsPolicy {

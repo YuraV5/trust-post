@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthProvider } from '@prisma/client';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
-import { type IAppLogger } from '../../../../shared/logger/intefaces/interface';
+import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import type { IOAuthProvider } from '../interfaces/oauth-provider';
 import type { OAuthTokenResult, OAuthUserProfile } from '../types';
 import {

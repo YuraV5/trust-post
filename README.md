@@ -208,9 +208,8 @@ Production releases use **SemVer** + **Git tags**.
 1. Merge tested code into `main`.
 2. CI reads all commit messages since the last `vX.Y.Z` tag.
 3. CI chooses the highest bump marker and creates a new git tag automatically.
-4. Tag push triggers Docker publish workflow and builds image tags:
+4. In the same CI run, Docker image is pushed with tags:
 	- `trust-post:vX.Y.Z` (immutable release)
-	- `trust-post:vX.Y` (minor line)
 	- `trust-post:latest` (latest stable)
 
 ### Commit markers for auto bump

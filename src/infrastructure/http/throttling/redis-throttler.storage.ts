@@ -54,7 +54,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
 
     try {
       if (!(await this.ensureConnected())) {
-        return this.allowFallback();
+        return this.blockFallback(limit, blockDuration, key, throttlerName);
       }
 
       // 1. check block
@@ -100,9 +100,9 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
       this.logOk(response, key, throttlerName);
       return response;
     } catch (error) {
-      this.logger.error(`Throttler fallback (allow request) key=${key}: ${(error as Error).message}`);
+      this.logger.error(`Throttler fallback (block request) key=${key}: ${(error as Error).message}`);
 
-      return this.allowFallback();
+      return this.blockFallback(limit, blockDuration, key, throttlerName);
     }
   }
 
@@ -198,17 +198,24 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
     );
   }
 
-  // Fallback to allow requests if Redis is unavailable
-  private allowFallback(): ThrottlerStorageRecord {
-    if (!this.isProduction) {
-      this.logger.debug('Throttler fallback: allowing request (Redis unavailable)');
-    }
+  // Fail-closed fallback to keep throttling protection if Redis is unavailable
+  private blockFallback(
+    limit: number,
+    blockDuration: number,
+    key: string,
+    throttlerName: string,
+  ): ThrottlerStorageRecord {
+    const fallbackBlockMs = blockDuration > 0 ? blockDuration : 1000;
+
+    this.logger.warn(
+      `[THROTTLE FALLBACK BLOCKED] ${throttlerName} key=${key} blockTTL=${this.toSeconds(fallbackBlockMs)}s`,
+    );
 
     return {
-      totalHits: 0,
-      timeToExpire: 0,
-      isBlocked: false,
-      timeToBlockExpire: 0,
+      totalHits: limit + 1,
+      timeToExpire: this.toSeconds(fallbackBlockMs),
+      isBlocked: true,
+      timeToBlockExpire: this.toSeconds(fallbackBlockMs),
     };
   }
 

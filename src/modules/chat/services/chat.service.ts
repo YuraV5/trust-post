@@ -15,12 +15,16 @@ import {
 } from '../types';
 import { IChatService } from '../interfaces';
 import { ChatRepo } from '../repos';
+import { RedisService } from '../../cache/services';
 
 @Injectable()
 export class ChatService implements IChatService {
+  private readonly CHAT_CACHE_TTL_SECONDS = 30;
+
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly repo: ChatRepo,
+    private readonly redisService: RedisService,
   ) {}
 
   async createPrivateChat(input: CreatePrivateChatInput): Promise<ChatWithMembers | ChatEntity> {
@@ -147,9 +151,15 @@ export class ChatService implements IChatService {
   }
 
   async getUserChats(userId: string, page: number = 1, limit: number = 20): Promise<UserChatsResult> {
+    const cacheKey = this.buildCacheKey('user-chats', { userId, page, limit });
+    const cached = await this.readCache<UserChatsResult>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const { data: chats, total } = await this.repo.findUserChats(userId, page, limit);
 
-    return {
+    const result = {
       data: chats,
       pagination: {
         page,
@@ -158,9 +168,18 @@ export class ChatService implements IChatService {
         totalPages: Math.ceil(total / limit),
       },
     };
+
+    await this.writeCache(cacheKey, result, this.CHAT_CACHE_TTL_SECONDS);
+    return result;
   }
 
   async getChat(chatId: string, userId: string): Promise<ChatWithMembersAndPrivate> {
+    const cacheKey = this.buildCacheKey('chat-by-id', { chatId, userId });
+    const cached = await this.readCache<ChatWithMembersAndPrivate>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const chat = await this.repo.findChatWithMembers(chatId);
 
     if (!chat) {
@@ -173,6 +192,7 @@ export class ChatService implements IChatService {
       throw new AppForbiddenException('You are not a member of this chat');
     }
 
+    await this.writeCache(cacheKey, chat, this.CHAT_CACHE_TTL_SECONDS);
     return chat;
   }
 
@@ -188,5 +208,37 @@ export class ChatService implements IChatService {
     // For now, we'll just return success
     this.logger.info('Chat marked as read', { chatId, userId });
     return { message: 'Chat marked as read' };
+  }
+
+  private buildCacheKey(scope: string, payload: unknown): string {
+    return `cache:chat:${scope}:${JSON.stringify(payload)}`;
+  }
+
+  private async readCache<T>(key: string): Promise<T | null> {
+    try {
+      const cached = await this.redisService.get(key);
+      if (!cached) {
+        return null;
+      }
+
+      return JSON.parse(cached) as T;
+    } catch (error) {
+      this.logger.error('Chat cache read failed', {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  private async writeCache(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+    try {
+      await this.redisService.set(key, JSON.stringify(value), ttlSeconds);
+    } catch (error) {
+      this.logger.error('Chat cache write failed', {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }

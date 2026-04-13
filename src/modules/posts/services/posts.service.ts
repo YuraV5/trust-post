@@ -11,16 +11,20 @@ import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from
 import { PostsQueueService } from '../queue';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
+import { RedisService } from '../../cache/services';
 
 @Injectable()
 export class PostsService implements IPostsService {
   private readonly MAX_LIMIT = 100;
+  private readonly POSTS_LIST_CACHE_TTL_SECONDS = 30;
+  private readonly POST_BY_ID_CACHE_TTL_SECONDS = 30;
 
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly postsRepo: PostsRepo,
     private readonly postLikeRepo: PostsLikeRepo,
     private readonly postQueue: PostsQueueService,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(authorId: string, data: CreatePost): Promise<Post> {
@@ -39,24 +43,60 @@ export class PostsService implements IPostsService {
 
   async getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<Post>> {
     const normalized = this.normalizeUserPostsQuery(query);
-    return await this.postsRepo.findByAuthorIdPaginated(userId, normalized);
+    const cacheKey = this.buildCacheKey('user-posts', { userId, query: normalized });
+
+    const cached = await this.readCache<PaginatedResult<Post>>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const result = await this.postsRepo.findByAuthorIdPaginated(userId, normalized);
+    await this.writeCache(cacheKey, result, this.POSTS_LIST_CACHE_TTL_SECONDS);
+    return result;
   }
 
   async getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<Post>> {
     const normalized = this.normalizePublicQuery(query);
-    return await this.postsRepo.findManyPublic(normalized);
+    const cacheKey = this.buildCacheKey('public-posts', normalized);
+
+    const cached = await this.readCache<PaginatedResult<Post>>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const result = await this.postsRepo.findManyPublic(normalized);
+    await this.writeCache(cacheKey, result, this.POSTS_LIST_CACHE_TTL_SECONDS);
+    return result;
   }
 
   async getAllStaffPosts(query: PostsStaffQueryDto): Promise<PaginatedResult<Post>> {
     const normalized = this.normalizeStaffQuery(query);
-    return await this.postsRepo.findManyStaff(normalized);
+    const cacheKey = this.buildCacheKey('staff-posts', normalized);
+
+    const cached = await this.readCache<PaginatedResult<Post>>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const result = await this.postsRepo.findManyStaff(normalized);
+    await this.writeCache(cacheKey, result, this.POSTS_LIST_CACHE_TTL_SECONDS);
+    return result;
   }
 
   async findById(id: number): Promise<Post> {
+    const cacheKey = this.buildCacheKey('post-by-id', { id });
+    const cached = await this.readCache<Post>(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
     const post = await this.postsRepo.getPostById(id);
     if (!post) {
       throw new AppNotFoundException('No posts found');
     }
+
+    await this.writeCache(cacheKey, post, this.POST_BY_ID_CACHE_TTL_SECONDS);
     return post;
   }
 
@@ -187,5 +227,37 @@ export class PostsService implements IPostsService {
       sortBy,
       sortOrder,
     };
+  }
+
+  private buildCacheKey(scope: string, payload: unknown): string {
+    return `cache:posts:${scope}:${JSON.stringify(payload)}`;
+  }
+
+  private async readCache<T>(key: string): Promise<T | null> {
+    try {
+      const cached = await this.redisService.get(key);
+      if (!cached) {
+        return null;
+      }
+
+      return JSON.parse(cached) as T;
+    } catch (error) {
+      this.logger.error('Posts cache read failed', {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  private async writeCache(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+    try {
+      await this.redisService.set(key, JSON.stringify(value), ttlSeconds);
+    } catch (error) {
+      this.logger.error('Posts cache write failed', {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }

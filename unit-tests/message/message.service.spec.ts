@@ -3,7 +3,8 @@ import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { MessageService } from '../../src/modules/message/services/message.service';
 import { MessageRepo } from '../../src/modules/message/repos';
 import { FilesService } from '../../src/modules/files/services';
-import { StubAppLogger } from '../__mock__';
+import { RedisService } from '../../src/modules/cache/services';
+import { StubAppLogger, mockRedisService } from '../__mock__';
 import { mockMessageRepo, mockFilesService } from './__mock__';
 
 describe('MessageService', () => {
@@ -17,6 +18,7 @@ describe('MessageService', () => {
         MessageService,
         { provide: MessageRepo, useValue: mockMessageRepo },
         { provide: FilesService, useValue: mockFilesService },
+        { provide: RedisService, useValue: mockRedisService },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();

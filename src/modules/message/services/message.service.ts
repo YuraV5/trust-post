@@ -14,13 +14,17 @@ import {
 import { MessageRepo } from '../repos';
 import { FilesService } from '../../files/services';
 import { FileFolder } from '../../files/types';
+import { RedisService } from '../../cache/services';
 
 @Injectable()
 export class MessageService implements IMessageService {
+  private readonly MESSAGE_LIST_CACHE_TTL_SECONDS = 15;
+
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly repo: MessageRepo,
     private readonly filesService: FilesService,
+    private readonly redisService: RedisService,
   ) {}
 
   async sendMessage(input: SendMessageInput): Promise<MessageWithSenderAndFiles> {
@@ -47,6 +51,12 @@ export class MessageService implements IMessageService {
   }
 
   async getMessages(chatId: string, userId: string, page: number = 1, limit: number = 50): Promise<MessageListResult> {
+    const cacheKey = this.buildCacheKey('chat-messages', { chatId, userId, page, limit });
+    const cached = await this.readCache<MessageListResult>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     // Verify user is a member of the chat
     const member = await this.repo.findChatMember(chatId, userId);
 
@@ -56,7 +66,7 @@ export class MessageService implements IMessageService {
 
     const { data: messages, total } = await this.repo.findMessages(chatId, page, limit);
 
-    return {
+    const result = {
       data: messages.reverse(), // Return in chronological order
       pagination: {
         page,
@@ -65,6 +75,9 @@ export class MessageService implements IMessageService {
         totalPages: Math.ceil(total / limit),
       },
     };
+
+    await this.writeCache(cacheKey, result, this.MESSAGE_LIST_CACHE_TTL_SECONDS);
+    return result;
   }
 
   async editMessage(input: EditMessageInput): Promise<MessageWithSenderAndFiles> {
@@ -126,7 +139,11 @@ export class MessageService implements IMessageService {
     try {
       await this.filesService.delete([file.storageKey], file.provider);
     } catch (error) {
-      this.logger.error('Failed to delete file from storage', { fileId, storageKey: file.storageKey, error });
+      this.logger.error('Failed to delete file from storage', {
+        fileId,
+        storageKey: file.storageKey,
+        error: error instanceof Error ? error : String(error),
+      });
       // Continue with DB deletion even if storage deletion fails
     }
 
@@ -196,7 +213,11 @@ export class MessageService implements IMessageService {
           provider: file.provider,
         }));
       } catch (error) {
-        this.logger.error('Failed to upload files', { chatId, senderId, error });
+        this.logger.error('Failed to upload files', {
+          chatId,
+          senderId,
+          error: error instanceof Error ? error : String(error),
+        });
         throw new AppBadRequestException('Failed to upload files');
       }
     }
@@ -245,7 +266,11 @@ export class MessageService implements IMessageService {
     } catch (error) {
       // Cleanup uploaded files if message creation failed
       if (uploadedFiles.length > 0) {
-        this.logger.error('Message creation failed, cleaning up uploaded files', { chatId, senderId, error });
+        this.logger.error('Message creation failed, cleaning up uploaded files', {
+          chatId,
+          senderId,
+          error: error instanceof Error ? error : String(error),
+        });
         try {
           await this.filesService.delete(
             uploadedFiles.map((f) => f.storageKey),
@@ -256,6 +281,38 @@ export class MessageService implements IMessageService {
         }
       }
       throw error;
+    }
+  }
+
+  private buildCacheKey(scope: string, payload: unknown): string {
+    return `cache:message:${scope}:${JSON.stringify(payload)}`;
+  }
+
+  private async readCache<T>(key: string): Promise<T | null> {
+    try {
+      const cached = await this.redisService.get(key);
+      if (!cached) {
+        return null;
+      }
+
+      return JSON.parse(cached) as T;
+    } catch (error) {
+      this.logger.error('Message cache read failed', {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  private async writeCache(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+    try {
+      await this.redisService.set(key, JSON.stringify(value), ttlSeconds);
+    } catch (error) {
+      this.logger.error('Message cache write failed', {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 }

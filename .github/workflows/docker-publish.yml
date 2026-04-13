@@ -4,13 +4,96 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
   push:
     branches:
       - main
 
 jobs:
+  # ── Runs on PR: calculates the next SemVer and tags the branch ───────────────
+  tag-pr-branch:
+    if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Determine next SemVer tag from PR commits
+        id: bump
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --tags --force
+          git fetch origin main
+
+          LAST_TAG=$(git tag -l 'v*.*.*' --sort=-version:refname | head -n 1)
+          [ -z "${LAST_TAG}" ] && LAST_TAG="v0.0.0"
+
+          # Only look at commits that are new on this branch vs main
+          COMMITS=$(git log --format=%B "origin/main..HEAD")
+
+          if [ -z "$(echo "${COMMITS}" | tr -d '[:space:]')" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "next_tag=${LAST_TAG}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Bump rules (only one level, take the highest found):
+          #   #major / [major] / BREAKING CHANGE / feat: → bump MINOR (v1.0.0 → v1.1.0)
+          #   everything else                             → bump PATCH  (v1.0.0 → v1.0.1)
+          BUMP=patch
+          if echo "${COMMITS}" | grep -Eiq \
+            '(^|[[:space:]])#major([[:space:]]|$)|(^|[[:space:]])\[major\]([[:space:]]|$)|BREAKING CHANGE|^feat(\(.+\))?:'; then
+            BUMP=minor
+          fi
+
+          VERSION=${LAST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${VERSION}"
+
+          case "${BUMP}" in
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          NEXT_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          BRANCH_SAFE=$(echo "${{ github.head_ref }}" | tr '/' '_' | tr '[:upper:]' '[:lower:]')
+          COMBINED_TAG="${BRANCH_SAFE}_${NEXT_TAG}"
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "next_tag=${NEXT_TAG}" >> "$GITHUB_OUTPUT"
+          echo "combined_tag=${COMBINED_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Assign combined tag to PR branch
+        if: steps.bump.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          COMBINED_TAG="${{ steps.bump.outputs.combined_tag }}"
+
+          # Remove old tag of the same name on re-runs (PR synchronize event)
+          git tag -d "${COMBINED_TAG}" 2>/dev/null || true
+          git push origin ":refs/tags/${COMBINED_TAG}" 2>/dev/null || true
+
+          git tag "${COMBINED_TAG}"
+          git push origin "${COMBINED_TAG}"
+
+  # ── Runs on push to main: reads branch tag, builds and publishes image ────────
   docker:
-    if: github.actor != 'github-actions[bot]'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,89 +104,76 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine next SemVer tag from commits
-        id: bump
+      - name: Resolve merged branch name and version tag
+        id: info
         shell: bash
         run: |
           set -euo pipefail
 
           git fetch --tags --force
 
-          LAST_TAG=$(git tag -l 'v*.*.*' --sort=-version:refname | head -n 1)
-          if [ -z "${LAST_TAG}" ]; then
-            LAST_TAG="v0.0.0"
+          # ── Extract merged branch name from the merge commit message ─────────
+          MERGE_MSG=$(git log -1 --format=%B HEAD)
+          BRANCH=""
+
+          # Standard GitHub merge: "Merge pull request #N from org/branch-name"
+          BRANCH=$(echo "${MERGE_MSG}" | grep -oP 'from [^[:space:]]+/\K[^\n]+' | head -1 || true)
+
+          # Squash merge: commit subject is usually "feature-name (#N)"
+          if [ -z "${BRANCH}" ]; then
+            BRANCH=$(echo "${MERGE_MSG}" | head -1 | sed -E 's/ \(#[0-9]+\)$//' | tr -d '\r\n')
           fi
 
-          if git rev-parse "${LAST_TAG}" >/dev/null 2>&1; then
-            COMMITS=$(git log --format=%B "${LAST_TAG}..HEAD")
-          else
-            COMMITS=$(git log --format=%B)
+          BRANCH_SAFE=$(echo "${BRANCH}" | tr '/' '_' | tr '[:upper:]' '[:lower:]' | tr -d '\r\n')
+
+          # ── Find the combined tag assigned to this branch during the PR ──────
+          MERGED_SHA=$(git rev-parse HEAD^2 2>/dev/null || echo "")
+          COMBINED_TAG=""
+
+          if [ -n "${MERGED_SHA}" ]; then
+            COMBINED_TAG=$(git tag --points-at "${MERGED_SHA}" -l "${BRANCH_SAFE}_v*.*.*" \
+              | sort -V | tail -1 || true)
           fi
 
-          if [ -z "$(echo "${COMMITS}" | tr -d '[:space:]')" ]; then
-            echo "create_tag=false" >> "$GITHUB_OUTPUT"
-            echo "next_tag=${LAST_TAG}" >> "$GITHUB_OUTPUT"
-            exit 0
+          # Fallback: search all tags with the branch-safe prefix
+          if [ -z "${COMBINED_TAG}" ] && [ -n "${BRANCH_SAFE}" ]; then
+            COMBINED_TAG=$(git tag -l "${BRANCH_SAFE}_v*.*.*" --sort=-version:refname \
+              | head -1 || true)
           fi
 
-          BUMP=patch
-          if echo "${COMMITS}" | grep -Eiq '(^|[[:space:]])#major([[:space:]]|$)|(^|[[:space:]])\[major\]([[:space:]]|$)|BREAKING CHANGE'; then
-            BUMP=major
-          elif echo "${COMMITS}" | grep -Eiq '(^|[[:space:]])#minor([[:space:]]|$)|(^|[[:space:]])\[minor\]([[:space:]]|$)|^feat(\(.+\))?:'; then
-            BUMP=minor
-          elif echo "${COMMITS}" | grep -Eiq '(^|[[:space:]])#patch([[:space:]]|$)|(^|[[:space:]])\[patch\]([[:space:]]|$)|^fix(\(.+\))?:'; then
-            BUMP=patch
+          # Last resort: use latest plain semver tag
+          if [ -z "${COMBINED_TAG}" ]; then
+            FALLBACK=$(git tag -l 'v*.*.*' --sort=-version:refname | head -1 || true)
+            COMBINED_TAG="${BRANCH_SAFE:+${BRANCH_SAFE}_}${FALLBACK:-v0.0.1}"
           fi
 
-          VERSION=${LAST_TAG#v}
-          IFS='.' read -r MAJOR MINOR PATCH <<< "${VERSION}"
+          # Extract the semver part (e.g. "v1.2.5") from the combined tag
+          VERSION_TAG=$(echo "${COMBINED_TAG}" | grep -oP 'v\d+\.\d+\.\d+' | tail -1)
+          VERSION_TAG="${VERSION_TAG:-v0.0.1}"
 
-          case "${BUMP}" in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch)
-              PATCH=$((PATCH + 1))
-              ;;
-          esac
+          echo "image_tag=${COMBINED_TAG}" >> "$GITHUB_OUTPUT"
+          echo "version_tag=${VERSION_TAG}" >> "$GITHUB_OUTPUT"
 
-          NEXT_TAG="v${MAJOR}.${MINOR}.${PATCH}"
-          BRANCH_SAFE=$(echo "${GITHUB_REF_NAME}" | tr '/' '_' | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG="${BRANCH_SAFE}_${NEXT_TAG}"
-
-          echo "bump=${BUMP}" >> "$GITHUB_OUTPUT"
-          echo "next_tag=${NEXT_TAG}" >> "$GITHUB_OUTPUT"
-          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-
-          if git rev-parse "${NEXT_TAG}" >/dev/null 2>&1; then
-            echo "create_tag=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "create_tag=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Create and push tag
-        if: steps.bump.outputs.create_tag == 'true'
+      - name: Update package.json and create release tag
         shell: bash
         run: |
           set -euo pipefail
 
-          npm version "${{ steps.bump.outputs.bump }}" --no-git-tag-version
+          VERSION="${{ steps.info.outputs.version_tag }}"
+          VERSION="${VERSION#v}"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          npm version "${VERSION}" --no-git-tag-version --allow-same-version
+
           git add package.json package-lock.json
-          git commit -m "chore(release): ${{ steps.bump.outputs.next_tag }}"
+          git diff --staged --quiet || git commit -m "chore(release): ${{ steps.info.outputs.version_tag }}"
           git push origin HEAD:main
 
-          git tag "${{ steps.bump.outputs.next_tag }}"
-          git push origin "${{ steps.bump.outputs.next_tag }}"
+          # Create plain semver tag on the current HEAD and push
+          git tag "${{ steps.info.outputs.version_tag }}" 2>/dev/null || true
+          git push origin "${{ steps.info.outputs.version_tag }}" 2>/dev/null || true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -122,6 +192,16 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/trust-post:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/trust-post:${{ steps.bump.outputs.image_tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/trust-post:${{ steps.info.outputs.image_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.info.outputs.version_tag }}
+          name: Release ${{ steps.info.outputs.version_tag }}
+          generate_release_notes: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

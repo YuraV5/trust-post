@@ -16,6 +16,9 @@ export class MetricsService {
   // Business metrics.
   private readonly activeUsersGauge: Gauge<string>;
   private readonly postsTotal: Counter<string>;
+  private readonly postsCurrentTotalGauge: Gauge<string>;
+  private readonly postsByStatusGauge: Gauge<string>;
+  private readonly postsPendingModerationGauge: Gauge<string>;
   private readonly chatsTotal: Counter<string>;
   private readonly commentsTotal: Counter<string>;
   private readonly likesTotal: Counter<string>;
@@ -58,6 +61,25 @@ export class MetricsService {
       name: 'posts_total',
       help: 'Total number of posts created on the platform',
       labelNames: ['status'],
+      registers: [this.registry],
+    });
+
+    this.postsCurrentTotalGauge = new Gauge({
+      name: 'posts_current_total',
+      help: 'Current total number of non-deleted posts',
+      registers: [this.registry],
+    });
+
+    this.postsByStatusGauge = new Gauge({
+      name: 'posts_current_by_status',
+      help: 'Current number of non-deleted posts grouped by status',
+      labelNames: ['status'],
+      registers: [this.registry],
+    });
+
+    this.postsPendingModerationGauge = new Gauge({
+      name: 'posts_pending_moderation_current',
+      help: 'Current number of posts waiting for moderation',
       registers: [this.registry],
     });
 
@@ -132,6 +154,21 @@ export class MetricsService {
   // Increment post counter when a new post is created.
   recordPostCreated(status: 'published' | 'draft' | 'deleted' = 'published'): void {
     this.postsTotal.inc({ status });
+  }
+
+  // Set current total number of posts (snapshot metric).
+  setCurrentPostsTotal(count: number): void {
+    this.postsCurrentTotalGauge.set(count);
+  }
+
+  // Set current number of posts for a concrete status.
+  setCurrentPostsByStatus(status: string, count: number): void {
+    this.postsByStatusGauge.set({ status }, count);
+  }
+
+  // Set current number of posts that are waiting for moderation.
+  setCurrentPostsPendingModeration(count: number): void {
+    this.postsPendingModerationGauge.set(count);
   }
 
   // Increment chat counter when a new chat is created.

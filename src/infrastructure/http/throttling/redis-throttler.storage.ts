@@ -16,8 +16,11 @@ type ThrottlerRecord = {
 export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShutdown {
   private readonly logger = new Logger(RedisThrottlerStorage.name);
   private readonly client: Redis;
+  private readonly isProduction: boolean;
 
   constructor(private readonly config: ConfigService) {
+    this.isProduction = this.config.get<string>('nodeEnv') === 'production';
+
     this.client = new Redis({
       host: this.config.get<string>('redis.host', 'localhost'),
       port: this.config.get<number>('redis.port', 6379),
@@ -152,6 +155,10 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
 
   // Logging helpers Log successful hits
   private logOk(response: ThrottlerRecord, key: string, throttlerName: string) {
+    if (this.isProduction) {
+      return;
+    }
+
     this.logger.debug(
       `[THROTTLE] ${throttlerName} key=${key} hits=${response.totalHits} ttl=${response.timeToExpire}s`,
     );
@@ -166,7 +173,10 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
 
   // Fallback to allow requests if Redis is unavailable
   private allowFallback(): ThrottlerStorageRecord {
-    this.logger.debug('Throttler fallback: allowing request (Redis unavailable)');
+    if (!this.isProduction) {
+      this.logger.debug('Throttler fallback: allowing request (Redis unavailable)');
+    }
+
     return {
       totalHits: 0,
       timeToExpire: 0,

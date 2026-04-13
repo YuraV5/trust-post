@@ -25,7 +25,7 @@ export interface IAppConfig {
   redis: {
     host: string;
     port: number;
-    password: string;
+    password?: string;
     ttl: number;
     maxRetries: number;
     retryDelayMs: number;

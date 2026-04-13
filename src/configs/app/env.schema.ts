@@ -26,7 +26,11 @@ export const configValidation = Joi.object({
 
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().required(),
-  REDIS_PASSWORD: Joi.string().required(),
+  REDIS_PASSWORD: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
   REDIS_TTL: Joi.number().default(300),
   REDIS_MAX_RETRIES: Joi.number().default(5),
   REDIS_RETRY_DELAY_MS: Joi.number().default(2000),

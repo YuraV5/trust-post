@@ -11,6 +11,7 @@ import { PostsReviewService } from './services';
 import { EmailsModule } from '../emails/emails.module';
 import { CommentsModule } from './comments/comments.module';
 import { PostsFilesModule } from './posts-files/posts-files.module';
+import { MetricsModule } from '../../infrastructure/metrics/metrics.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { PostsFilesModule } from './posts-files/posts-files.module';
     EmailsModule,
     CommentsModule,
     PostsFilesModule,
+    MetricsModule,
   ],
   controllers: [PublicPostsController, StaffPostsController],
   providers: [

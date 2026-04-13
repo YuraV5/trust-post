@@ -12,7 +12,7 @@
 ## Recommended Additions
 
 - [ ] Public demo environment (read-only)
-- [ ] API collection (Postman or Bruno)
+- [x] API collection (Postman or Bruno)
 - [ ] Short load-test report with baseline numbers
 - [ ] Security scan in CI (npm audit or SAST)
 - [ ] Release tags and changelog automation

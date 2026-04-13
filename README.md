@@ -1,242 +1,119 @@
-## 🎯 Project Overview
+# Trust-Post
 
-**Trust-Post** is a production-ready Node.js/NestJS backend for a modern social network platform. It provides:
+Trust-Post is a modular social platform backend built with NestJS and Prisma.
+It demonstrates production-focused backend engineering: authentication, real-time chat,
+background jobs, payments, observability, and Docker-based environments.
 
-- 🔐 **User Authentication** — JWT + OAuth (Google, GitHub, etc.)
-- 💬 **Real-time Messaging** — WebSockets with Socket.io
-- 📝 **Post Management** — Create, edit, delete, like posts
-- 👥 **User System** — Profiles, roles, permissions
-- 🛡️ **Moderation Tools** — Staff dashboard, post review workflow
-- 💳 **Payment Integration** — WayForPay gateway support
-- 📊 **Caching & Queue System** — Redis + BullMQ
-- 🐳 **Docker Ready** — Development and production configs
-- 📚 **Auto-generated API Docs** — Swagger/OpenAPI
+## Stack
 
+- NestJS 11, TypeScript 5
+- PostgreSQL + Prisma
+- Redis + BullMQ
+- Socket.io (real-time chat)
+- Swagger/OpenAPI
+- Prometheus + Grafana + Loki
+- Docker + GitHub Actions
 
-## 🚀 Quick Start
+## Core Features
 
-### Prerequisites
+- JWT auth and OAuth providers
+- Posts, comments, likes, and file upload flow
+- Real-time chat over WebSockets
+- Queue-based email and background jobs
+- Payment module (WayForPay integration)
+- Role-based admin and moderation flows
+- Rate limiting and validation guards
 
-- **Node.js** 18+ (`node --version`)
-- **npm** 9+ (`npm --version`)
-- **Docker & Docker Compose** (for database)
-- **PostgreSQL** 14+ (or use Docker)
-- **Redis** 7+ (or use Docker)
+## Quick Start (Local)
 
-### Installation
+### 1. Install
 
-#### 1. Clone & Install Dependencies
 ```bash
-git clone <repo>
-cd trust-post
-npm install
-```
-
-#### 2. Environment Setup
-```bash
-# Copy example config
+npm ci
 cp .env.example .env.local
-
-# Edit environment variables
-# Required:
-# - DATABASE_URL (PostgreSQL)
-# - REDIS_URL (Redis)
-# - JWT_SECRET (any random string)
-# - FRONTEND_URL (http://localhost:3000)
 ```
 
-#### 3. Start Services (Docker)
+### 2. Start infra
+
 ```bash
-# Start PostgreSQL & Redis
 npm run docker:dev
-
-# Or use docker-compose directly
-docker compose --env-file .env.local up -d
 ```
 
-#### 4. Database Setup
-```bash
-# Run migrations
-npm run mgr:dev
+### 3. Run migrations and seed
 
-# Seed sample data (optional)
+```bash
+npm run mgr:dev
 npm run seed:full
 ```
 
-#### 5. Start Application
+### 4. Start app
+
 ```bash
-# Development mode (watch)
 npm run dev
-
-# Production mode
-npm run prod
-
-# Debug mode
-npm run debug
 ```
 
-Server will be running at: **http://localhost:3001**
+App: http://localhost:3001
+Docs: http://localhost:3001/docs
 
-Swagger docs: **http://localhost:3001/docs** (if `SWAGGER_ENABLED=true`)
+## Monitoring
 
-## 📊 Monitoring Stack
-
-The monitoring stack is **optional** and can be toggled via Docker Compose **profiles**. 
-
-### Dev Mode (Without Monitoring) — Fast Startup ⚡
+Local monitoring for app running on host:
 
 ```bash
-# Start only local postgres + redis (fastest)
-npm run docker:dev
+npm run docker:monitor:dev
 ```
 
-### Dev Monitoring For Local App
+Main endpoints:
 
-Run the Nest app locally on your machine, and start only the monitoring stack in Docker.
+- Prometheus: http://localhost:9090
+- Alertmanager: http://localhost:9093
+- Grafana: http://localhost:3000
+- Loki: http://localhost:3100
+
+## Quality Checks
+
+Run these checks before pushing:
 
 ```bash
-# 1) Start local postgres + redis
-docker compose -f docker-compose.local.yml --env-file .env.local up -d
-
-# 2) Start the Nest app locally
-npm run start:dev
-
-# 3) Start Prometheus/Grafana/Loki/exporters for local app scraping
-docker compose -f docker-compose.local.yml -f docker-compose.monitoring.dev.yml --env-file .env.local up -d
-```
-
-In this mode Prometheus scrapes the app from `host.docker.internal:3001` via `monitoring/prometheus/prometheus.dev.yml`.
-
-### Production / Full Container Monitoring
-
-```bash
-# Start app + postgres + redis + prometheus + grafana + loki + exporters
-docker compose --profile monitoring --env-file .env.local up -d
-```
-
-In this mode Prometheus scrapes the containerized app via `app:3001` using `monitoring/prometheus/prometheus.prod.yml`.
-
-**Monitoring URLs:**
-
-- Prometheus: http://localhost:9090 — Metrics database
-- Alertmanager: http://localhost:9093 — Alert routing
-- Grafana: http://localhost:3000 — Dashboards (admin/admin)
-- Loki: http://localhost:3100 — Log aggregation
-
-**Services in "monitoring" profile:**
-- `postgres-exporter` — DB metrics
-- `redis-exporter` — Redis metrics  
-- `node-exporter` — Host/OS metrics
-- `prometheus` — Metrics scraper
-- `alertmanager` — Alert manager
-- `loki` — Log aggregation
-- `promtail` — Log collector
-- `grafana` — Dashboard UI
-
-**Configuration files:**
-- `monitoring/prometheus/prometheus.dev.yml` — Scrape jobs for local app on host
-- `monitoring/prometheus/prometheus.prod.yml` — Scrape jobs for app running in Docker
-- `monitoring/prometheus/rules.yml` — Alert rules (5xx rate, service down)
-- `monitoring/alertmanager/alertmanager.yml` — Alert routing
-- `monitoring/loki/loki-config.yml` — Log storage config
-- `monitoring/promtail/promtail-config.yml` — Log collection jobs
-- Grafana provisioning + dashboard: `monitoring/grafana/`
-
-Note:
-
-- Slack/Telegram notifications are intentionally left as placeholders for the next phase.
-- Receiver names (`slack`, `telegram`) are already prepared in Alertmanager config, so integrations can be added later without compose changes.
-
-Manual test alert flow (without Slack/Telegram integration):
-
-1. Uncomment `TrustPostManualTestAlert` rule in `monitoring/prometheus/rules.yml`.
-2. Reload Prometheus config:
-
-```bash
-curl -X POST http://localhost:9090/-/reload
-```
-
-3. Verify alert in Alertmanager UI (`http://localhost:9093`) and in Grafana alert views.
-
-## 🏗️ Architecture
-
-### Modules
-
-The application is organized into feature modules:
-
-```
-src/modules/
-├── auth/              # Authentication & sessions
-├── users/             # User profiles & management
-├── posts/             # Posts, comments, files
-├── chat/              # Real-time chat (WebSocket)
-├── message/           # Chat messages
-├── admin/             # Admin operations
-├── payments/          # Payment processing
-├── files/             # File uploads & storage
-├── emails/            # Email sending queue
-├── cache/             # Redis health check
-└── security/          # Security utilities
-```
-
-### Tech Stack
-
-- **Framework**: [NestJS](https://nestjs.com/) 11
-- **Language**: [TypeScript](https://www.typescriptlang.org/) 5.7
-- **Database**: [PostgreSQL](https://www.postgresql.org/) 16 + [Prisma](https://www.prisma.io/) ORM
-- **Caching**: [Redis](https://redis.io/) 7 + [ioredis](https://github.com/luin/ioredis)
-- **Job Queue**: [BullMQ](https://docs.bullmq.io/)
-- **Real-time**: [Socket.io](https://socket.io/)
-- **Authentication**: JWT + [argon2](https://en.wikipedia.org/wiki/Argon2) for password hashing
-- **File Storage**: [Cloudinary](https://cloudinary.com/) CDN
-- **Validation**: [class-validator](https://github.com/typestack/class-validator)
-- **Documentation**: [Swagger/OpenAPI](https://swagger.io/)
-
-
-## 📦 Build & Deploy
-
-### Production Build
-```bash
-# Build TypeScript
+npm run lint:check
+npm run format:check
+npm run test
 npm run build
-
-# Check output
-ls -la dist/
-
-# Run production server
-npm run prod
 ```
 
-### Docker Production
+## CI
 
-```bash
-# Build image
-docker build -t trust-post:latest .
+Pull request checks include:
 
-# Run with docker-compose
-docker compose -f docker-compose.yml up
+- lint check
+- format check
+- unit tests
+- build
+- docker image build validation
 
-# Clean up
-docker compose down -v
+Workflow files are under .github/workflows.
 
-## 🛠️ Development
+## Project Structure
 
-### Code Structure
-```
+```text
 src/
-├── app/               # Application setup (Swagger, guards, etc.)
-├── common/            # Shared decorators, guards, utilities
-├── modules/           # Feature modules
-├── shared/            # Global services (logger, config)
-└── main.ts            # Entry point
+  app/              # app bootstrapping and global setup
+  common/           # guards, decorators, shared helpers
+  configs/          # typed config modules
+  infrastructure/   # adapters and integrations
+  modules/          # feature modules (auth, posts, chat, payments, etc.)
+  shared/           # shared services and logger
+prisma/             # schema and migrations
+monitoring/         # prometheus, grafana, loki, alertmanager config
+unit-tests/         # unit test suites
+test/               # integration and container test setup
+```
 
-## 🔒 Security Best Practices
+## Portfolio Notes
 
-1. **Environment Variables** — Never commit `.env` files
-2. **Password Hashing** — Using Argon2 (industry standard)
-3. **CORS** — Configured for frontend domain only
-4. **Helmet** — Express security headers enabled
-5. **Rate Limiting** — Per-route throttling active
-6. **HTTPS** — Required in production
-7. **Database** — Prepared statements via Prisma
-8. **Input Validation** — class-validator on all DTOs
+This project is focused on backend architecture and operational readiness.
+See short engineering notes:
+
+- docs/ARCHITECTURE.md
+- docs/DECISIONS.md
+- docs/PORTFOLIO_CHECKLIST.md

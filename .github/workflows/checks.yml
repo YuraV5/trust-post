@@ -23,10 +23,10 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint:check
 
       - name: Format check
-        run: npm run format -- --check
+        run: npm run format:check
 
       - name: Tests
         run: npm run test
@@ -50,6 +50,6 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
-          tags: work-link-service:${{ github.sha }}
+          tags: trust-post:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

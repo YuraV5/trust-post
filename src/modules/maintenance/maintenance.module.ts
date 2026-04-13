@@ -5,15 +5,21 @@ import { OrphanFilesJob } from './jobs/orphan-files.job';
 import { ExpiredPendingPaymentsCleanupJob } from './jobs/expired-pending-payments-cleanup.job';
 import { RejectedDeletedCommentsCleanupJob } from './jobs/rejected-deleted-comments-cleanup.job';
 import { FilesModule } from '../files/files.module';
+import { PrismaModule } from '../prisma/prisma.module';
+import { MetricsModule } from '../../infrastructure/metrics/metrics.module';
+import { ActiveUsersMetricsJob } from './jobs/active-users-metrics.job';
+import { PostsStatusMetricsJob } from './jobs/posts-status-metrics.job';
 
 @Module({
-  imports: [FilesModule],
+  imports: [FilesModule, PrismaModule, MetricsModule],
   providers: [
     UnverifiedUsersCleanupJob,
     ExpiredSessionsCleanupJob,
     OrphanFilesJob,
     ExpiredPendingPaymentsCleanupJob,
     RejectedDeletedCommentsCleanupJob,
+    ActiveUsersMetricsJob,
+    PostsStatusMetricsJob,
   ],
 })
 export class MaintenanceModule {}

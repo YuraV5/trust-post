@@ -1,23 +1,14 @@
 services:
-  app:
-    image: trust-post:latest
-    container_name: trust_post_app
-    env_file:
-      - .env.local
-    ports:
-      - "3001:3001"
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
   db:
     image: postgres:15
-    container_name: trust_post_db
+    container_name: postgres_dev
+    restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -25,23 +16,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
   redis:
     image: redis:7
-    container_name: trust_post_redis
-    command: >  
-      redis-server
-      --appendonly yes
-      --requirepass ${REDIS_PASSWORD}
+    container_name: redis_dev
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 10
-    restart: unless-stopped
+      retries: 5
 
 volumes:
   pgdata:

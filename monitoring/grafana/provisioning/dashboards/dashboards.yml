@@ -1,0 +1,16 @@
+apiVersion: 1
+
+# Dashboard provisioning from local JSON files.
+providers:
+  - name: trust-post
+    orgId: 1
+    # Folder name shown in Grafana UI.
+    folder: Trust-Post
+    type: file
+    # If true, dashboards missing from filesystem are removed from Grafana.
+    disableDeletion: false
+    # Allow editing provisioned dashboards in Grafana UI.
+    editable: true
+    options:
+      # Path where dashboard JSON files are mounted in the Grafana container.
+      path: /var/lib/grafana/dashboards

@@ -4,10 +4,14 @@ import { Context } from '../../../shared/contex/context.service';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Response, Request } from 'express';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
+import { MetricsService } from '../../metrics/metrics.service';
 
 @Injectable()
 export class HttpContextInterceptor implements NestInterceptor {
-  constructor(@Inject(APP_LOGGER) private readonly logger: IAppLogger) {}
+  constructor(
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     if (context.getType() !== 'http') {
@@ -48,6 +52,14 @@ export class HttpContextInterceptor implements NestInterceptor {
         // Exception filters log final mapped status codes and payload details.
         // Logging error here can capture stale status (often 200) before filters run.
         if (hasError) return;
+
+        // Record metrics for non-exception flow with the final response status.
+        this.metricsService.recordHttpRequest(
+          req.method,
+          this.metricsService.resolveRouteLabel(req),
+          res.statusCode,
+          duration,
+        );
 
         this.logger.info('HTTP request completed', {
           method: req.method,

@@ -6,6 +6,7 @@ import { AppErrorCode } from '../../../shared/errors/error-codes';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Context } from '../../../shared/contex/context.service';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
+import { MetricsService } from '../../metrics/metrics.service';
 
 type PrismaError = Prisma.PrismaClientKnownRequestError | Prisma.PrismaClientValidationError;
 
@@ -14,6 +15,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly adapterHost: HttpAdapterHost,
+    private readonly metricsService: MetricsService,
   ) {}
 
   catch(exception: PrismaError, host: ArgumentsHost): void {
@@ -45,6 +47,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
 
     // Prisma validation errors happen before query execution and have no prisma code.
     if (error instanceof Prisma.PrismaClientValidationError) {
+      // Track validation-related database failures as HTTP 400.
+      this.metricsService.recordHttpRequest(req.method, this.metricsService.resolveRouteLabel(req), 400, 0);
+
       httpAdapter.reply(
         res,
         {
@@ -97,6 +102,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         message = 'Invalid database input';
         break;
     }
+
+    // Track mapped Prisma errors with their resulting HTTP status.
+    this.metricsService.recordHttpRequest(req.method, this.metricsService.resolveRouteLabel(req), status, 0);
 
     httpAdapter.reply(
       res,

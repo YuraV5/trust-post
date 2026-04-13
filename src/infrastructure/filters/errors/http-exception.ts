@@ -14,12 +14,14 @@ import { AppError } from '../../../shared/errors/basic-app-error';
 import { AppErrorCode } from '../../../shared/errors/error-codes';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
+import { MetricsService } from '../../metrics/metrics.service';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly adapterHost: HttpAdapterHost,
+    private readonly metricsService: MetricsService,
   ) {}
 
   catch(exception: HttpException, host: ArgumentsHost): void {
@@ -67,6 +69,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       stack: exception instanceof Error ? exception.stack : undefined,
       context: 'HttpExceptionFilter',
     });
+
+    // Record exception response metrics with the mapped final status code.
+    this.metricsService.recordHttpRequest(req.method, this.metricsService.resolveRouteLabel(req), status, 0);
 
     httpAdapter.reply(
       res,

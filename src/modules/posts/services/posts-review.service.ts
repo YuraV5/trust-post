@@ -10,6 +10,7 @@ import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { PostLifecycleStatus } from '../types/common';
 import { ResponseMessage } from '../../../common/types';
 import { EmailQueueService } from '../../emails/email-queue.service';
+import { MetricsService } from '../../../infrastructure/metrics/metrics.service';
 
 @Injectable()
 export class PostsReviewService {
@@ -20,6 +21,7 @@ export class PostsReviewService {
     private readonly prisma: PrismaService,
     private readonly postsRepo: PostsRepo,
     private readonly emailQueue: EmailQueueService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async assignReviewer(postId: number): Promise<ResponseMessage> {
@@ -65,6 +67,11 @@ export class PostsReviewService {
       }
     }
 
+    // Approved moderation must always map to approved post lifecycle status.
+    if (reviewStatus === PostReviewStatus.APPROVED && postStatus !== PostStatus.APPROVED) {
+      throw new AppBadRequestException('When reviewStatus is APPROVED, postStatus must be APPROVED');
+    }
+
     // --- LOAD REQUIRED DATA ONCE ---
     const post = await this.postsRepo.getPostById(postId);
     if (!post) {
@@ -86,6 +93,15 @@ export class PostsReviewService {
 
       await this.postsRepo.updateStatus(postId, { postStatus, statusReason: finalStatusReason }, tx);
     });
+
+    // Count publication only when moderation approves the post.
+    if (
+      reviewStatus === PostReviewStatus.APPROVED &&
+      postStatus === PostStatus.APPROVED &&
+      post.status !== PostStatus.APPROVED
+    ) {
+      this.metricsService.recordPostCreated('published');
+    }
 
     if (reviewStatus === PostReviewStatus.REJECTED) {
       this.emailQueue

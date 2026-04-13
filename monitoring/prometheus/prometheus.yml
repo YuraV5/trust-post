@@ -1,0 +1,46 @@
+# Global Prometheus behavior.
+# scrape_interval: how often metrics are collected from targets.
+# evaluation_interval: how often alert expressions are evaluated.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Alert rules loaded by Prometheus.
+rule_files:
+  - /etc/prometheus/rules.yml
+
+# Where to send firing alerts.
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  # Prometheus self-monitoring target.
+  - job_name: prometheus
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  # Main application metrics target.
+  # If app runs inside Docker network, use: app:3001
+  # If app runs on host machine (current setup), use: host.docker.internal:3001
+  - job_name: trust-post-app
+    metrics_path: /v1/metrics
+    static_configs:
+      - targets: ["host.docker.internal:3001"]
+
+  # Postgres infrastructure metrics (connections, DB up/down, etc.).
+  - job_name: postgres-exporter
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # Redis infrastructure metrics (memory, clients, commands, up/down).
+  - job_name: redis-exporter
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  # Host-level CPU/RAM/disk/network metrics for Node Exporter dashboards (e.g., 1860).
+  - job_name: node-exporter
+    static_configs:
+      - targets: ["host.docker.internal:9100"]

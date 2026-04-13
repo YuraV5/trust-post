@@ -7,6 +7,8 @@ export interface IAppConfig {
   swaggerEnabled: boolean;
   serviceName: string;
   loggerLevel: string;
+  loggerFileMaxSizeMb: number;
+  loggerFileMaxFiles: number;
   frontUrl: string;
   serviceUrl: string;
   idempotency: {
@@ -23,7 +25,7 @@ export interface IAppConfig {
   redis: {
     host: string;
     port: number;
-    password: string;
+    password?: string;
     ttl: number;
     maxRetries: number;
     retryDelayMs: number;

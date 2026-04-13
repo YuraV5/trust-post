@@ -79,6 +79,85 @@ Server will be running at: **http://localhost:3001**
 
 Swagger docs: **http://localhost:3001/docs** (if `SWAGGER_ENABLED=true`)
 
+## 📊 Monitoring Stack
+
+The monitoring stack is **optional** and can be toggled via Docker Compose **profiles**. 
+
+### Dev Mode (Without Monitoring) — Fast Startup ⚡
+
+```bash
+# Start only local postgres + redis (fastest)
+npm run docker:dev
+```
+
+### Dev Monitoring For Local App
+
+Run the Nest app locally on your machine, and start only the monitoring stack in Docker.
+
+```bash
+# 1) Start local postgres + redis
+docker compose -f docker-compose.local.yml --env-file .env.local up -d
+
+# 2) Start the Nest app locally
+npm run start:dev
+
+# 3) Start Prometheus/Grafana/Loki/exporters for local app scraping
+docker compose -f docker-compose.local.yml -f docker-compose.monitoring.dev.yml --env-file .env.local up -d
+```
+
+In this mode Prometheus scrapes the app from `host.docker.internal:3001` via `monitoring/prometheus/prometheus.dev.yml`.
+
+### Production / Full Container Monitoring
+
+```bash
+# Start app + postgres + redis + prometheus + grafana + loki + exporters
+docker compose --profile monitoring --env-file .env.local up -d
+```
+
+In this mode Prometheus scrapes the containerized app via `app:3001` using `monitoring/prometheus/prometheus.prod.yml`.
+
+**Monitoring URLs:**
+
+- Prometheus: http://localhost:9090 — Metrics database
+- Alertmanager: http://localhost:9093 — Alert routing
+- Grafana: http://localhost:3000 — Dashboards (admin/admin)
+- Loki: http://localhost:3100 — Log aggregation
+
+**Services in "monitoring" profile:**
+- `postgres-exporter` — DB metrics
+- `redis-exporter` — Redis metrics  
+- `node-exporter` — Host/OS metrics
+- `prometheus` — Metrics scraper
+- `alertmanager` — Alert manager
+- `loki` — Log aggregation
+- `promtail` — Log collector
+- `grafana` — Dashboard UI
+
+**Configuration files:**
+- `monitoring/prometheus/prometheus.dev.yml` — Scrape jobs for local app on host
+- `monitoring/prometheus/prometheus.prod.yml` — Scrape jobs for app running in Docker
+- `monitoring/prometheus/rules.yml` — Alert rules (5xx rate, service down)
+- `monitoring/alertmanager/alertmanager.yml` — Alert routing
+- `monitoring/loki/loki-config.yml` — Log storage config
+- `monitoring/promtail/promtail-config.yml` — Log collection jobs
+- Grafana provisioning + dashboard: `monitoring/grafana/`
+
+Note:
+
+- Slack/Telegram notifications are intentionally left as placeholders for the next phase.
+- Receiver names (`slack`, `telegram`) are already prepared in Alertmanager config, so integrations can be added later without compose changes.
+
+Manual test alert flow (without Slack/Telegram integration):
+
+1. Uncomment `TrustPostManualTestAlert` rule in `monitoring/prometheus/rules.yml`.
+2. Reload Prometheus config:
+
+```bash
+curl -X POST http://localhost:9090/-/reload
+```
+
+3. Verify alert in Alertmanager UI (`http://localhost:9093`) and in Grafana alert views.
+
 ## 🏗️ Architecture
 
 ### Modules

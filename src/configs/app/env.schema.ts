@@ -9,6 +9,8 @@ export const configValidation = Joi.object({
   SWAGGER_ENABLED: Joi.boolean().truthy('true', '1', 'yes', 'on').falsy('false', '0', 'no', 'off').default(false),
   SERVICE_NAME: Joi.string().default('trust-post-service'),
   LOGGER_LEVEL: Joi.string().default('info'),
+  LOGGER_FILE_MAX_SIZE_MB: Joi.number().integer().min(1).default(10),
+  LOGGER_FILE_MAX_FILES: Joi.number().integer().min(1).default(5),
   FRONTEND_URL: Joi.string().uri().required(),
   SERVICE_URL: Joi.string().uri().default('http://localhost:3001'),
   IDEMPOTENCY_ENABLED: Joi.boolean().truthy('true', '1', 'yes', 'on').falsy('false', '0', 'no', 'off').default(false),
@@ -24,7 +26,11 @@ export const configValidation = Joi.object({
 
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().required(),
-  REDIS_PASSWORD: Joi.string().required(),
+  REDIS_PASSWORD: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().required(),
+    otherwise: Joi.string().allow('').optional(),
+  }),
   REDIS_TTL: Joi.number().default(300),
   REDIS_MAX_RETRIES: Joi.number().default(5),
   REDIS_RETRY_DELAY_MS: Joi.number().default(2000),

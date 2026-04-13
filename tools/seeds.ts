@@ -39,27 +39,27 @@ async function hashPassword(password: string): Promise<string> {
 // Generate random text content
 function generatePostContent(): string {
   const contents = [
-    'Шукаю допомогу на розвиток стартапу в сфері технологій.',
-    'Потрібні кошти для медичного лікування. Дякую за допомогу!',
-    'Збираю гроші на освіту моєї дитини за кордоном.',
-    'Проєкт по збереженню довкілля потребує фінансування.',
-    'Допоможіть реалізувати художній проєкт місцевої громади.',
-    'Потрібна фінансова підтримка для відкриття малого бізнесу.',
-    'Цільова сума на благодійні потреби нашої сільської громади.',
-    'Шукаємо спонсорів для молодіжного спортивного проєкту.',
+    'I am looking for help to develop a startup in the field of technology.',
+    'I need funds for medical treatment. Thank you for your help!',
+    'I am raising money for my child"s education abroad.',
+    'An environmental conservation project needs funding.',
+    'Help implement an art project for the local community.',
+    'I need financial support to open a small business.',
+    'Target amount for the charitable needs of our rural community.',
+    'We are looking for sponsors for a youth sports project.',
   ];
   return contents[Math.floor(Math.random() * contents.length)];
 }
 
 function generateCommentContent(): string {
   const comments = [
-    'Гарна ініціатива! Бажаю успіхів!',
-    'Підтримую цей проєкт. Це дуже важливо!',
-    'Дякую за цю можливість. Чого вам вдалося?',
-    'Відмінна робота! Сподіваюся на позитивні результати.',
-    'Я готовий допомогти. Як мені приєднатися?',
-    'Це саме те, що нам всім потрібно.',
-    'Дякую за приклад. Вдалого вам розвитку!',
+    'Good initiative! I wish you success!',
+    'I support this project. It is very important!',
+    'Thank you for this opportunity. What have you achieved?',
+    'Excellent work! I hope for positive results.',
+    'I am ready to help. How can I join?',
+    'This is exactly what we all need.',
+    'Thank you for the example. Good luck with your development!',
   ];
   return comments[Math.floor(Math.random() * comments.length)];
 }

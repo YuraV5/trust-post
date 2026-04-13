@@ -1,0 +1,138 @@
+groups:
+  # Recording rules for pre-computed metrics to optimize dashboard queries.
+  # These rules aggregate high-cardinality metrics into lower-cardinality time series.
+  # interval: 15s means metrics are updated every 15 seconds.
+  - name: trust-post.recording
+    interval: 15s
+    rules:
+      # Percentile latency: P95 over 5-minute sliding window.
+      - record: http_request_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="trust-post-app"}[5m])) by (le, method, route))
+
+      # Percentile latency: P99 over 5-minute sliding window.
+      - record: http_request_duration_seconds:p99_5m
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="trust-post-app"}[5m])) by (le, method, route))
+
+      # Request rate per second (total across all endpoints).
+      - record: http_requests:rate1m
+        expr: sum(rate(http_requests_total{job="trust-post-app"}[1m])) by (method, status_code)
+
+      # 5xx error rate over 5-minute window.
+      - record: http_5xx:rate5m
+        expr: sum(rate(http_requests_total{job="trust-post-app",status_code=~"5.."}[5m])) by (method)
+
+      # Average request duration over 5-minute window (for trend analysis).
+      - record: http_request_duration_seconds:avg5m
+        expr: avg(rate(http_request_duration_seconds_sum{job="trust-post-app"}[5m]) / rate(http_request_duration_seconds_count{job="trust-post-app"}[5m])) by (method, route)
+
+  # One rules group for trust-post service.
+  # interval: how often Prometheus re-evaluates rules in this group.
+  - name: trust-post.rules
+    interval: 30s
+    rules:
+      # Critical: service is unreachable by Prometheus for >1 minute.
+      - alert: TrustPostServiceDown
+        expr: up{job="trust-post-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+          service: trust-post
+          environment: local
+        annotations:
+          summary: "trust-post service is down"
+          description: "Prometheus cannot scrape trust-post-app for more than 1 minute."
+          service: "trust-post"
+          environment: "local"
+          runbook_url: "https://runbooks.example/trust-post/service-down"
+          dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"
+
+      # Critical: high 5xx ratio over short window.
+      # Noise guard: evaluate only when there are at least 20 requests in 5m.
+      # Tune here:
+      # - threshold 0.05 -> make higher/lower depending on tolerance.
+      # - volume gate 20 -> increase in low-traffic environments.
+      - alert: TrustPost5xxRateCritical
+        expr: |
+          (
+            sum(increase(http_requests_total{job="trust-post-app",status_code=~"5.."}[5m]))
+            /
+            clamp_min(sum(increase(http_requests_total{job="trust-post-app"}[5m])), 1)
+          ) > 0.05
+          and
+          sum(increase(http_requests_total{job="trust-post-app"}[5m])) >= 20
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+          service: trust-post
+          environment: local
+        annotations:
+          summary: "Critical 5xx error ratio"
+          description: "5xx ratio is above 5% over the last 5 minutes with at least 20 requests."
+          service: "trust-post"
+          environment: "local"
+          runbook_url: "https://runbooks.example/trust-post/http-5xx"
+          dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"
+
+      # Warning: smaller but persistent 5xx ratio on longer window.
+      # Noise guard: evaluate only when there are at least 50 requests in 10m.
+      - alert: TrustPost5xxRateWarning
+        expr: |
+          (
+            sum(increase(http_requests_total{job="trust-post-app",status_code=~"5.."}[10m]))
+            /
+            clamp_min(sum(increase(http_requests_total{job="trust-post-app"}[10m])), 1)
+          ) > 0.01
+          and
+          sum(increase(http_requests_total{job="trust-post-app"}[10m])) >= 50
+        for: 3m
+        labels:
+          severity: warning
+          team: backend
+          service: trust-post
+          environment: local
+        annotations:
+          summary: "Warning 5xx error ratio"
+          description: "5xx ratio is above 1% over the last 10 minutes with at least 50 requests."
+          service: "trust-post"
+          environment: "local"
+          runbook_url: "https://runbooks.example/trust-post/http-5xx"
+          dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"
+
+      # Critical: absolute count of status=500 in 5m window.
+      # Tune N here (currently 20) based on traffic profile.
+      - alert: TrustPost500ErrorsAbsoluteCritical
+        expr: sum(increase(http_requests_total{job="trust-post-app",status_code="500"}[5m])) > 20
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+          service: trust-post
+          environment: local
+        annotations:
+          summary: "Critical absolute 500 errors"
+          description: "More than 20 HTTP 500 responses were observed in the last 5 minutes."
+          service: "trust-post"
+          environment: "local"
+          runbook_url: "https://runbooks.example/trust-post/http-500-burst"
+          dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"
+
+          # Manual smoke-test alert.
+          # Keep it commented in normal mode to avoid permanent noise.
+          # Uncomment temporarily when testing Alertmanager routing.
+      # - alert: TrustPostManualTestAlert
+      #   expr: vector(1)
+      #   for: 1m
+      #   labels:
+      #     severity: info
+      #     team: backend
+      #     service: trust-post
+      #     environment: local
+      #   annotations:
+      #     summary: "Manual test alert"
+      #     description: "Used to verify notification routing (Slack/Telegram)."
+      #     service: "trust-post"
+      #     environment: "local"
+      #     runbook_url: "https://runbooks.example/trust-post/manual-test-alert"
+      #     dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"

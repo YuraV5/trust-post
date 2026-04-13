@@ -1,6 +1,6 @@
 {
   "name": "trust-post",
-  "version": "0.0.2",
+  "version": "1.1.1",
   "description": "Pet project for my CV. Social media platform with AI features built with NestJS and Prisma.",
   "author": "Vakula Yuriy <1vakyura1@gmail.com>",
   "private": true,

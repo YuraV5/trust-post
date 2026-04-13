@@ -1,52 +1,7 @@
 services:
-  app:
-    image: trust-post:latest
-    container_name: trust_post_app
-    env_file:
-      - .env
-    ports:
-      - "3001:3001"
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
-  db:
-    image: postgres:15
-    container_name: trust_post_db
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  redis:
-    image: redis:7
-    container_name: trust_post_redis
-    command: >  
-      redis-server
-      --appendonly yes
-      --requirepass ${REDIS_PASSWORD}
-    volumes:
-      - redisdata:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    restart: unless-stopped
-
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.16.0
     container_name: trust_post_postgres_exporter
-    profiles: ["monitoring"]
     environment:
       DATA_SOURCE_NAME: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
     depends_on:
@@ -57,10 +12,8 @@ services:
   redis-exporter:
     image: oliver006/redis_exporter:v1.62.0
     container_name: trust_post_redis_exporter
-    profiles: ["monitoring"]
     environment:
       REDIS_ADDR: redis://redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       redis:
         condition: service_healthy
@@ -69,7 +22,6 @@ services:
   node-exporter:
     image: prom/node-exporter:v1.8.2
     container_name: trust_post_node_exporter
-    profiles: ["monitoring"]
     ports:
       - "9100:9100"
     restart: unless-stopped
@@ -77,7 +29,6 @@ services:
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: trust_post_prometheus
-    profiles: ["monitoring"]
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -85,12 +36,10 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/prometheus.dev.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
       - prometheusdata:/prometheus
     depends_on:
-      app:
-        condition: service_started
       alertmanager:
         condition: service_started
     restart: unless-stopped
@@ -98,7 +47,6 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.27.0
     container_name: trust_post_alertmanager
-    profiles: ["monitoring"]
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
@@ -112,7 +60,6 @@ services:
   loki:
     image: grafana/loki:3.1.1
     container_name: trust_post_loki
-    profiles: ["monitoring"]
     command: -config.file=/etc/loki/loki-config.yml
     ports:
       - "3100:3100"
@@ -124,7 +71,6 @@ services:
   promtail:
     image: grafana/promtail:3.1.1
     container_name: trust_post_promtail
-    profiles: ["monitoring"]
     command: -config.file=/etc/promtail/promtail-config.yml
     volumes:
       - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
@@ -138,7 +84,6 @@ services:
   grafana:
     image: grafana/grafana:11.1.4
     container_name: trust_post_grafana
-    profiles: ["monitoring"]
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
@@ -158,8 +103,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  pgdata:
-  redisdata:
   prometheusdata:
   alertmanagerdata:
   grafanadata:

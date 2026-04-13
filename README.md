@@ -86,18 +86,35 @@ The monitoring stack is **optional** and can be toggled via Docker Compose **pro
 ### Dev Mode (Without Monitoring) — Fast Startup ⚡
 
 ```bash
-# Start only app + postgres + redis (fastest)
+# Start only local postgres + redis (fastest)
 npm run docker:dev
-# or
-docker compose --env-file .env.local up -d
 ```
 
-### With Monitoring Stack
+### Dev Monitoring For Local App
+
+Run the Nest app locally on your machine, and start only the monitoring stack in Docker.
+
+```bash
+# 1) Start local postgres + redis
+docker compose -f docker-compose.local.yml --env-file .env.local up -d
+
+# 2) Start the Nest app locally
+npm run start:dev
+
+# 3) Start Prometheus/Grafana/Loki/exporters for local app scraping
+docker compose -f docker-compose.local.yml -f docker-compose.monitoring.dev.yml --env-file .env.local up -d
+```
+
+In this mode Prometheus scrapes the app from `host.docker.internal:3001` via `monitoring/prometheus/prometheus.dev.yml`.
+
+### Production / Full Container Monitoring
 
 ```bash
 # Start app + postgres + redis + prometheus + grafana + loki + exporters
 docker compose --profile monitoring --env-file .env.local up -d
 ```
+
+In this mode Prometheus scrapes the containerized app via `app:3001` using `monitoring/prometheus/prometheus.prod.yml`.
 
 **Monitoring URLs:**
 
@@ -117,7 +134,8 @@ docker compose --profile monitoring --env-file .env.local up -d
 - `grafana` — Dashboard UI
 
 **Configuration files:**
-- `monitoring/prometheus/prometheus.yml` — Scrape jobs + storage
+- `monitoring/prometheus/prometheus.dev.yml` — Scrape jobs for local app on host
+- `monitoring/prometheus/prometheus.prod.yml` — Scrape jobs for app running in Docker
 - `monitoring/prometheus/rules.yml` — Alert rules (5xx rate, service down)
 - `monitoring/alertmanager/alertmanager.yml` — Alert routing
 - `monitoring/loki/loki-config.yml` — Log storage config

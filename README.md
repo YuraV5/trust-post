@@ -195,39 +195,6 @@ src/modules/
 
 ## 📦 Build & Deploy
 
-## 🔖 Versioning & Release Rules
-
-Production releases use **SemVer** + **Git tags**.
-
-- `patch` (`vX.Y.Z`) for bug fixes and safe internal improvements without public API changes
-- `minor` (`vX.Y.0`) for backward-compatible new features
-- `major` (`vX.0.0`) for breaking changes
-
-### Release flow (recommended)
-
-1. Merge tested code into `main`.
-2. CI reads all commit messages since the last `vX.Y.Z` tag.
-3. CI chooses the highest bump marker and updates repository version files automatically (`package.json`, `package-lock.json`).
-4. CI commits release version update into `main`.
-5. CI creates a new git tag automatically.
-6. In the same CI run, Docker image is pushed with tags:
-	- `trust-post:main_vX.Y.Z` (branch + immutable release version, `/` is replaced with `_`)
-	- `trust-post:latest` (latest stable)
-
-### Commit markers for auto bump
-
-- `#major` or `[major]` or `BREAKING CHANGE` -> `major`
-- `#minor` or `[minor]` or `feat:` -> `minor`
-- `#patch` or `[patch]` or `fix:` -> `patch`
-
-If multiple markers appear, CI picks the highest level: `major > minor > patch`.
-
-### Why this is better for production
-
-- Immutable release tags are easy to roll back.
-- Version meaning is clear for team and CI/CD.
-- `latest` stays convenient, but exact deploys can always pin `main_vX.Y.Z`.
-
 ### Production Build
 ```bash
 # Build TypeScript

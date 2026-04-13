@@ -10,6 +10,7 @@ on:
 
 jobs:
   docker:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -73,7 +74,12 @@ jobs:
           esac
 
           NEXT_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          BRANCH_SAFE=$(echo "${GITHUB_REF_NAME}" | tr '/' '_' | tr '[:upper:]' '[:lower:]')
+          IMAGE_TAG="${BRANCH_SAFE}_${NEXT_TAG}"
+
+          echo "bump=${BUMP}" >> "$GITHUB_OUTPUT"
           echo "next_tag=${NEXT_TAG}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
 
           if git rev-parse "${NEXT_TAG}" >/dev/null 2>&1; then
             echo "create_tag=false" >> "$GITHUB_OUTPUT"
@@ -86,8 +92,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          npm version "${{ steps.bump.outputs.bump }}" --no-git-tag-version
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add package.json package-lock.json
+          git commit -m "chore(release): ${{ steps.bump.outputs.next_tag }}"
+          git push origin HEAD:main
+
           git tag "${{ steps.bump.outputs.next_tag }}"
           git push origin "${{ steps.bump.outputs.next_tag }}"
 
@@ -108,6 +122,6 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/trust-post:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/trust-post:${{ steps.bump.outputs.next_tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/trust-post:${{ steps.bump.outputs.image_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

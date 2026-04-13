@@ -33,6 +33,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          sanitize_for_tag() {
+            # Docker tag safe charset: [A-Za-z0-9_.-]
+            # Convert everything else to '-', collapse separators, and trim ends.
+            echo "$1" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed -E 's|/|_|g; s|[^a-z0-9_.-]+|-|g; s|-+|-|g; s|^[-_.]+||; s|[-_.]+$||'
+          }
+
           git fetch --tags --force
           git fetch origin main
 
@@ -66,7 +74,8 @@ jobs:
           esac
 
           NEXT_TAG="v${MAJOR}.${MINOR}.${PATCH}"
-          BRANCH_SAFE=$(echo "${{ github.head_ref }}" | tr '/' '_' | tr '[:upper:]' '[:lower:]')
+          BRANCH_SAFE=$(sanitize_for_tag "${{ github.head_ref }}")
+          [ -z "${BRANCH_SAFE}" ] && BRANCH_SAFE="branch"
           COMBINED_TAG="${BRANCH_SAFE}_${NEXT_TAG}"
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -110,6 +119,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          sanitize_for_tag() {
+            # Docker tag safe charset: [A-Za-z0-9_.-]
+            # Convert everything else to '-', collapse separators, and trim ends.
+            echo "$1" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed -E 's|/|_|g; s|[^a-z0-9_.-]+|-|g; s|-+|-|g; s|^[-_.]+||; s|[-_.]+$||'
+          }
+
           git fetch --tags --force
 
           # ── Extract merged branch name from the merge commit message ─────────
@@ -124,7 +141,8 @@ jobs:
             BRANCH=$(echo "${MERGE_MSG}" | head -1 | sed -E 's/ \(#[0-9]+\)$//' | tr -d '\r\n')
           fi
 
-          BRANCH_SAFE=$(echo "${BRANCH}" | tr '/' '_' | tr '[:upper:]' '[:lower:]' | tr -d '\r\n')
+          BRANCH_SAFE=$(sanitize_for_tag "${BRANCH}")
+          [ -z "${BRANCH_SAFE}" ] && BRANCH_SAFE="branch"
 
           # ── Find the combined tag assigned to this branch during the PR ──────
           MERGED_SHA=$(git rev-parse HEAD^2 2>/dev/null || echo "")

@@ -3,7 +3,8 @@ import { ChatType } from '@prisma/client';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { ChatService } from '../../src/modules/chat/services/chat.service';
 import { ChatRepo } from '../../src/modules/chat/repos';
-import { StubAppLogger } from '../__mock__';
+import { RedisService } from '../../src/modules/cache/services';
+import { StubAppLogger, mockRedisService } from '../__mock__';
 
 describe('ChatService', () => {
   let service: ChatService;
@@ -29,6 +30,7 @@ describe('ChatService', () => {
       providers: [
         ChatService,
         { provide: ChatRepo, useValue: mockChatRepo },
+        { provide: RedisService, useValue: mockRedisService },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();

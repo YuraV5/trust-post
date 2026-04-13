@@ -3,8 +3,9 @@ import { CommentsService } from '../../src/modules/posts/comments/services/comme
 import { CommentsRepo, CommentLikeRepo } from '../../src/modules/posts/comments/repo';
 import { CommentsModerationQueueService } from '../../src/modules/posts/comments/queue';
 import { TokensService } from '../../src/modules/security/services';
+import { RedisService } from '../../src/modules/cache/services';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
-import { StubAppLogger } from '../__mock__';
+import { StubAppLogger, mockRedisService } from '../__mock__';
 
 describe('CommentsService', () => {
   let service: CommentsService;
@@ -51,6 +52,7 @@ describe('CommentsService', () => {
         { provide: CommentLikeRepo, useValue: mockCommentLikeRepo },
         { provide: CommentsModerationQueueService, useValue: mockModerationQueue },
         { provide: TokensService, useValue: mockTokensService },
+        { provide: RedisService, useValue: mockRedisService },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();

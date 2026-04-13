@@ -18,11 +18,13 @@ import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { CommentsModerationQueueService } from '../queue';
 import { TokensService } from '../../../security/services';
+import { RedisService } from '../../../cache/services';
 
 @Injectable()
 export class CommentsService implements ICommentsService {
   private readonly MAX_LIMIT = 100;
   private readonly RETRY_BATCH_SIZE = 25;
+  private readonly COMMENTS_LIST_CACHE_TTL_SECONDS = 30;
 
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
@@ -30,6 +32,7 @@ export class CommentsService implements ICommentsService {
     private readonly commentLikesRepo: CommentLikeRepo,
     private readonly moderationQueue: CommentsModerationQueueService,
     private readonly tokensService: TokensService,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(postId: number, authorId: string, data: CreateCommentInput): Promise<ResponseMessage> {
@@ -69,7 +72,20 @@ export class CommentsService implements ICommentsService {
     viewerId?: string,
   ): Promise<PaginatedResult<Comment>> {
     const normalized = this.normalizeQuery(query);
-    return await this.commentsRepo.findByPostIdPaginated(postId, normalized, viewerId);
+    const cacheKey = this.buildCacheKey('comments-by-post', {
+      postId,
+      viewerId: viewerId ?? null,
+      query: normalized,
+    });
+
+    const cached = await this.readCache<PaginatedResult<Comment>>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const result = await this.commentsRepo.findByPostIdPaginated(postId, normalized, viewerId);
+    await this.writeCache(cacheKey, result, this.COMMENTS_LIST_CACHE_TTL_SECONDS);
+    return result;
   }
 
   async update(id: number, data: UpdateCommentInput): Promise<ResponseMessage> {
@@ -258,5 +274,37 @@ export class CommentsService implements ICommentsService {
     }
 
     return chunks;
+  }
+
+  private buildCacheKey(scope: string, payload: unknown): string {
+    return `cache:comments:${scope}:${JSON.stringify(payload)}`;
+  }
+
+  private async readCache<T>(key: string): Promise<T | null> {
+    try {
+      const cached = await this.redisService.get(key);
+      if (!cached) {
+        return null;
+      }
+
+      return JSON.parse(cached) as T;
+    } catch (error) {
+      this.logger.error('Comments cache read failed', {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  private async writeCache(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+    try {
+      await this.redisService.set(key, JSON.stringify(value), ttlSeconds);
+    } catch (error) {
+      this.logger.error('Comments cache write failed', {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }

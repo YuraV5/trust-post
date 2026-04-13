@@ -5,6 +5,8 @@ import { StubAppLogger } from '../__mock__';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { PostsLikeRepo, PostsRepo } from '../../src/modules/posts/repos';
 import { PostsQueueService } from '../../src/modules/posts/queue';
+import { RedisService } from '../../src/modules/cache/services';
+import { mockRedisService } from '../__mock__';
 import { mockPostsRepo, mockPostsLikeRepo, mockPostsQueueService } from './__mock__';
 
 describe('PostsService', () => {
@@ -19,6 +21,7 @@ describe('PostsService', () => {
         { provide: PostsRepo, useValue: mockPostsRepo },
         { provide: PostsLikeRepo, useValue: mockPostsLikeRepo },
         { provide: PostsQueueService, useValue: mockPostsQueueService },
+        { provide: RedisService, useValue: mockRedisService },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();

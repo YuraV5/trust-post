@@ -1,8 +1,8 @@
-import { MetricsService } from "@app/infrastructure/metrics/metrics.service";
-import { PrismaService } from "@app/modules/prisma/prisma.service";
-import { Injectable, OnModuleInit } from "@nestjs/common";
-import { Cron } from "@nestjs/schedule";
-import { PostStatus } from "@prisma/client";
+import { MetricsService } from '@app/infrastructure/metrics/metrics.service';
+import { PrismaService } from '@app/modules/prisma/prisma.service';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
+import { PostStatus } from '@prisma/client';
 
 @Injectable()
 export class PostsStatusMetricsJob implements OnModuleInit {

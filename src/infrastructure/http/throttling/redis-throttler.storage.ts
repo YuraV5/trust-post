@@ -17,9 +17,11 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
   private readonly logger = new Logger(RedisThrottlerStorage.name);
   private readonly client: Redis;
   private readonly isProduction: boolean;
+  private readonly retryDelayMs: number;
 
   constructor(private readonly config: ConfigService) {
     this.isProduction = this.config.get<string>('nodeEnv') === 'production';
+    this.retryDelayMs = this.config.get<number>('redis.retryDelayMs', this.isProduction ? 2000 : 250);
 
     this.client = new Redis({
       host: this.config.get<string>('redis.host', 'localhost'),
@@ -27,7 +29,9 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
       password: this.config.get<string>('redis.password') || undefined,
       db: REDIS_DB.THROTTHLE,
       maxRetriesPerRequest: null,
-      lazyConnect: false,
+      lazyConnect: true,
+      enableOfflineQueue: false,
+      retryStrategy: this.isProduction ? (times) => Math.min(this.retryDelayMs * Math.max(times, 1), 5000) : undefined,
     });
 
     this.client.on('connect', () => {
@@ -49,6 +53,10 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
     const { hitKey, blockKey } = this.buildKeys(key, throttlerName);
 
     try {
+      if (!(await this.ensureConnected())) {
+        return this.allowFallback();
+      }
+
       // 1. check block
       const blockTtl = await this.client.pttl(blockKey);
 
@@ -101,7 +109,26 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
   // Cleanup on shutdown
   async onApplicationShutdown(): Promise<void> {
     this.logger.log('Shutting down Redis throttler');
+
+    if (this.client.status === 'end') {
+      return;
+    }
+
     await this.client.quit();
+  }
+
+  private async ensureConnected(): Promise<boolean> {
+    if (this.client.status === 'ready' || this.client.status === 'connecting' || this.client.status === 'connect') {
+      return true;
+    }
+
+    try {
+      await this.client.connect();
+      return true;
+    } catch (error) {
+      this.logger.error(`Redis throttler connection failed: ${(error as Error).message}`);
+      return false;
+    }
   }
 
   // Helper methods build keys

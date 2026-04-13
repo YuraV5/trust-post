@@ -30,4 +30,3 @@ export class ActiveUsersMetricsJob implements OnModuleInit {
     this.metricsService.setActiveUsers(activeUsers.length);
   }
 }
-

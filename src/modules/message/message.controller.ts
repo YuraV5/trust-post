@@ -1,23 +1,23 @@
 import {
   Controller,
-  Post,
   Get,
+  Post,
   Patch,
   Delete,
   Body,
+  HttpCode,
+  HttpStatus,
   Param,
   Query,
   UploadedFiles,
   UseInterceptors,
-  HttpStatus,
-  ParseFilePipeBuilder,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { MessageService } from './services/message.service';
 import { CurrentUser } from '../../common/decorators';
 import { type AuthenticatedUser } from '../../common/interfaces';
-import { SendMessageDto, EditMessageDto } from './dtos';
+import { EditMessageDto } from './dtos';
 import { MessageActionResult, MessageListResult, MessageWithSenderAndFiles } from './types';
 
 @ApiTags('messages')
@@ -41,48 +41,6 @@ export class MessageController {
     return this.messageService.getMessages(chatId, user.userId, pageNum, limitNum);
   }
 
-  @Post('chats/:chatId/messages')
-  @ApiOperation({ summary: 'Send a message to a chat' })
-  @ApiResponse({ status: 201, description: 'Message sent successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 403, description: 'Not a member of this chat' })
-  async sendMessage(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('chatId') chatId: string,
-    @Body() dto: SendMessageDto,
-  ): Promise<MessageWithSenderAndFiles> {
-    return this.messageService.sendMessage({
-      chatId,
-      senderId: user.userId,
-      content: dto.content,
-    });
-  }
-
-  @Post('chats/:chatId/messages/upload')
-  @UseInterceptors(FilesInterceptor('files', 10)) // max 10 files
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Send a message with files to a chat' })
-  @ApiResponse({ status: 201, description: 'Message with files sent successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 403, description: 'Not a member of this chat' })
-  async sendMessageWithFiles(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('chatId') chatId: string,
-    @Body('content') content: string,
-    @UploadedFiles(
-      new ParseFilePipeBuilder()
-        .addFileTypeValidator({ fileType: /image\/(jpeg|png|gif|webp)|application\/(pdf|msword|vnd\.openxmlformats)/ })
-        .addMaxSizeValidator({ maxSize: 10 * 1024 * 1024 }) // 10MB per file
-        .build({
-          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
-          fileIsRequired: false, // Files are optional
-        }),
-    )
-    files?: Express.Multer.File[],
-  ): Promise<MessageWithSenderAndFiles> {
-    return this.messageService.sendMessageWithFiles(chatId, user.userId, content, files);
-  }
-
   @Patch('messages/:messageId')
   @ApiOperation({ summary: 'Edit a message' })
   @ApiResponse({ status: 200, description: 'Message updated successfully' })
@@ -96,6 +54,7 @@ export class MessageController {
     return this.messageService.editMessage({
       messageId,
       userId: user.userId,
+      role: user.role,
       newContent: dto.newContent,
     });
   }
@@ -110,6 +69,27 @@ export class MessageController {
     @Param('messageId') messageId: string,
   ): Promise<MessageActionResult> {
     return this.messageService.deleteMessage(messageId, user.userId);
+  }
+
+  @Post('chats/:chatId/messages/:messageId/files')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FilesInterceptor('files', 10))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Attach files to an existing message (own messages only, max 10 files)' })
+  @ApiResponse({ status: 200, description: 'Files attached successfully' })
+  @ApiResponse({ status: 400, description: 'No files provided or message is deleted' })
+  @ApiResponse({ status: 403, description: 'Can only attach files to your own messages' })
+  @ApiResponse({ status: 404, description: 'Message not found' })
+  async addFilesToMessage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('messageId') messageId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<MessageActionResult> {
+    if (!files || files.length === 0) {
+      return { message: 'No files provided' };
+    }
+    await this.messageService.addFilesToMessage(messageId, user.userId, user.role, files);
+    return { message: 'Files attached successfully' };
   }
 
   @Delete('files/:fileId')

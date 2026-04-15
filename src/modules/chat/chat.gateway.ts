@@ -21,6 +21,7 @@ import { PublicRoute } from '../../common/decorators';
 import { type MessageWithSenderAndFiles } from '../message/types';
 import { Server } from 'socket.io';
 import { extractSocketToken } from '../../common/utils/extract-socket-token';
+import { UserRoles } from '@prisma/client';
 
 const wsOrigins = (process.env.WS_CORS_ALLOW_ORIGIN || process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001')
   .split(',')
@@ -156,11 +157,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @SubscribeMessage('message:send')
   async handleSendMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string; content: string },
+    @MessageBody() data: { chatId: string; content?: string },
   ): Promise<MessageGatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
-      const { chatId, content } = data;
+      const { chatId, content = '' } = data;
 
       // Send message via service
       const message = await this.messageService.sendMessage({
@@ -198,12 +199,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   ): Promise<MessageGatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
+      const role = (client.userRole as UserRoles | undefined) ?? UserRoles.USER;
       const { messageId, newContent, chatId } = data;
 
       // Edit message via service
       const message = await this.messageService.editMessage({
         messageId,
         userId,
+        role,
         newContent,
       });
 
@@ -232,6 +235,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   ): Promise<GatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
+
       const { messageId, chatId } = data;
 
       // Delete message via service

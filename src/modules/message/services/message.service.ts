@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { FileProvider } from '@prisma/client';
+import { FileProvider, UserRoles } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException, AppForbiddenException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
@@ -15,6 +15,7 @@ import { MessageRepo } from '../repos';
 import { FilesService } from '../../files/services';
 import { FileFolder } from '../../files/types';
 import { RedisService } from '../../cache/services';
+import { SocketService } from '../../socket/socket.service';
 
 @Injectable()
 export class MessageService implements IMessageService {
@@ -25,12 +26,18 @@ export class MessageService implements IMessageService {
     private readonly repo: MessageRepo,
     private readonly filesService: FilesService,
     private readonly redisService: RedisService,
+    private readonly socketService: SocketService,
   ) {}
+
+  private isAdmin(role: UserRoles): boolean {
+    return role === UserRoles.ADMIN;
+  }
 
   async sendMessage(input: SendMessageInput): Promise<MessageWithSenderAndFiles> {
     const { chatId, senderId, content } = input;
+    const trimmed = content?.trim() ?? '';
 
-    if (!content || content.trim().length === 0) {
+    if (trimmed.length === 0) {
       throw new AppBadRequestException('Message content cannot be empty');
     }
 
@@ -41,7 +48,7 @@ export class MessageService implements IMessageService {
       throw new AppForbiddenException('You are not a member of this chat');
     }
 
-    const message = await this.repo.createMessage(chatId, senderId, content);
+    const message = await this.repo.createMessage(chatId, senderId, trimmed);
 
     // Update chat's updatedAt timestamp
     await this.repo.touchChat(chatId);
@@ -81,7 +88,7 @@ export class MessageService implements IMessageService {
   }
 
   async editMessage(input: EditMessageInput): Promise<MessageWithSenderAndFiles> {
-    const { messageId, userId, newContent } = input;
+    const { messageId, userId, role, newContent } = input;
 
     if (!newContent || newContent.trim().length === 0) {
       throw new AppBadRequestException('Message content cannot be empty');
@@ -93,7 +100,7 @@ export class MessageService implements IMessageService {
       throw new AppNotFoundException('Message not found');
     }
 
-    if (message.senderId !== userId) {
+    if (message.senderId !== userId && !this.isAdmin(role)) {
       throw new AppForbiddenException('You can only edit your own messages');
     }
 
@@ -108,7 +115,7 @@ export class MessageService implements IMessageService {
   }
 
   async deleteMessage(messageId: string, userId: string): Promise<MessageActionResult> {
-    const message = await this.repo.findMessageById(messageId);
+    const message = await this.repo.findMessageWithSenderAndFiles(messageId);
 
     if (!message) {
       throw new AppNotFoundException('Message not found');
@@ -118,10 +125,93 @@ export class MessageService implements IMessageService {
       throw new AppForbiddenException('You can only delete your own messages');
     }
 
+    if (message.files.length > 0) {
+      const keysByProvider = new Map<FileProvider, string[]>();
+
+      for (const file of message.files) {
+        const existing = keysByProvider.get(file.provider) ?? [];
+        existing.push(file.storageKey);
+        keysByProvider.set(file.provider, existing);
+      }
+
+      for (const [provider, keys] of keysByProvider.entries()) {
+        try {
+          await this.filesService.delete(keys, provider);
+        } catch (error) {
+          this.logger.error('Failed to delete message files from storage', {
+            messageId,
+            provider,
+            count: keys.length,
+            error: error instanceof Error ? error : String(error),
+          });
+        }
+      }
+
+      await this.repo.deleteFilesByMessageId(messageId);
+    }
+
     await this.repo.softDeleteMessage(messageId);
+
+    this.socketService.emitToRoom('chat', `chat:${message.chatId}`, 'message:deleted', {
+      messageId,
+      chatId: message.chatId,
+      timestamp: new Date().toISOString(),
+    });
 
     this.logger.info('Message deleted', { messageId, userId });
     return { message: 'Message deleted successfully' };
+  }
+
+  async addFilesToMessage(
+    messageId: string,
+    senderId: string,
+    role: UserRoles,
+    files: Express.Multer.File[],
+  ): Promise<void> {
+    const message = await this.repo.findMessageById(messageId);
+
+    if (!message) {
+      throw new AppNotFoundException('Message not found');
+    }
+
+    if (message.senderId !== senderId && !this.isAdmin(role)) {
+      throw new AppForbiddenException('You can only attach files to your own messages');
+    }
+
+    if (message.isDeleted) {
+      throw new AppBadRequestException('Cannot attach files to a deleted message');
+    }
+
+    const uploadResult = await this.filesService.upload(files, {
+      resourceId: message.chatId,
+      userId: senderId,
+      fileFolder: FileFolder.CHATS,
+      storage: FileProvider.CLOUDINARY,
+    });
+
+    await Promise.all(
+      uploadResult.data.map((file) =>
+        this.repo.createMessageFile({
+          messageId,
+          url: file.url,
+          storageKey: file.storageKey,
+          size: file.size,
+          originalName: file.originalName,
+          mimeType: file.mimeType,
+          provider: file.provider,
+        }),
+      ),
+    );
+
+    this.logger.info('Files attached to message', { messageId, senderId, count: uploadResult.data.length });
+
+    const updatedMessage = await this.repo.findMessageWithSenderAndFiles(messageId);
+    if (updatedMessage) {
+      this.socketService.emitToRoom('chat', `chat:${message.chatId}`, 'message:edited', {
+        chatId: message.chatId,
+        message: updatedMessage,
+      });
+    }
   }
 
   async deleteFile(fileId: string, userId: string): Promise<MessageActionResult> {
@@ -149,6 +239,26 @@ export class MessageService implements IMessageService {
 
     // Delete from database
     await this.repo.deleteFile(fileId);
+
+    const updatedMessage = await this.repo.findMessageWithSenderAndFiles(file.messageId);
+    if (updatedMessage) {
+      const hasText = updatedMessage.content.trim().length > 0;
+      const hasFiles = updatedMessage.files.length > 0;
+
+      if (!hasText && !hasFiles) {
+        await this.repo.softDeleteMessage(updatedMessage.id);
+        this.socketService.emitToRoom('chat', `chat:${updatedMessage.chatId}`, 'message:deleted', {
+          messageId: updatedMessage.id,
+          chatId: updatedMessage.chatId,
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        this.socketService.emitToRoom('chat', `chat:${updatedMessage.chatId}`, 'message:edited', {
+          chatId: updatedMessage.chatId,
+          message: updatedMessage,
+        });
+      }
+    }
 
     this.logger.info('File deleted', { fileId, userId });
     return { message: 'File deleted successfully' };

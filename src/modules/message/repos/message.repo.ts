@@ -142,4 +142,27 @@ export class MessageRepo implements IMessageRepo {
       where: { id: fileId },
     });
   }
+
+  async deleteFilesByMessageId(messageId: string): Promise<void> {
+    await this.db.messageFile.deleteMany({
+      where: { messageId },
+    });
+  }
+
+  async findMessageWithSenderAndFiles(messageId: string): Promise<MessageWithSenderAndFiles | null> {
+    return this.db.message.findUnique({
+      where: { id: messageId },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            photoUrl: true,
+          },
+        },
+        files: true,
+      },
+    });
+  }
 }

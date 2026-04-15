@@ -4,7 +4,9 @@ import { MessageService } from '../../src/modules/message/services/message.servi
 import { MessageRepo } from '../../src/modules/message/repos';
 import { FilesService } from '../../src/modules/files/services';
 import { RedisService } from '../../src/modules/cache/services';
-import { StubAppLogger, mockRedisService } from '../__mock__';
+import { SocketService } from '../../src/modules/socket/socket.service';
+import { UserRoles } from '@prisma/client';
+import { StubAppLogger, mockRedisService, mockSocketService } from '../__mock__';
 import { mockMessageRepo, mockFilesService } from './__mock__';
 
 describe('MessageService', () => {
@@ -19,6 +21,7 @@ describe('MessageService', () => {
         { provide: MessageRepo, useValue: mockMessageRepo },
         { provide: FilesService, useValue: mockFilesService },
         { provide: RedisService, useValue: mockRedisService },
+        { provide: SocketService, useValue: mockSocketService },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();
@@ -134,25 +137,46 @@ describe('MessageService', () => {
 
   describe('deleteMessage', () => {
     it('throws when message does not exist', async () => {
-      mockMessageRepo.findMessageById.mockResolvedValue(null);
+      mockMessageRepo.findMessageWithSenderAndFiles.mockResolvedValue(null);
 
-      await expect(service.deleteMessage('msg-1', 'u-1')).rejects.toThrow('Message not found');
+      await expect(service.deleteMessage('msg-1', 'u-1', UserRoles.USER)).rejects.toThrow('Message not found');
     });
 
     it('throws when user is not the message sender', async () => {
-      mockMessageRepo.findMessageById.mockResolvedValue({ id: 'msg-1', senderId: 'other-user' });
+      mockMessageRepo.findMessageWithSenderAndFiles.mockResolvedValue({
+        id: 'msg-1',
+        senderId: 'other-user',
+        files: [],
+        chatId: 'c-1',
+      });
 
-      await expect(service.deleteMessage('msg-1', 'u-1')).rejects.toThrow('You can only delete your own messages');
+      await expect(service.deleteMessage('msg-1', 'u-1', UserRoles.USER)).rejects.toThrow(
+        'You can only delete your own messages',
+      );
     });
 
     it('soft-deletes message and returns confirmation', async () => {
-      mockMessageRepo.findMessageById.mockResolvedValue({ id: 'msg-1', senderId: 'u-1' });
+      mockMessageRepo.findMessageWithSenderAndFiles.mockResolvedValue({
+        id: 'msg-1',
+        senderId: 'u-1',
+        files: [],
+        chatId: 'c-1',
+      });
       mockMessageRepo.softDeleteMessage.mockResolvedValue(undefined);
 
-      const result = await service.deleteMessage('msg-1', 'u-1');
+      const result = await service.deleteMessage('msg-1', 'u-1', UserRoles.USER);
 
       expect(result).toEqual({ message: 'Message deleted successfully' });
       expect(mockMessageRepo.softDeleteMessage).toHaveBeenCalledWith('msg-1');
+      expect(mockSocketService.emitToRoom).toHaveBeenCalledWith(
+        'chat',
+        'chat:c-1',
+        'message:deleted',
+        expect.objectContaining({
+          messageId: 'msg-1',
+          chatId: 'c-1',
+        }),
+      );
     });
   });
 });

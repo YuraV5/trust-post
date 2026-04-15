@@ -14,9 +14,11 @@ export interface IMessageRepo {
   touchChat(chatId: string): Promise<void>;
   findMessages(chatId: string, page: number, limit: number): Promise<MessageRepoListResult>;
   findMessageById(messageId: string): Promise<MessageEntity | null>;
+  findMessageWithSenderAndFiles(messageId: string): Promise<MessageWithSenderAndFiles | null>;
   updateMessageContent(messageId: string, newContent: string): Promise<MessageWithSenderAndFiles>;
   softDeleteMessage(messageId: string): Promise<void>;
   createMessageFile(input: AddFileInput): Promise<MessageFileEntity>;
   findFileById(fileId: string): Promise<MessageFileWithMessage | null>;
   deleteFile(fileId: string): Promise<void>;
+  deleteFilesByMessageId(messageId: string): Promise<void>;
 }

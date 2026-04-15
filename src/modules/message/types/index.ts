@@ -1,4 +1,4 @@
-import { type ChatMember, type FileProvider, type Message, type MessageFile } from '@prisma/client';
+import { type ChatMember, type FileProvider, type Message, type MessageFile, type UserRoles } from '@prisma/client';
 
 export type SendMessageInput = {
   chatId: string;
@@ -9,6 +9,7 @@ export type SendMessageInput = {
 export type EditMessageInput = {
   messageId: string;
   userId: string;
+  role: UserRoles;
   newContent: string;
 };
 

@@ -63,6 +63,12 @@ Local monitoring for app running on host:
 npm run docker:monitor:dev
 ```
 
+Application logs are written to the console and, when `LOGGER_FILE_ENABLED=true`, also to:
+
+- `logs/normal/app.log`
+- `logs/error/error.log`
+- `logs/error/exceptions.log`
+
 Main endpoints:
 
 - Prometheus: http://localhost:9090

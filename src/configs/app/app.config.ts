@@ -16,6 +16,7 @@ export default (): IAppConfig => ({
   swaggerEnabled: parseBoolean(process.env.SWAGGER_ENABLED, process.env.NODE_ENV !== 'production'),
   serviceName: process.env.SERVICE_NAME || 'trust-post',
   loggerLevel: process.env.LOGGER_LEVEL || 'info',
+  loggerFileEnabled: parseBoolean(process.env.LOGGER_FILE_ENABLED, process.env.NODE_ENV !== 'test'),
   loggerFileMaxSizeMb: parseInt(process.env.LOGGER_FILE_MAX_SIZE_MB!, 10) || 10,
   loggerFileMaxFiles: parseInt(process.env.LOGGER_FILE_MAX_FILES!, 10) || 5,
   frontUrl: process.env.FRONTEND_URL!,

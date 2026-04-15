@@ -17,7 +17,7 @@ export class ConflictErrorResponse {
   message: string;
 
   @ApiProperty({ example: 'conflict details or empty field', description: 'Error details', required: false })
-  details?: any;
+  details?: unknown;
 
   @ApiProperty({ example: '2026-01-30T12:00:00.000Z', description: 'Timestamp of the error' })
   timestamp: string;

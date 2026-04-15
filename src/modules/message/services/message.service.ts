@@ -114,7 +114,7 @@ export class MessageService implements IMessageService {
     return updatedMessage;
   }
 
-  async deleteMessage(messageId: string, userId: string, role: UserRoles): Promise<MessageActionResult> {
+  async deleteMessage(messageId: string, userId: string): Promise<MessageActionResult> {
     const message = await this.repo.findMessageWithSenderAndFiles(messageId);
 
     if (!message) {
@@ -162,7 +162,12 @@ export class MessageService implements IMessageService {
     return { message: 'Message deleted successfully' };
   }
 
-  async addFilesToMessage(messageId: string, senderId: string, role: UserRoles, files: Express.Multer.File[]): Promise<void> {
+  async addFilesToMessage(
+    messageId: string,
+    senderId: string,
+    role: UserRoles,
+    files: Express.Multer.File[],
+  ): Promise<void> {
     const message = await this.repo.findMessageById(messageId);
 
     if (!message) {
@@ -209,7 +214,7 @@ export class MessageService implements IMessageService {
     }
   }
 
-  async deleteFile(fileId: string, userId: string, role: UserRoles): Promise<MessageActionResult> {
+  async deleteFile(fileId: string, userId: string): Promise<MessageActionResult> {
     const file = await this.repo.findFileById(fileId);
 
     if (!file) {

@@ -1,6 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { PostStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MetricsService } from '../../../infrastructure/metrics/metrics.service';
 

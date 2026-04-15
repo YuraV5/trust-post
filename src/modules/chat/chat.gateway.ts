@@ -235,11 +235,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   ): Promise<GatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
-      const role = (client.userRole as UserRoles | undefined) ?? UserRoles.USER;
+
       const { messageId, chatId } = data;
 
       // Delete message via service
-      await this.messageService.deleteMessage(messageId, userId, role);
+      await this.messageService.deleteMessage(messageId, userId);
 
       // Broadcast to all users in the chat room
       this.socketService.emitToRoom(this.namespace, `chat:${chatId}`, 'message:deleted', {

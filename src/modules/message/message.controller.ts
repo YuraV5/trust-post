@@ -68,7 +68,7 @@ export class MessageController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('messageId') messageId: string,
   ): Promise<MessageActionResult> {
-    return this.messageService.deleteMessage(messageId, user.userId, user.role);
+    return this.messageService.deleteMessage(messageId, user.userId);
   }
 
   @Post('chats/:chatId/messages/:messageId/files')
@@ -101,6 +101,6 @@ export class MessageController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('fileId') fileId: string,
   ): Promise<MessageActionResult> {
-    return this.messageService.deleteFile(fileId, user.userId, user.role);
+    return this.messageService.deleteFile(fileId, user.userId);
   }
 }

@@ -3,6 +3,9 @@ import { Request } from 'express';
 import { collectDefaultMetrics, Counter, Gauge, Histogram, Registry } from 'prom-client';
 
 type HttpMetricLabels = 'method' | 'route' | 'status_code';
+type QueueDepthLabels = 'queue' | 'state';
+type QueueNameLabels = 'queue';
+type QueueEventLabels = 'queue' | 'job_name';
 
 @Injectable()
 export class MetricsService {
@@ -22,6 +25,13 @@ export class MetricsService {
   private readonly chatsTotal: Counter<string>;
   private readonly commentsTotal: Counter<string>;
   private readonly likesTotal: Counter<string>;
+
+  // Queue and DLQ health metrics.
+  private readonly queueJobsCurrentGauge: Gauge<QueueDepthLabels>;
+  private readonly queueDlqJobsCurrentGauge: Gauge<QueueNameLabels>;
+  private readonly queueOldestWaitingAgeGauge: Gauge<QueueNameLabels>;
+  private readonly queueFailedRetriedCurrentGauge: Gauge<QueueNameLabels>;
+  private readonly queueDlqTotal: Counter<QueueEventLabels>;
 
   constructor() {
     // Register Node.js process/runtime metrics (cpu, memory, event loop, etc.).
@@ -100,6 +110,41 @@ export class MetricsService {
       name: 'likes_total',
       help: 'Total number of likes/reactions across all content',
       labelNames: ['content_type'],
+      registers: [this.registry],
+    });
+
+    this.queueJobsCurrentGauge = new Gauge({
+      name: 'queue_jobs_current',
+      help: 'Current number of jobs by queue and state',
+      labelNames: ['queue', 'state'],
+      registers: [this.registry],
+    });
+
+    this.queueDlqJobsCurrentGauge = new Gauge({
+      name: 'queue_dlq_jobs_current',
+      help: 'Current number of jobs in queue DLQ',
+      labelNames: ['queue'],
+      registers: [this.registry],
+    });
+
+    this.queueOldestWaitingAgeGauge = new Gauge({
+      name: 'queue_oldest_waiting_job_age_seconds',
+      help: 'Age in seconds of the oldest waiting job in queue',
+      labelNames: ['queue'],
+      registers: [this.registry],
+    });
+
+    this.queueFailedRetriedCurrentGauge = new Gauge({
+      name: 'queue_failed_retried_jobs_current',
+      help: 'Current number of failed jobs (recent sample) that already had retries',
+      labelNames: ['queue'],
+      registers: [this.registry],
+    });
+
+    this.queueDlqTotal = new Counter({
+      name: 'queue_dlq_total',
+      help: 'Total number of jobs moved to DLQ',
+      labelNames: ['queue', 'job_name'],
       registers: [this.registry],
     });
   }
@@ -184,6 +229,26 @@ export class MetricsService {
   // Increment likes counter when a like/reaction is added.
   recordLikeAdded(contentType: 'post' | 'comment' | 'profile' = 'post'): void {
     this.likesTotal.inc({ content_type: contentType });
+  }
+
+  setQueueJobsCurrent(queueName: string, state: string, count: number): void {
+    this.queueJobsCurrentGauge.set({ queue: queueName, state }, count);
+  }
+
+  setQueueDlqJobsCurrent(queueName: string, count: number): void {
+    this.queueDlqJobsCurrentGauge.set({ queue: queueName }, count);
+  }
+
+  setQueueOldestWaitingJobAgeSeconds(queueName: string, ageSeconds: number): void {
+    this.queueOldestWaitingAgeGauge.set({ queue: queueName }, ageSeconds);
+  }
+
+  setQueueFailedRetriedJobsCurrent(queueName: string, count: number): void {
+    this.queueFailedRetriedCurrentGauge.set({ queue: queueName }, count);
+  }
+
+  recordQueueDlqEnqueue(queueName: string, jobName: string): void {
+    this.queueDlqTotal.inc({ queue: queueName, job_name: jobName });
   }
 
   // Normalize path values to avoid noisy labels in Prometheus.

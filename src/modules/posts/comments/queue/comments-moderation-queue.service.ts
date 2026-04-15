@@ -7,11 +7,16 @@ import { Queue } from 'bullmq';
 import { COMMENTS_MODERATION_JOB, COMMENTS_MODERATION_QUEUE } from '../consts';
 import { COMMENTS_QUEUE_JOB_OPTIONS } from '../configs/comments-queue.config';
 import { AGENT_ACTION_TYPE } from '../../../core-agents/consts';
+import { MetricsService } from '../../../../infrastructure/metrics/metrics.service';
 
 @Injectable()
 export class CommentsModerationQueueService extends BaseQueueService {
-  constructor(@Inject(APP_LOGGER) logger: IAppLogger, @InjectQueue(COMMENTS_MODERATION_QUEUE) queue: Queue) {
-    super(logger, queue);
+  constructor(
+    @Inject(APP_LOGGER) logger: IAppLogger,
+    @InjectQueue(COMMENTS_MODERATION_QUEUE) queue: Queue,
+    metricsService: MetricsService,
+  ) {
+    super(logger, queue, metricsService);
   }
 
   async enqueue(data: { commentId: number; postId: number; content: string }): Promise<void> {

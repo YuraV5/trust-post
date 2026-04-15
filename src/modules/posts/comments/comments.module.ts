@@ -30,6 +30,6 @@ import { SecurityModule } from '../../security/security.module';
     CommentsModerationQueueProcessor,
     CommentsModerationService,
   ],
-  exports: [CommentsService],
+  exports: [CommentsService, CommentsModerationQueueService],
 })
 export class CommentsModule {}

@@ -9,9 +9,13 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { MetricsModule } from '../../infrastructure/metrics/metrics.module';
 import { ActiveUsersMetricsJob } from './jobs/active-users-metrics.job';
 import { PostsStatusMetricsJob } from './jobs/posts-status-metrics.job';
+import { QueueHealthMetricsJob } from './jobs/queue-health-metrics.job';
+import { PostsModule } from '../posts/posts.module';
+import { CommentsModule } from '../posts/comments/comments.module';
+import { EmailsModule } from '../emails/emails.module';
 
 @Module({
-  imports: [FilesModule, PrismaModule, MetricsModule],
+  imports: [FilesModule, PrismaModule, MetricsModule, PostsModule, CommentsModule, EmailsModule],
   providers: [
     UnverifiedUsersCleanupJob,
     ExpiredSessionsCleanupJob,
@@ -20,6 +24,7 @@ import { PostsStatusMetricsJob } from './jobs/posts-status-metrics.job';
     RejectedDeletedCommentsCleanupJob,
     ActiveUsersMetricsJob,
     PostsStatusMetricsJob,
+    QueueHealthMetricsJob,
   ],
 })
 export class MaintenanceModule {}

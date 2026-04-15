@@ -28,3 +28,13 @@ export type JobOptions = {
   timeout?: number; // ms
   stackTraceLimit?: number;
 };
+
+export type QueueState = 'waiting' | 'active' | 'completed' | 'failed' | 'delayed' | 'paused';
+
+export type QueueHealthSnapshot = {
+  queueName: string;
+  counts: Record<QueueState, number>;
+  dlqCount: number;
+  failedRetriedCount: number;
+  oldestWaitingJobAgeSeconds: number;
+};

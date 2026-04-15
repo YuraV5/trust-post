@@ -37,6 +37,6 @@ import { MetricsModule } from '../../infrastructure/metrics/metrics.module';
     PostsQueueService,
     PostsQueueProcessor,
   ],
-  exports: [PostsService, PostsReviewService],
+  exports: [PostsService, PostsReviewService, PostsQueueService],
 })
 export class PostsModule {}

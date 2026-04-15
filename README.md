@@ -76,6 +76,13 @@ Main endpoints:
 - Grafana: http://localhost:3000
 - Loki: http://localhost:3100
 
+Queue observability baseline includes:
+
+- DLQ per queue (`<queue>.dlq`) for terminally failed jobs
+- Queue health metrics (`queue_jobs_current`, `queue_oldest_waiting_job_age_seconds`, `queue_failed_retried_jobs_current`)
+- DLQ metrics and alerts (`queue_dlq_jobs_current`, `queue_dlq_total`)
+- Prometheus alerts for queue lag, backlog SLA, repeated failures, and DLQ growth
+
 ## Quality Checks
 
 Run these checks before pushing:

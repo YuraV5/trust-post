@@ -6,12 +6,14 @@ import { type IAppLogger } from '../../../../shared/logger/interfaces/interface'
 import { COMMENTS_MODERATION_JOB, COMMENTS_MODERATION_QUEUE } from '../consts';
 import { CommentsModerationService } from '../moderation/comments-moderation.service';
 import { ModerateCommentJobData } from './types/types';
+import { CommentsModerationQueueService } from './comments-moderation-queue.service';
 
 @Processor(COMMENTS_MODERATION_QUEUE, { limiter: { max: 20, duration: 1000 } })
 export class CommentsModerationQueueProcessor extends WorkerHost {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly moderationService: CommentsModerationService,
+    private readonly commentsQueueService: CommentsModerationQueueService,
   ) {
     super();
   }
@@ -26,6 +28,14 @@ export class CommentsModerationQueueProcessor extends WorkerHost {
           throw new Error(`No processor defined for job ${job.name}`);
       }
     } catch (error) {
+      const maxAttempts = job.opts.attempts ?? 1;
+      const currentAttempt = (job.attemptsMade ?? 0) + 1;
+      const isLastAttempt = currentAttempt >= maxAttempts;
+
+      if (isLastAttempt) {
+        await this.commentsQueueService.moveToDlq(job, error);
+      }
+
       this.logger.error('Comments moderation queue job processing failed', {
         jobId: job.id,
         jobName: job.name,

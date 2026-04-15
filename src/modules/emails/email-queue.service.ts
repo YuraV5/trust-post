@@ -7,11 +7,16 @@ import { EMAIL_NOTIFICATION_QUEUE, EMAIL_JOB } from './const';
 import { EMAIL_JOB_OPTIONS } from './configs';
 import { AccountActivationTask, EmailVerificationTask, PasswordResetTask } from './types';
 import { type IAppLogger } from '../../shared/logger/interfaces/interface';
+import { MetricsService } from '../../infrastructure/metrics/metrics.service';
 
 @Injectable()
 export class EmailQueueService extends BaseQueueService {
-  constructor(@Inject(APP_LOGGER) logger: IAppLogger, @InjectQueue(EMAIL_NOTIFICATION_QUEUE) queue: Queue) {
-    super(logger, queue);
+  constructor(
+    @Inject(APP_LOGGER) logger: IAppLogger,
+    @InjectQueue(EMAIL_NOTIFICATION_QUEUE) queue: Queue,
+    metricsService: MetricsService,
+  ) {
+    super(logger, queue, metricsService);
   }
 
   async sendVerificationEmail(data: EmailVerificationTask): Promise<void> {

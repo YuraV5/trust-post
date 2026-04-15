@@ -1,14 +1,18 @@
 import { Inject } from '@nestjs/common';
 import { IQueueService } from './interfaces';
-import { Queue } from 'bullmq';
+import { Job, Queue } from 'bullmq';
 import { APP_LOGGER } from '../../shared/logger/services/app-logger';
-import { JobOptions } from './types';
+import { JobOptions, QueueHealthSnapshot } from './types';
 import { type IAppLogger } from '../../shared/logger/interfaces/interface';
+import { MetricsService } from '../../infrastructure/metrics/metrics.service';
 
 export abstract class BaseQueueService implements IQueueService {
+  private dlqQueue?: Queue;
+
   constructor(
     @Inject(APP_LOGGER) protected readonly logger: IAppLogger,
     private readonly queue: Queue,
+    private readonly metricsService?: MetricsService,
   ) {}
 
   /**
@@ -25,6 +29,25 @@ export abstract class BaseQueueService implements IQueueService {
     removeOnComplete: true,
     removeOnFail: 50,
   };
+
+  protected readonly dlqOptions: JobOptions = {
+    attempts: 1,
+    removeOnComplete: 1000,
+    removeOnFail: 1000,
+    lifo: false,
+  };
+
+  // Build a queue-specific DLQ using the same Redis connection as the source queue.
+  protected getDlqQueue(): Queue {
+    if (!this.dlqQueue) {
+      this.dlqQueue = new Queue(`${this.queue.name}.dlq`, {
+        connection: this.queue.opts.connection,
+        prefix: this.queue.opts.prefix,
+      });
+    }
+
+    return this.dlqQueue;
+  }
 
   // Add a job to the queue with the specified data and options
   async add<T>(jobName: string, data: T, options?: JobOptions): Promise<void> {
@@ -75,5 +98,71 @@ export abstract class BaseQueueService implements IQueueService {
   // Get the name of the queue (useful for logging and debugging)
   getQueueName(): string {
     return this.queue.name;
+  }
+
+  async moveToDlq(job: Job<unknown>, error: unknown): Promise<void> {
+    const dlq = this.getDlqQueue();
+    const dlqJobName = `${job.name}.failed`;
+
+    await dlq.add(
+      dlqJobName,
+      {
+        sourceQueue: this.queue.name,
+        sourceJobId: job.id,
+        sourceJobName: job.name,
+        sourceData: job.data,
+        attemptsMade: job.attemptsMade,
+        maxAttempts: job.opts.attempts,
+        failedReason: error instanceof Error ? error.message : String(error),
+        stacktrace: job.stacktrace,
+        failedAt: new Date().toISOString(),
+      },
+      {
+        ...this.dlqOptions,
+        jobId: `${String(job.id ?? 'no-id')}-${Date.now()}`,
+      },
+    );
+
+    this.metricsService?.recordQueueDlqEnqueue(this.queue.name, String(job.name));
+
+    this.logger.warn('Job moved to DLQ after max retry attempts', {
+      queueName: this.queue.name,
+      dlqQueueName: dlq.name,
+      jobId: job.id,
+      jobName: job.name,
+      attemptsMade: job.attemptsMade,
+      maxAttempts: job.opts.attempts,
+      error: error as Error,
+    });
+  }
+
+  async getHealthSnapshot(): Promise<QueueHealthSnapshot> {
+    const counts = await this.queue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed', 'paused');
+    const dlqCounts = await this.getDlqQueue().getJobCounts('waiting', 'delayed');
+
+    // Keep the query cheap: inspect only the most recent 50 failed jobs.
+    const failedJobs = await this.queue.getJobs(['failed'], 0, 49, false);
+    const failedRetriedCount = failedJobs.filter((failedJob) => (failedJob.attemptsMade ?? 0) > 1).length;
+
+    const waitingJobs = await this.queue.getJobs(['waiting'], 0, 0, true);
+    const oldestWaitingTimestamp = waitingJobs[0]?.timestamp ?? 0;
+    const oldestWaitingJobAgeSeconds = oldestWaitingTimestamp
+      ? Math.max(0, Math.floor((Date.now() - oldestWaitingTimestamp) / 1000))
+      : 0;
+
+    return {
+      queueName: this.queue.name,
+      counts: {
+        waiting: counts.waiting ?? 0,
+        active: counts.active ?? 0,
+        completed: counts.completed ?? 0,
+        failed: counts.failed ?? 0,
+        delayed: counts.delayed ?? 0,
+        paused: counts.paused ?? 0,
+      },
+      dlqCount: (dlqCounts.waiting ?? 0) + (dlqCounts.delayed ?? 0),
+      failedRetriedCount,
+      oldestWaitingJobAgeSeconds,
+    };
   }
 }

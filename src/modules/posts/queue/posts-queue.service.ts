@@ -6,11 +6,16 @@ import { InjectQueue } from '@nestjs/bullmq/dist/decorators/inject-queue.decorat
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { Queue } from 'bullmq';
+import { MetricsService } from '../../../infrastructure/metrics/metrics.service';
 
 @Injectable()
 export class PostsQueueService extends BaseQueueService {
-  constructor(@Inject(APP_LOGGER) logger: IAppLogger, @InjectQueue(POSTS_QUEUE) queue: Queue) {
-    super(logger, queue);
+  constructor(
+    @Inject(APP_LOGGER) logger: IAppLogger,
+    @InjectQueue(POSTS_QUEUE) queue: Queue,
+    metricsService: MetricsService,
+  ) {
+    super(logger, queue, metricsService);
   }
 
   async assignReviewerToPost(postId: number): Promise<void> {

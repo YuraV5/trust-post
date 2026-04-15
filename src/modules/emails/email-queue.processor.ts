@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config/dist/config.service';
 import { AccountActivationTask, EmailVerificationTask, PasswordResetTask, RejectPostEmailTask } from './types';
 import { type IAppLogger } from '../../shared/logger/interfaces/interface';
 import { EmailsProviderService } from './emails-provider/services';
+import { EmailQueueService } from './email-queue.service';
 
 @Processor(EMAIL_NOTIFICATION_QUEUE, { limiter: { max: 20, duration: 1000 } }) // Limit to 20 jobs per second
 export class EmailProcessor extends WorkerHost {
@@ -20,6 +21,7 @@ export class EmailProcessor extends WorkerHost {
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly emailProvider: EmailsProviderService,
     private readonly config: ConfigService,
+    private readonly emailQueueService: EmailQueueService,
   ) {
     super();
   }
@@ -43,6 +45,14 @@ export class EmailProcessor extends WorkerHost {
           throw new Error(`No processor defined for job ${job.name}`);
       }
     } catch (error) {
+      const maxAttempts = job.opts.attempts ?? 1;
+      const currentAttempt = (job.attemptsMade ?? 0) + 1;
+      const isLastAttempt = currentAttempt >= maxAttempts;
+
+      if (isLastAttempt) {
+        await this.emailQueueService.moveToDlq(job, error);
+      }
+
       this.logger.error('Email queue job processing failed', {
         jobId: job.id,
         jobName: job.name,

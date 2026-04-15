@@ -118,6 +118,94 @@ groups:
           runbook_url: "https://runbooks.example/trust-post/http-500-burst"
           dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"
 
+      # Warning: queue backlog is aging and likely violating near-term SLA.
+      - alert: TrustPostQueueLagWarning
+        expr: max(queue_oldest_waiting_job_age_seconds{job="trust-post-app"}) > 120
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+          service: trust-post
+          environment: local
+        annotations:
+          summary: "Queue lag warning"
+          description: "Oldest waiting queue job age is above 120 seconds for over 5 minutes."
+          service: "trust-post"
+          environment: "local"
+          runbook_url: "https://runbooks.example/trust-post/queue-lag"
+          dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"
+
+      # Critical: backlog volume and lag indicate risk of delayed processing.
+      - alert: TrustPostQueueBacklogSlaCritical
+        expr: |
+          sum(queue_jobs_current{job="trust-post-app",state="waiting"}) > 100
+          and
+          max(queue_oldest_waiting_job_age_seconds{job="trust-post-app"}) > 300
+        for: 3m
+        labels:
+          severity: critical
+          team: backend
+          service: trust-post
+          environment: local
+        annotations:
+          summary: "Queue backlog SLA breach risk"
+          description: "Waiting backlog is above 100 jobs and oldest waiting job age is above 5 minutes."
+          service: "trust-post"
+          environment: "local"
+          runbook_url: "https://runbooks.example/trust-post/queue-backlog"
+          dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"
+
+      # Warning: repeated failed jobs are accumulating in recent failed sample.
+      - alert: TrustPostQueueRepeatedFailuresWarning
+        expr: sum(queue_failed_retried_jobs_current{job="trust-post-app"}) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+          service: trust-post
+          environment: local
+        annotations:
+          summary: "Repeated queue failures warning"
+          description: "More than 5 failed jobs with retries are present in queue failed sets."
+          service: "trust-post"
+          environment: "local"
+          runbook_url: "https://runbooks.example/trust-post/queue-retries"
+          dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"
+
+      # Warning: at least one message landed in DLQ and needs investigation/re-drive.
+      - alert: TrustPostDlqHasMessagesWarning
+        expr: sum(queue_dlq_jobs_current{job="trust-post-app"}) > 0
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+          service: trust-post
+          environment: local
+        annotations:
+          summary: "DLQ contains failed jobs"
+          description: "At least one job has been moved to DLQ for more than 10 minutes."
+          service: "trust-post"
+          environment: "local"
+          runbook_url: "https://runbooks.example/trust-post/dlq"
+          dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"
+
+      # Critical: DLQ inflow indicates ongoing processing outage or regression.
+      - alert: TrustPostDlqGrowthCritical
+        expr: sum(increase(queue_dlq_total{job="trust-post-app"}[15m])) > 10
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+          service: trust-post
+          environment: local
+        annotations:
+          summary: "DLQ growth critical"
+          description: "More than 10 jobs were moved to DLQ within 15 minutes."
+          service: "trust-post"
+          environment: "local"
+          runbook_url: "https://runbooks.example/trust-post/dlq-growth"
+          dashboard_url: "http://localhost:3000/d/trust-post-overview/trust-post-overview"
+
           # Manual smoke-test alert.
           # Keep it commented in normal mode to avoid permanent noise.
           # Uncomment temporarily when testing Alertmanager routing.

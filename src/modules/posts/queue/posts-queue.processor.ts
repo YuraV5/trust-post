@@ -6,12 +6,14 @@ import { Inject } from '@nestjs/common/decorators/core/inject.decorator';
 import { PostsReviewService } from '../services';
 import { Job } from 'bullmq';
 import { AssignReviewerJobData } from '../types';
+import { PostsQueueService } from './posts-queue.service';
 
 @Processor(POSTS_QUEUE, { limiter: { max: 10, duration: 1000 } }) // Limit to 10 jobs per second to prevent overwhelming the system
 export class PostsQueueProcessor extends WorkerHost {
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly postReviewService: PostsReviewService,
+    private readonly postsQueueService: PostsQueueService,
   ) {
     super();
   }
@@ -25,6 +27,14 @@ export class PostsQueueProcessor extends WorkerHost {
           throw new Error(`No processor defined for job ${job.name}`);
       }
     } catch (error) {
+      const maxAttempts = job.opts.attempts ?? 1;
+      const currentAttempt = (job.attemptsMade ?? 0) + 1;
+      const isLastAttempt = currentAttempt >= maxAttempts;
+
+      if (isLastAttempt) {
+        await this.postsQueueService.moveToDlq(job, error);
+      }
+
       this.logger.error('Posts queue job processing failed', {
         jobId: job.id,
         jobName: job.name,

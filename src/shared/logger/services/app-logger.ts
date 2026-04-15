@@ -15,6 +15,7 @@ export class AppLogger implements IAppLogger {
   private readonly logger: Logger;
   private readonly nodeEnv: string;
   private readonly logLevel: string;
+  private readonly fileLoggingEnabled: boolean;
   private readonly cwdPattern: RegExp;
   private readonly normalLogsDir: string;
   private readonly errorLogsDir: string;
@@ -24,13 +25,15 @@ export class AppLogger implements IAppLogger {
   constructor(private readonly config: ConfigService) {
     this.nodeEnv = this.config.getOrThrow<string>('nodeEnv');
     this.logLevel = this.config.get('loggerLevel') || 'info';
+    this.fileLoggingEnabled = this.config.get<boolean>('loggerFileEnabled') ?? this.nodeEnv !== APP_MODE.TEST;
     this.cwdPattern = this.buildCwdPattern(process.cwd());
     this.normalLogsDir = join(process.cwd(), 'logs', 'normal');
     this.errorLogsDir = join(process.cwd(), 'logs', 'error');
-    // TODO: add to env and config
     this.fileMaxSizeBytes = (this.config.get<number>('loggerFileMaxSizeMb') || 10) * 1024 * 1024;
     this.fileMaxFiles = this.config.get<number>('loggerFileMaxFiles') || 5;
-    this.ensureLogDirs();
+    if (this.fileLoggingEnabled) {
+      this.ensureLogDirs();
+    }
     this.logger = this.createLogger();
   }
 
@@ -55,6 +58,9 @@ export class AppLogger implements IAppLogger {
   }
 
   private createProdLogger(): Logger {
+    const fileTransports = this.createFileTransports();
+    const errorFileHandlers = this.createErrorFileHandlers();
+
     return createLogger({
       level: this.logLevel || 'info',
       format: format.combine(
@@ -105,13 +111,16 @@ export class AppLogger implements IAppLogger {
           return JSON.stringify(logData);
         }),
       ),
-      transports: [new transports.Console(), ...this.createFileTransports()],
-      exceptionHandlers: [new transports.Console(), ...this.createErrorFileHandlers()],
-      rejectionHandlers: [new transports.Console(), ...this.createErrorFileHandlers()],
+      transports: [new transports.Console(), ...fileTransports],
+      exceptionHandlers: [new transports.Console(), ...errorFileHandlers],
+      rejectionHandlers: [new transports.Console(), ...errorFileHandlers],
     });
   }
 
   private createDevLogger(): Logger {
+    const fileTransports = this.createFileTransports();
+    const errorFileHandlers = this.createErrorFileHandlers();
+
     return createLogger({
       level: this.logLevel || 'debug',
       format: format.combine(
@@ -153,9 +162,9 @@ export class AppLogger implements IAppLogger {
           return log;
         }),
       ),
-      transports: [new transports.Console(), ...this.createFileTransports()],
-      exceptionHandlers: [new transports.Console(), ...this.createErrorFileHandlers()],
-      rejectionHandlers: [new transports.Console(), ...this.createErrorFileHandlers()],
+      transports: [new transports.Console(), ...fileTransports],
+      exceptionHandlers: [new transports.Console(), ...errorFileHandlers],
+      rejectionHandlers: [new transports.Console(), ...errorFileHandlers],
     });
   }
 
@@ -165,6 +174,10 @@ export class AppLogger implements IAppLogger {
   }
 
   private createFileTransports(): transports.FileTransportInstance[] {
+    if (!this.fileLoggingEnabled) {
+      return [];
+    }
+
     return [
       new transports.File({
         filename: join(this.normalLogsDir, 'app.log'),
@@ -184,6 +197,10 @@ export class AppLogger implements IAppLogger {
   }
 
   private createErrorFileHandlers(): transports.FileTransportInstance[] {
+    if (!this.fileLoggingEnabled) {
+      return [];
+    }
+
     return [
       new transports.File({
         filename: join(this.errorLogsDir, 'exceptions.log'),

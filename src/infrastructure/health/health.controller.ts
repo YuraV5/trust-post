@@ -24,6 +24,10 @@ type HealthResponse = {
   };
 };
 
+type LivenessResponse = {
+  status: 'ok';
+};
+
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
@@ -32,10 +36,52 @@ export class HealthController {
     private readonly redis: RedisConnectionManager,
   ) {}
 
+  /** Liveness — process is alive, no external dependency checks. */
+  @Get('liveness')
+  @PublicRoute()
+  @ApiOperation({ summary: 'Liveness check — confirms the process is running' })
+  @ApiOkResponse({
+    description: 'Process is alive',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'ok' },
+      },
+    },
+  })
+  liveness(): LivenessResponse {
+    return { status: 'ok' };
+  }
+
+  /** Readiness — verifies all external dependencies are reachable. */
+  @Get('readiness')
+  @PublicRoute()
+  @HealthCheck()
+  @ApiOperation({ summary: 'Readiness check — verifies database and redis connectivity' })
+  @ApiOkResponse({
+    description: 'Service is ready to accept traffic',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'ok' },
+        info: { type: 'object', example: {} },
+        error: { type: 'object', example: {} },
+        details: { type: 'object', example: {} },
+      },
+    },
+  })
+  async readiness(): Promise<HealthResponse> {
+    return this.runDependencyChecks();
+  }
+
+  /**
+   * @deprecated Use GET /health/readiness instead.
+   * Kept for backward compatibility.
+   */
   @Get()
   @PublicRoute()
   @HealthCheck()
-  @ApiOperation({ summary: 'Health check' })
+  @ApiOperation({ summary: 'Health check (deprecated — use /health/readiness)' })
   @ApiOkResponse({
     description: 'Service health status',
     schema: {
@@ -49,6 +95,10 @@ export class HealthController {
     },
   })
   async check(): Promise<HealthResponse> {
+    return this.runDependencyChecks();
+  }
+
+  private async runDependencyChecks(): Promise<HealthResponse> {
     const details: HealthResponse['details'] = {
       database: { status: 'up' },
       redis: { status: 'up' },

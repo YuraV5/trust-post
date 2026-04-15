@@ -21,6 +21,7 @@ describe('ChatService', () => {
     createPostChat: jest.fn(),
     findChatById: jest.fn(),
     findUserChats: jest.fn(),
+    findChatWithMembers: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -197,6 +198,103 @@ describe('ChatService', () => {
       const result = await service.deleteChatForUser('chat-1', 'user-1');
 
       expect(result).toEqual({ message: 'Chat deleted successfully' });
+    });
+  });
+
+  describe('getUserChats', () => {
+    it('returns cached user chats when cache hit', async () => {
+      const cached = {
+        data: [{ id: 'chat-1' }],
+        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      };
+      (mockRedisService.get as jest.Mock).mockResolvedValue(JSON.stringify(cached));
+
+      const result = await service.getUserChats('user-1', 1, 20);
+
+      expect(result).toEqual(cached);
+      expect(mockChatRepo.findUserChats).not.toHaveBeenCalled();
+    });
+
+    it('reads from repo and writes to cache when cache miss', async () => {
+      (mockRedisService.get as jest.Mock).mockResolvedValue(null);
+      mockChatRepo.findUserChats.mockResolvedValue({
+        data: [{ id: 'chat-2' }],
+        total: 21,
+      });
+
+      const result = await service.getUserChats('user-1', 2, 10);
+
+      expect(result).toEqual({
+        data: [{ id: 'chat-2' }],
+        pagination: { page: 2, limit: 10, total: 21, totalPages: 3 },
+      });
+      expect(mockChatRepo.findUserChats).toHaveBeenCalledWith('user-1', 2, 10);
+      expect(mockRedisService.set).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('getChat', () => {
+    it('returns cached chat when cache hit', async () => {
+      const cachedChat = {
+        id: 'chat-1',
+        members: [{ userId: 'user-1' }],
+        PrivateChat: null,
+      };
+      (mockRedisService.get as jest.Mock).mockResolvedValue(JSON.stringify(cachedChat));
+
+      const result = await service.getChat('chat-1', 'user-1');
+
+      expect(result).toEqual(cachedChat);
+      expect(mockChatRepo.findChatWithMembers).not.toHaveBeenCalled();
+    });
+
+    it('throws when chat is not found', async () => {
+      (mockRedisService.get as jest.Mock).mockResolvedValue(null);
+      mockChatRepo.findChatWithMembers.mockResolvedValue(null);
+
+      await expect(service.getChat('chat-404', 'user-1')).rejects.toThrow('Chat not found');
+    });
+
+    it('throws when user is not member of chat', async () => {
+      (mockRedisService.get as jest.Mock).mockResolvedValue(null);
+      mockChatRepo.findChatWithMembers.mockResolvedValue({
+        id: 'chat-1',
+        members: [{ userId: 'user-2' }],
+        PrivateChat: null,
+      });
+
+      await expect(service.getChat('chat-1', 'user-1')).rejects.toThrow('You are not a member of this chat');
+    });
+
+    it('returns chat and writes to cache when user is member', async () => {
+      (mockRedisService.get as jest.Mock).mockResolvedValue(null);
+      const chat = {
+        id: 'chat-1',
+        members: [{ userId: 'user-1' }],
+        PrivateChat: null,
+      };
+      mockChatRepo.findChatWithMembers.mockResolvedValue(chat);
+
+      const result = await service.getChat('chat-1', 'user-1');
+
+      expect(result).toEqual(chat);
+      expect(mockRedisService.set).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('markChatAsRead', () => {
+    it('throws when user is not a member', async () => {
+      mockChatRepo.findChatMember.mockResolvedValue(null);
+
+      await expect(service.markChatAsRead('chat-1', 'user-1')).rejects.toThrow('You are not a member of this chat');
+    });
+
+    it('returns success message when user is a member', async () => {
+      mockChatRepo.findChatMember.mockResolvedValue({ userId: 'user-1' });
+
+      const result = await service.markChatAsRead('chat-1', 'user-1');
+
+      expect(result).toEqual({ message: 'Chat marked as read' });
     });
   });
 });

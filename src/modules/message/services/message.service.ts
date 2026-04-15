@@ -37,6 +37,10 @@ export class MessageService implements IMessageService {
     const { chatId, senderId, content } = input;
     const trimmed = content?.trim() ?? '';
 
+    if (trimmed.length === 0) {
+      throw new AppBadRequestException('Message content cannot be empty');
+    }
+
     // Verify user is a member of the chat
     const member = await this.repo.findChatMember(chatId, senderId);
 

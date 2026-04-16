@@ -2,12 +2,6 @@
 
 Shortly describe what this PR changes and why.
 
-## Changes
-
-- 
-- 
-- 
-
 ## Validation
 
 Mark what was checked locally:
@@ -27,7 +21,8 @@ Mark what was checked locally:
 - [ ] No
 - [ ] Yes (describe below)
 
-## Related
+## Docs Updated
 
-- Issue: #
-- Docs updated: [ ] Yes [ ] No [ ] Not needed
+- [ ] Yes
+- [ ] No
+- [ ] Not needed

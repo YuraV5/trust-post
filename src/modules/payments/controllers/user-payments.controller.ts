@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
-import { CurrentUser } from '../../../common/decorators';
+import { CurrentUser, RequireIdempotencyKey } from '../../../common/decorators';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { CreateUserPaymentDto, PaymentsQueryDto, RegeneratePaymentLinkDto } from '../dtos';
 import { PaymentsService } from '../services';
@@ -19,6 +19,7 @@ export class UserPaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post()
+  @RequireIdempotencyKey()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create payment request' })
   @ApiBody({ type: CreateUserPaymentDto })

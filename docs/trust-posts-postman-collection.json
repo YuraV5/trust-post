@@ -26,6 +26,11 @@
       "key": "accessToken",
       "value": "",
       "type": "default"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "payment-req-001",
+      "type": "default"
     }
   ],
   "event": [
@@ -1571,7 +1576,13 @@
           "name": "create payment (user)",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}",
+                "type": "text"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"postId\": 1,\n  \"amount\": 250,\n  \"currency\": \"UAH\",\n  \"message\": \"Happy to support this project!\",\n  \"provider\": \"WAYFORPAY\"\n}",
@@ -1590,7 +1601,7 @@
                 "payments"
               ]
             },
-            "description": "message is optional. Returns a WayForPay payment URL."
+            "description": "Idempotency-Key header is required. message is optional. Returns a WayForPay payment URL."
           },
           "response": []
         },
@@ -1601,7 +1612,13 @@
               "type": "noauth"
             },
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}",
+                "type": "text"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"postId\": 1,\n  \"amount\": 100,\n  \"currency\": \"UAH\",\n  \"donorEmail\": \"anon.donor@example.com\",\n  \"donorName\": \"Anonymous Donor\",\n  \"message\": \"Keep up the great work!\",\n  \"provider\": \"WAYFORPAY\"\n}",
@@ -1621,7 +1638,7 @@
                 "anonymous"
               ]
             },
-            "description": "No auth required. donorEmail, donorName, message are optional."
+            "description": "No auth required. Idempotency-Key header is required. donorEmail, donorName, message are optional."
           },
           "response": []
         },

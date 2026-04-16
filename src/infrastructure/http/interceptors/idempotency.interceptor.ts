@@ -1,5 +1,6 @@
 import { AppBadRequestException, AppConflictException } from '../../../shared/errors/app-errors';
 import { CallHandler, ExecutionContext, Inject, Injectable, NestInterceptor } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { Request, Response } from 'express';
 import { Observable, catchError, from, of, switchMap, throwError } from 'rxjs';
 import { createHash } from 'node:crypto';
@@ -7,6 +8,13 @@ import { RedisService } from '../../../modules/cache/services';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { ConfigService } from '@nestjs/config/dist/config.service';
+import { REQUIRE_IDEMPOTENCY_KEY } from '../../../common/decorators';
+
+const IDEMPOTENCY_HEADER = 'idempotency-key';
+/** TTL for payment-related routes (24 hours) */
+const PAYMENT_TTL_SECONDS = 86_400;
+/** TTL for all other routes (1 hour) */
+const DEFAULT_TTL_SECONDS = 3_600;
 
 type CachedResponse = {
   requestHash: string;
@@ -15,13 +23,16 @@ type CachedResponse = {
   createdAt: string;
 };
 /**
- *This interceptor provides idempotency for mutating
- *HTTP requests (POST, PUT, PATCH, DELETE)
- *based on a unique x-idempotency-key header.
+ * Provides idempotency for mutating HTTP requests (POST, PUT, PATCH, DELETE).
+ *
+ * - Payment routes: `Idempotency-Key` header is REQUIRED (enforced via @RequireIdempotencyKey()).
+ * - Other routes: header is optional; when absent a SHA-256 hash of the normalised body is used.
+ * - TTL: 24 h for payment routes, 1 h for all others.
+ * - Same key + different payload → 409 Conflict (logged as warn).
+ * - Duplicate concurrent requests are serialised via a Redis lock.
  */
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
-  private readonly idempotencyTtlSeconds: number;
   private readonly lockTtlSeconds: number;
   private readonly waitTimeoutMs: number;
   private readonly waitPollMs: number;
@@ -30,17 +41,12 @@ export class IdempotencyInterceptor implements NestInterceptor {
     private readonly redisService: RedisService,
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly config: ConfigService,
+    private readonly reflector: Reflector,
   ) {
-    const baseTtl = this.config.get<number>('idempotency.interceptorTtl') || 300; // Base TTL of 5 minutes for idempotency keys
-    this.idempotencyTtlSeconds = Math.max(30, Math.min(baseTtl, 3600));
-    this.lockTtlSeconds = Math.max(5, Math.min(Math.floor(this.idempotencyTtlSeconds / 4), 60));
-    this.waitTimeoutMs = 8000;
+    this.lockTtlSeconds = 30;
+    this.waitTimeoutMs = 8_000;
     this.waitPollMs = 150;
   }
-  /**
-   * The main intercept method that handles the
-   * idempotency logic for incoming HTTP requests.
-   */
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const isEnabled = this.config.get<boolean>('idempotency.enabled') ?? false;
     if (!isEnabled) {
@@ -48,9 +54,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    // Skip non-HTTP contexts (e.g., RPC, WebSocket)
     if (context.getType() !== 'http') {
-      this.logger.debug('Idempotency skipped: non-HTTP context');
       return next.handle();
     }
 
@@ -58,21 +62,28 @@ export class IdempotencyInterceptor implements NestInterceptor {
     const req = httpCtx.getRequest<Request & { user?: { userId?: string } }>();
     const res = httpCtx.getResponse<Response>();
 
-    // Only apply to mutating methods (POST, PUT, PATCH, DELETE)
     if (!this.isMutatingMethod(req.method)) {
-      this.logger.debug('Idempotency skipped: non-mutating method', {
-        method: req.method,
-        path: req.originalUrl ?? req.url,
-      });
       return next.handle();
     }
 
-    // Define request scope for user+method+route
+    // Check if the route requires an explicit Idempotency-Key header
+    const keyRequired = this.reflector.getAllAndOverride<boolean>(REQUIRE_IDEMPOTENCY_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    const rawKey = req.headers[IDEMPOTENCY_HEADER]?.toString().trim();
+
+    if (keyRequired && !rawKey) {
+      throw new AppBadRequestException('Idempotency-Key header is required for this endpoint.');
+    }
+
+    // Scope: user + method + route path — ensures UNIQUE(key, route)
     const scopeUser = req.user?.userId ?? 'anonymous';
     const routePath = req.route?.path ?? req.path;
     const scope = `${scopeUser}:${req.method}:${routePath}`;
 
-    // Stable hash of the request payload
+    // Stable SHA-256 hash of the normalised request payload
     const requestHash = this.hash(
       this.stableStringify({
         body: req.body ?? null,
@@ -81,13 +92,15 @@ export class IdempotencyInterceptor implements NestInterceptor {
       }),
     );
 
-    // Use x-idempotency-key if provided; otherwise generate server key
-    const idempotencyKey = req.headers['x-idempotency-key']?.toString().trim() ?? this.hash(`${scope}:${requestHash}`);
+    // If no explicit key provided, fall back to a deterministic hash of the payload
+    const idempotencyKey = rawKey ?? this.hash(`${scope}:${requestHash}`);
 
-    // Keys for Redis cache and lock
     const operationKey = this.hash(`${scope}:${idempotencyKey}`);
     const responseKey = `idem:resp:${operationKey}`;
     const lockKey = `idem:lock:${operationKey}`;
+
+    // Route-based TTL: payment routes → 24 h, everything else → 1 h
+    const ttlSeconds = this.isPaymentRoute(routePath) ? PAYMENT_TTL_SECONDS : DEFAULT_TTL_SECONDS;
 
     this.logger.debug('Idempotency processing started', {
       method: req.method,
@@ -95,6 +108,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
       userId: scopeUser,
       routePath,
       operationKey,
+      ttlSeconds,
     });
 
     res.setHeader('x-idempotency-status', 'processing');
@@ -104,7 +118,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
       switchMap((cached) => {
         const parsed = this.parseCached(cached);
         if (parsed) {
-          this.ensureSamePayload(parsed.requestHash, requestHash);
+          this.ensureSamePayload(parsed.requestHash, requestHash, operationKey, routePath);
           res.setHeader('x-idempotency-status', 'replayed');
           res.status(parsed.statusCode);
           this.logger.debug('Idempotency cache hit: replaying cached response', {
@@ -128,7 +142,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
                       'Another request with the same idempotency key is in progress. Retry shortly.',
                     );
                   }
-                  this.ensureSamePayload(waitedParsed.requestHash, requestHash);
+                  this.ensureSamePayload(waitedParsed.requestHash, requestHash, operationKey, routePath);
                   res.setHeader('x-idempotency-status', 'replayed');
                   res.status(waitedParsed.statusCode);
                   this.logger.debug('Idempotency wait completed: replaying response from first request', {
@@ -153,9 +167,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
                   createdAt: new Date().toISOString(),
                 };
 
-                return from(
-                  this.redisService.set(responseKey, JSON.stringify(payload), this.idempotencyTtlSeconds),
-                ).pipe(
+                return from(this.redisService.set(responseKey, JSON.stringify(payload), ttlSeconds)).pipe(
                   switchMap(() => from(this.redisService.del(lockKey))),
                   switchMap(() => {
                     this.logger.debug('Idempotency request processed and cached', {
@@ -188,19 +200,28 @@ export class IdempotencyInterceptor implements NestInterceptor {
     );
   }
 
-  /** Check if the HTTP method is mutating (POST, PUT, PATCH, DELETE). */
   private isMutatingMethod(method: string): boolean {
     return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase());
   }
 
-  /** Ensure that the stored payload hash matches the current request payload hash. */
-  private ensureSamePayload(storedHash: string, currentHash: string): void {
+  private isPaymentRoute(routePath: string): boolean {
+    return routePath.toLowerCase().includes('payment');
+  }
+
+  /**
+   * Throws 409 Conflict when the stored hash does not match the current payload.
+   * Prevents re-using an idempotency key with a different body.
+   */
+  private ensureSamePayload(storedHash: string, currentHash: string, operationKey: string, routePath: string): void {
     if (storedHash !== currentHash) {
-      throw new AppBadRequestException('The same x-idempotency-key cannot be reused with a different payload.');
+      this.logger.warn('Idempotency conflict: key reused with different payload', {
+        operationKey,
+        routePath,
+      });
+      throw new AppConflictException('Idempotency-Key has already been used with a different request payload.');
     }
   }
 
-  /** Parse the cached response from Redis and validate its structure. */
   private parseCached(value: string | null): CachedResponse | null {
     if (!value) {
       return null;
@@ -217,9 +238,6 @@ export class IdempotencyInterceptor implements NestInterceptor {
     }
   }
 
-  /** Wait for a cached response to become available for the given key,
-   * polling Redis until it appears or a timeout is reached.
-   */
   private async waitForResponse(responseKey: string): Promise<string | null> {
     const started = Date.now();
 
@@ -234,19 +252,17 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return null;
   }
 
-  /** Utility method to pause execution for a given number of milliseconds. */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  /** Generate a SHA-256 hash for the given string value. */
   private hash(value: string): string {
     return createHash('sha256').update(value).digest('hex');
   }
 
-  /** Stable stringify method that produces consistent string output for the same input,
-   * regardless of key order in objects.
-   * This is important for generating consistent hashes for request payloads.
+  /**
+   * Produces a deterministic JSON string regardless of key order,
+   * ensuring consistent hashes for identical payloads.
    */
   private stableStringify(value: unknown): string {
     if (value === null || typeof value !== 'object') {

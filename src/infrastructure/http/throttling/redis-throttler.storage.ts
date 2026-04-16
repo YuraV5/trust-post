@@ -4,13 +4,16 @@ import { ThrottlerStorage } from '@nestjs/throttler';
 import Redis from 'ioredis';
 import { REDIS_DB } from '../../../configs/redis/redis-db';
 import { ThrottlerStorageRecord } from '@nestjs/throttler/dist/throttler-storage-record.interface';
+import { AppServiceUnavailableException } from '../../../shared/errors/app-errors';
 
-type ThrottlerRecord = {
-  totalHits: number;
-  timeToExpire: number;
-  isBlocked: boolean;
-  timeToBlockExpire: number;
+type ThrottlerRecord = ThrottlerStorageRecord;
+
+type LocalHitState = {
+  hits: number;
+  windowEndsAtMs: number;
 };
+
+const PAYMENT_THROTTLERS = new Set(['paymentsAnonymous', 'paymentsWebhook']);
 
 @Injectable()
 export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShutdown {
@@ -18,10 +21,14 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
   private readonly client: Redis;
   private readonly isProduction: boolean;
   private readonly retryDelayMs: number;
+  private readonly fallbackMaxKeys: number;
+  private readonly localHits = new Map<string, LocalHitState>();
+  private readonly localBlocks = new Map<string, number>();
 
   constructor(private readonly config: ConfigService) {
     this.isProduction = this.config.get<string>('nodeEnv') === 'production';
     this.retryDelayMs = this.config.get<number>('redis.retryDelayMs', this.isProduction ? 2000 : 250);
+    this.fallbackMaxKeys = this.config.get<number>('throttling.redisFallbackMaxKeys', 10_000);
 
     this.client = new Redis({
       host: this.config.get<string>('redis.host', 'localhost'),
@@ -50,63 +57,20 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
     blockDuration: number,
     throttlerName: string,
   ): Promise<ThrottlerRecord> {
-    const { hitKey, blockKey } = this.buildKeys(key, throttlerName);
+    const keys = this.buildKeys(key, throttlerName);
 
     try {
-      if (!(await this.ensureConnected())) {
-        return this.blockFallback(limit, blockDuration, key, throttlerName);
+      if (await this.isRedisReady()) {
+        return await this.incrementInRedis(keys.hitKey, keys.blockKey, ttl, limit, blockDuration, key, throttlerName);
       }
 
-      // 1. check block
-      const blockTtl = await this.client.pttl(blockKey);
-
-      if (blockTtl > 0) {
-        return this.handleBlocked(hitKey, blockTtl, key, throttlerName);
-      }
-
-      // 2. increment + ttl (multi)
-      const [hits] = await this.incrementWithTtl(hitKey, ttl);
-
-      // 3. get ttl
-      let hitTtl = await this.client.pttl(hitKey);
-
-      if (hitTtl < 0) {
-        await this.client.pexpire(hitKey, ttl);
-        hitTtl = ttl;
-      }
-
-      // 4. check limit
-      if (hits > limit) {
-        await this.client.set(blockKey, '1', 'PX', blockDuration);
-
-        const response = {
-          totalHits: hits,
-          timeToExpire: this.toSeconds(hitTtl),
-          isBlocked: true,
-          timeToBlockExpire: this.toSeconds(blockDuration),
-        };
-
-        this.logBlocked(response, key, throttlerName);
-        return response;
-      }
-
-      const response = {
-        totalHits: hits,
-        timeToExpire: this.toSeconds(hitTtl),
-        isBlocked: false,
-        timeToBlockExpire: 0,
-      };
-
-      this.logOk(response, key, throttlerName);
-      return response;
+      return this.redisUnavailableFallback(keys.hitKey, keys.blockKey, ttl, limit, blockDuration, key, throttlerName);
     } catch (error) {
-      this.logger.error(`Throttler fallback (block request) key=${key}: ${(error as Error).message}`);
-
-      return this.blockFallback(limit, blockDuration, key, throttlerName);
+      this.logger.error(`Throttler redis path failed, fallback used key=${key}: ${(error as Error).message}`);
+      return this.redisUnavailableFallback(keys.hitKey, keys.blockKey, ttl, limit, blockDuration, key, throttlerName);
     }
   }
 
-  // Cleanup on shutdown
   async onApplicationShutdown(): Promise<void> {
     this.logger.log('Shutting down Redis throttler');
 
@@ -117,9 +81,20 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
     await this.client.quit();
   }
 
-  private async ensureConnected(): Promise<boolean> {
-    if (this.client.status === 'ready' || this.client.status === 'connecting' || this.client.status === 'connect') {
+  private buildKeys(key: string, throttlerName: string): { hitKey: string; blockKey: string } {
+    return {
+      hitKey: `throttle:${throttlerName}:hits:${key}`,
+      blockKey: `throttle:${throttlerName}:block:${key}`,
+    };
+  }
+
+  private async isRedisReady(): Promise<boolean> {
+    if (this.client.status === 'ready') {
       return true;
+    }
+
+    if (this.client.status === 'connecting' || this.client.status === 'connect') {
+      return false;
     }
 
     try {
@@ -131,97 +106,193 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
     }
   }
 
-  // Helper methods build keys
-  private buildKeys(key: string, throttlerName: string) {
-    return {
-      hitKey: `throttle:${throttlerName}:hits:${key}`,
-      blockKey: `throttle:${throttlerName}:block:${key}`,
-    };
-  }
-
-  // Increment hits and get TTL atomically
-  private async incrementWithTtl(hitKey: string, ttl: number): Promise<[number]> {
-    const multi = this.client.multi();
-
-    multi.incr(hitKey);
-    multi.pttl(hitKey);
-
-    const results = await multi.exec();
-
-    const hits = results?.[0]?.[1] as number;
-    const currentTtl = results?.[1]?.[1] as number;
-
-    // If it's the first hit or the key has no TTL, set the TTL
-    if (hits === 1 || currentTtl < 0) {
-      await this.client.pexpire(hitKey, ttl);
-    }
-
-    return [hits];
-  }
-
-  // Handle blocked case
-  private async handleBlocked(
+  private async incrementInRedis(
     hitKey: string,
-    blockTtl: number,
+    blockKey: string,
+    ttl: number,
+    limit: number,
+    blockDuration: number,
     key: string,
     throttlerName: string,
   ): Promise<ThrottlerRecord> {
-    const hits = Number.parseInt((await this.client.get(hitKey)) ?? '0', 10) || 0;
-    const hitTtl = await this.client.pttl(hitKey);
+    const blockTtl = await this.client.pttl(blockKey);
+
+    if (blockTtl > 0) {
+      const hits = Number.parseInt((await this.client.get(hitKey)) ?? '0', 10) || limit + 1;
+      const hitTtl = await this.client.pttl(hitKey);
+      return this.buildBlockedResponse(hits, hitTtl, blockTtl, key, throttlerName);
+    }
+
+    const hits = await this.client.incr(hitKey);
+
+    if (hits === 1) {
+      await this.client.pexpire(hitKey, ttl);
+    }
+
+    let hitTtl = await this.client.pttl(hitKey);
+    if (hitTtl < 0) {
+      await this.client.pexpire(hitKey, ttl);
+      hitTtl = ttl;
+    }
+
+    if (hits > limit) {
+      const blockMs = this.resolveBlockDuration(blockDuration, ttl);
+      await this.client.set(blockKey, '1', 'PX', blockMs);
+      return this.buildBlockedResponse(hits, hitTtl, blockMs, key, throttlerName);
+    }
 
     const response = {
       totalHits: hits,
       timeToExpire: this.toSeconds(hitTtl),
-      isBlocked: true,
-      timeToBlockExpire: this.toSeconds(blockTtl),
+      isBlocked: false,
+      timeToBlockExpire: 0,
     };
 
-    this.logBlocked(response, key, throttlerName);
+    if (!this.isProduction) {
+      this.logger.debug(
+        `[THROTTLE] ${throttlerName} key=${key} hits=${response.totalHits} ttl=${response.timeToExpire}s`,
+      );
+    }
+
     return response;
   }
 
-  // Logging helpers Log successful hits
-  private logOk(response: ThrottlerRecord, key: string, throttlerName: string) {
-    if (this.isProduction) {
-      return;
-    }
+  private buildBlockedResponse(
+    hits: number,
+    hitTtlMs: number,
+    blockTtlMs: number,
+    key: string,
+    throttlerName: string,
+  ): ThrottlerRecord {
+    const response = {
+      totalHits: hits,
+      timeToExpire: this.toSeconds(hitTtlMs),
+      isBlocked: true,
+      timeToBlockExpire: this.toSeconds(blockTtlMs),
+    };
 
-    this.logger.debug(
-      `[THROTTLE] ${throttlerName} key=${key} hits=${response.totalHits} ttl=${response.timeToExpire}s`,
-    );
-  }
-
-  // Logging helpers Log blocked attempts
-  private logBlocked(response: ThrottlerRecord, key: string, throttlerName: string) {
     this.logger.warn(
       `[THROTTLE BLOCKED] ${throttlerName} key=${key} hits=${response.totalHits} blockTTL=${response.timeToBlockExpire}s`,
     );
+
+    return response;
   }
 
-  // Fail-closed fallback to keep throttling protection if Redis is unavailable
-  private blockFallback(
+  private redisUnavailableFallback(
+    hitKey: string,
+    blockKey: string,
+    ttl: number,
     limit: number,
     blockDuration: number,
     key: string,
     throttlerName: string,
   ): ThrottlerStorageRecord {
-    const fallbackBlockMs = blockDuration > 0 ? blockDuration : 1000;
+    if (PAYMENT_THROTTLERS.has(throttlerName)) {
+      this.logger.error(`[THROTTLE REDIS DOWN] blocking payment route with 503, throttler=${throttlerName} key=${key}`);
+      throw new AppServiceUnavailableException('Payment service is temporarily unavailable. Please retry shortly.');
+    }
 
+    const response = this.incrementInMemory(hitKey, blockKey, ttl, limit, blockDuration);
     this.logger.warn(
-      `[THROTTLE FALLBACK BLOCKED] ${throttlerName} key=${key} blockTTL=${this.toSeconds(fallbackBlockMs)}s`,
+      `[THROTTLE FALLBACK INMEMORY] ${throttlerName} key=${key} hits=${response.totalHits} blocked=${response.isBlocked} blockTTL=${response.timeToBlockExpire}s`,
     );
+    return response;
+  }
+
+  private incrementInMemory(
+    hitKey: string,
+    blockKey: string,
+    ttl: number,
+    limit: number,
+    blockDuration: number,
+  ): ThrottlerStorageRecord {
+    this.compactInMemoryState();
+
+    const now = Date.now();
+    const blockedUntilMs = this.localBlocks.get(blockKey) ?? 0;
+    if (blockedUntilMs > now) {
+      const state = this.localHits.get(hitKey);
+      return {
+        totalHits: state?.hits ?? limit + 1,
+        timeToExpire: this.toSeconds((state?.windowEndsAtMs ?? blockedUntilMs) - now),
+        isBlocked: true,
+        timeToBlockExpire: this.toSeconds(blockedUntilMs - now),
+      };
+    }
+
+    const windowMs = ttl > 0 ? ttl : 1000;
+    const existing = this.localHits.get(hitKey);
+    const hasActiveWindow = !!existing && existing.windowEndsAtMs > now;
+    const hits = hasActiveWindow ? existing.hits + 1 : 1;
+    const windowEndsAtMs = hasActiveWindow ? existing.windowEndsAtMs : now + windowMs;
+
+    this.localHits.set(hitKey, { hits, windowEndsAtMs });
+
+    if (hits > limit) {
+      const blockMs = this.resolveBlockDuration(blockDuration, ttl);
+      const blockedUntil = now + blockMs;
+      this.localBlocks.set(blockKey, blockedUntil);
+
+      return {
+        totalHits: hits,
+        timeToExpire: this.toSeconds(windowEndsAtMs - now),
+        isBlocked: true,
+        timeToBlockExpire: this.toSeconds(blockMs),
+      };
+    }
 
     return {
-      totalHits: limit + 1,
-      timeToExpire: this.toSeconds(fallbackBlockMs),
-      isBlocked: true,
-      timeToBlockExpire: this.toSeconds(fallbackBlockMs),
+      totalHits: hits,
+      timeToExpire: this.toSeconds(windowEndsAtMs - now),
+      isBlocked: false,
+      timeToBlockExpire: 0,
     };
   }
 
-  // Convert milliseconds to seconds for response
+  private compactInMemoryState(): void {
+    const now = Date.now();
+
+    for (const [key, blockedUntil] of this.localBlocks.entries()) {
+      if (blockedUntil <= now) {
+        this.localBlocks.delete(key);
+      }
+    }
+
+    for (const [key, state] of this.localHits.entries()) {
+      if (state.windowEndsAtMs <= now) {
+        this.localHits.delete(key);
+      }
+    }
+
+    while (this.localHits.size > this.fallbackMaxKeys) {
+      const oldestKey = this.localHits.keys().next().value;
+      if (!oldestKey) {
+        break;
+      }
+      this.localHits.delete(oldestKey);
+    }
+
+    while (this.localBlocks.size > this.fallbackMaxKeys) {
+      const oldestKey = this.localBlocks.keys().next().value;
+      if (!oldestKey) {
+        break;
+      }
+      this.localBlocks.delete(oldestKey);
+    }
+  }
+
+  private resolveBlockDuration(blockDuration: number, ttl: number): number {
+    if (blockDuration > 0) {
+      return blockDuration;
+    }
+    return ttl > 0 ? ttl : 1000;
+  }
+
   private toSeconds(milliseconds: number): number {
-    if (!milliseconds || milliseconds <= 0) return 0;
+    if (!milliseconds || milliseconds <= 0) {
+      return 0;
+    }
+
     return Math.ceil(milliseconds / 1000);
   }
 }

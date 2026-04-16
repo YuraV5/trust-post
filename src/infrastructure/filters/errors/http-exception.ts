@@ -56,6 +56,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       status = 404;
       code = AppErrorCode.NOT_FOUND;
       message = 'Resource not found';
+    } else if (status === 429) {
+      code = AppErrorCode.TOO_MANY_REQUESTS;
+      message = 'Too many requests';
+    } else if (status === 503) {
+      code = AppErrorCode.SERVICE_UNAVAILABLE;
+      message = 'Service unavailable';
     }
 
     this.logger.error('HTTP exception occurred', {

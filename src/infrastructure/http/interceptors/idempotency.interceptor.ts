@@ -167,9 +167,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
                   createdAt: new Date().toISOString(),
                 };
 
-                return from(
-                  this.redisService.set(responseKey, JSON.stringify(payload), ttlSeconds),
-                ).pipe(
+                return from(this.redisService.set(responseKey, JSON.stringify(payload), ttlSeconds)).pipe(
                   switchMap(() => from(this.redisService.del(lockKey))),
                   switchMap(() => {
                     this.logger.debug('Idempotency request processed and cached', {

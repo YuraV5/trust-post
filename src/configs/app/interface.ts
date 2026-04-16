@@ -21,6 +21,12 @@ export interface IAppConfig {
     globalLimit: number;
     globalTtlMs: number;
     blockTtlMs: number;
+    paymentAnonymousLimit: number;
+    paymentAnonymousTtlMs: number;
+    paymentAnonymousBlockTtlMs: number;
+    paymentWebhookLimit: number;
+    paymentWebhookTtlMs: number;
+    paymentWebhookBlockTtlMs: number;
   };
 
   redis: {

@@ -30,6 +30,12 @@ export default (): IAppConfig => ({
     globalLimit: parseInt(process.env.THROTTLE_GLOBAL_LIMIT!, 10) || 120,
     globalTtlMs: parseInt(process.env.THROTTLE_GLOBAL_TTL_MS!, 10) || 60000,
     blockTtlMs: parseInt(process.env.THROTTLE_BLOCK_TTL_MS!, 10) || 300000,
+    paymentAnonymousLimit: parseInt(process.env.THROTTLE_PAYMENT_ANONYMOUS_LIMIT!, 10) || 5,
+    paymentAnonymousTtlMs: parseInt(process.env.THROTTLE_PAYMENT_ANONYMOUS_TTL_MS!, 10) || 60000,
+    paymentAnonymousBlockTtlMs: parseInt(process.env.THROTTLE_PAYMENT_ANONYMOUS_BLOCK_TTL_MS!, 10) || 300000,
+    paymentWebhookLimit: parseInt(process.env.THROTTLE_PAYMENT_WEBHOOK_LIMIT!, 10) || 30,
+    paymentWebhookTtlMs: parseInt(process.env.THROTTLE_PAYMENT_WEBHOOK_TTL_MS!, 10) || 60000,
+    paymentWebhookBlockTtlMs: parseInt(process.env.THROTTLE_PAYMENT_WEBHOOK_BLOCK_TTL_MS!, 10) || 300000,
   },
 
   redis: {

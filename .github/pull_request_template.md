@@ -11,11 +11,6 @@ Mark what was checked locally:
 - [ ] `npm run test`
 - [ ] `npm run build`
 
-## Risk & Rollback
-
-- Risk level: Low / Medium / High
-- Rollback plan: how to safely revert if needed
-
 ## Breaking Changes
 
 - [ ] No

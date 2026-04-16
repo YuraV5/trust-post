@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Post, ValidationPipe } from '@n
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { PaymentProvider } from '@prisma/client';
-import { PublicRoute } from '../../../common/decorators';
+import { PublicRoute, RequireIdempotencyKey } from '../../../common/decorators';
 import { WayForPayWebhookBody } from '../decorators';
 import { CreateAnonymousPaymentDto, WayForPayWebhookDto } from '../dtos';
 import { PaymentsService } from '../services';
@@ -17,6 +17,7 @@ export class PublicPaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('anonymous')
+  @RequireIdempotencyKey()
   @PublicRoute()
   @SkipThrottle({ paymentsAnonymous: false })
   @HttpCode(HttpStatus.CREATED)

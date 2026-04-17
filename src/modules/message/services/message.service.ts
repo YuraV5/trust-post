@@ -254,11 +254,16 @@ export class MessageService implements IMessageService {
       throw new AppBadRequestException('Cannot edit deleted message');
     }
 
-    const updatedMessage = await this.repo.updateMessageContent(messageId, newContent.trim());
+    let updatedMessage = await this.repo.updateMessageContent(messageId, newContent.trim());
 
     if (updatedMessage.attachments.length > 0 && updatedMessage.type === MessageType.FILE) {
-      return this.repo.updateMessageType(updatedMessage.id, MessageType.MIXED);
+      updatedMessage = await this.repo.updateMessageType(updatedMessage.id, MessageType.MIXED);
     }
+
+    this.socketService.emitToRoom('chat', `chat:${updatedMessage.chatId}`, 'message:edited', {
+      chatId: updatedMessage.chatId,
+      message: updatedMessage,
+    });
 
     void this.invalidateMessageCache(updatedMessage.chatId);
 

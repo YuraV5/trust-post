@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { PaymentProvider } from '@prisma/client';
 import { WayForPayCheckoutPayload, WayForPayWebhookAcknowledge, WayForPayWebhookPayload } from '../types';
 import { IPaymentGateway } from '../interfaces';
@@ -101,7 +101,10 @@ export class WayForPayGateway implements IPaymentGateway {
     ].join(';');
 
     const expected = this.sign(signatureSource);
-    return expected === payload.merchantSignature;
+    const expectedBuf = Buffer.from(expected, 'hex');
+    const actualBuf = Buffer.from(payload.merchantSignature ?? '', 'hex');
+    if (expectedBuf.length !== actualBuf.length) return false;
+    return timingSafeEqual(expectedBuf, actualBuf);
   }
 
   buildWebhookAcknowledge(orderReference: string): WayForPayWebhookAcknowledge {

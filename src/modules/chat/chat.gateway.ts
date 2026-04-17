@@ -200,21 +200,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       const role = (client.userRole as UserRoles | undefined) ?? UserRoles.USER;
       const { messageId, newContent } = data;
 
-      // Edit message via service
+      // Edit message via service.
+      // The service handles DB write and broadcasts message:edited to the room,
+      // so both WS and REST edits notify all chat members consistently.
       const message = await this.messageService.editMessage({
         messageId,
         userId,
         role,
         newContent,
-      });
-
-      // emitToRoom (unlike client.to) includes the sender in the broadcast,
-      // so their own UI also updates immediately without a round-trip.
-      // chatId is taken from the persisted entity, not from client input,
-      // to prevent a client from spoofing broadcasts to a different chat.
-      this.socketService.emitToRoom(this.namespace, `chat:${message.chatId}`, 'message:edited', {
-        message,
-        chatId: message.chatId,
       });
 
       this.logger.info('Message edited via WebSocket', { userId, messageId, chatId: message.chatId });

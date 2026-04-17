@@ -30,7 +30,7 @@ background jobs, payments, observability, and Docker-based environments.
 
 ```bash
 npm ci
-cp .env.example .env.local
+cp .env.example .env
 ```
 
 ### 2. Start infra

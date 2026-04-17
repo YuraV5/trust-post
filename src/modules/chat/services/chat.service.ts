@@ -38,11 +38,13 @@ export class ChatService implements IChatService {
     const existingChat = await this.repo.findPrivateChatBetweenUsers(userId, otherUserId);
 
     if (existingChat) {
+      await this.invalidateUserChatsCache([userId, otherUserId]);
       return existingChat.chat;
     }
 
     // Create new private chat
     const chat = await this.repo.createPrivateChat(input);
+    await this.invalidateUserChatsCache([userId, otherUserId]);
 
     this.logger.info('Private chat created', { chatId: chat.id, userId, otherUserId });
     return chat;
@@ -61,6 +63,7 @@ export class ChatService implements IChatService {
 
     const allParticipants = Array.from(new Set([creatorId, ...participantIds]));
     const chat = await this.repo.createGroupChat(input);
+    await this.invalidateUserChatsCache(allParticipants);
 
     this.logger.info('Group chat created', { chatId: chat.id, creatorId, participantsCount: allParticipants.length });
     return chat;
@@ -85,6 +88,8 @@ export class ChatService implements IChatService {
       if (!isMember) {
         await this.repo.addChatMember(existingChat.id, creatorId);
       }
+      const memberIds = Array.from(new Set([creatorId, ...existingChat.members.map((member) => member.userId)]));
+      await this.invalidateUserChatsCache(memberIds);
       return existingChat;
     }
 
@@ -95,6 +100,7 @@ export class ChatService implements IChatService {
     if (creatorId !== post.authorId) {
       await this.repo.addChatMember(chat.id, creatorId);
     }
+    await this.invalidateUserChatsCache([creatorId, post.authorId]);
 
     this.logger.info('Post chat created', { chatId: chat.id, postId, creatorId });
     return chat;
@@ -119,6 +125,7 @@ export class ChatService implements IChatService {
     }
 
     await this.repo.addChatMember(chatId, userId);
+    await this.invalidateUserChatsCache([userId]);
 
     this.logger.info('User joined chat', { chatId, userId });
     return { message: 'Successfully joined the chat' };
@@ -132,6 +139,7 @@ export class ChatService implements IChatService {
     }
 
     await this.repo.removeChatMember(chatId, userId);
+    await this.invalidateUserChatsCache([userId]);
 
     this.logger.info('User left chat', { chatId, userId });
     return { message: 'Successfully left the chat' };
@@ -145,6 +153,7 @@ export class ChatService implements IChatService {
     }
 
     await this.repo.removeChatMember(chatId, userId);
+    await this.invalidateUserChatsCache([userId]);
 
     this.logger.info('Chat deleted for user', { chatId, userId });
     return { message: 'Chat deleted successfully' };
@@ -239,6 +248,21 @@ export class ChatService implements IChatService {
         key,
         error: error instanceof Error ? error.message : String(error),
       });
+    }
+  }
+
+  private async invalidateUserChatsCache(userIds: string[]): Promise<void> {
+    const uniqueUserIds = Array.from(new Set(userIds.filter(Boolean)));
+
+    for (const userId of uniqueUserIds) {
+      try {
+        await this.redisService.delByPattern(`cache:chat:user-chats:*"userId":"${userId}"*`);
+      } catch (error) {
+        this.logger.warn('User chats cache invalidation failed', {
+          userId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 }

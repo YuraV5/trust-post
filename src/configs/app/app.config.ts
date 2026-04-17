@@ -40,7 +40,7 @@ export default (): IAppConfig => ({
 
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
-    password: process.env.NODE_ENV === 'production' ? process.env.REDIS_PASSWORD : undefined,
+    password: process.env.REDIS_PASSWORD || undefined,
     port: parseInt(process.env.REDIS_PORT!, 10) || 6379,
     ttl: parseInt(process.env.REDIS_TTL!, 10) || 300,
     maxRetries: parseInt(process.env.REDIS_MAX_RETRIES!, 10) || 3,

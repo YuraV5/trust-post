@@ -31,6 +31,26 @@
       "key": "idempotencyKey",
       "value": "payment-req-001",
       "type": "default"
+    },
+    {
+      "key": "chatId",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "messageId",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "messageFileId",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "postId",
+      "value": "1",
+      "type": "default"
     }
   ],
   "event": [
@@ -1350,12 +1370,48 @@
       "name": "messages",
       "item": [
         {
+          "name": "send message",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "content",
+                  "value": "Hello, everyone!",
+                  "type": "text"
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chats/{{chatId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chats",
+                "{{chatId}}",
+                "messages"
+              ]
+            },
+            "description": "Send a message with optional file attachments (max 10 files). Uses multipart/form-data."
+          },
+          "response": []
+        },
+        {
           "name": "get messages",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/chats/{{chatId}}/messages?page=1&limit=50",
+              "raw": "{{baseUrl}}/chats/{{chatId}}/messages?cursor=&limit=20",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1366,12 +1422,13 @@
               ],
               "query": [
                 {
-                  "key": "page",
-                  "value": "1"
+                  "key": "cursor",
+                  "value": "",
+                  "description": "Cursor for pagination (message ID or timestamp). Leave empty for first page."
                 },
                 {
                   "key": "limit",
-                  "value": "50"
+                  "value": "20"
                 }
               ]
             }

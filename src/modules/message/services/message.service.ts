@@ -46,6 +46,9 @@ export class MessageService implements IMessageService {
     return ChatFileType.DOC;
   }
 
+  // Determines the message type from its content.
+  // SYSTEM is reserved for automated messages (join/leave events etc.) and
+  // always wins. Otherwise: text+files → MIXED, files only → FILE, text only → TEXT.
   private resolveMessageType(hasText: boolean, hasFiles: boolean, forcedType?: MessageType): MessageType {
     if (forcedType === MessageType.SYSTEM) {
       return MessageType.SYSTEM;
@@ -140,7 +143,8 @@ export class MessageService implements IMessageService {
         chatId,
         message,
       });
-
+      // for new messages we can afford to invalidate the cache after responding to the client,
+      // since the new message won't be visible in the list until the next fetch anyway. 
       void this.invalidateMessageCache(chatId);
 
       this.logger.info('Message sent', {
@@ -152,6 +156,9 @@ export class MessageService implements IMessageService {
       });
       return message;
     } catch (error) {
+      // Files were already uploaded to Cloudinary before the DB write failed.
+      // We must delete them now, otherwise they become orphans in storage.
+      // Files are grouped by provider in case we ever support multiple backends.
       if (uploadedFiles.length > 0) {
         const keysByProvider = new Map<FileProvider, string[]>();
 
@@ -187,6 +194,10 @@ export class MessageService implements IMessageService {
     limit: number = this.DEFAULT_LIMIT,
   ): Promise<MessageListResult> {
     const safeLimit = Number.isFinite(limit) ? Math.min(Math.max(limit, 1), 50) : this.DEFAULT_LIMIT;
+    // Cursor-based pagination: the client passes the createdAt of the oldest
+    // visible message; we return the next batch older than that timestamp.
+    // This is more stable than page/offset for a live feed where new messages
+    // are constantly being inserted at the top.
     const cacheKey = this.buildMessageCacheKey(chatId, { userId, cursor: cursor ?? null, limit: safeLimit });
     const cached = await this.readCache<MessageListResult>(cacheKey);
     if (cached) {
@@ -301,6 +312,11 @@ export class MessageService implements IMessageService {
 
     await this.repo.deleteFile(fileId);
 
+    // After deleting a file we need to re-evaluate the parent message:
+    // - If it had no text and this was the last file → the message is now empty,
+    //   so we soft-delete it and tell clients to remove it from the UI.
+    // - If content or other files remain → we recalculate its type (TEXT/FILE/MIXED)
+    //   and broadcast the updated message so clients re-render it correctly.
     const updatedMessage = await this.repo.findMessageWithSenderAndFiles(file.messageId);
     if (updatedMessage) {
       const hasText = (updatedMessage.content?.trim().length ?? 0) > 0;
@@ -344,6 +360,9 @@ export class MessageService implements IMessageService {
     return { message: 'Messages marked as read' };
   }
 
+  // chatId is a separate path segment (not inside JSON) so we can invalidate
+  // the entire chat's message cache with a single SCAN pattern:
+  // cache:message:chat-messages:<chatId>:* — covers every cursor/limit combo.
   private buildMessageCacheKey(chatId: string, rest: unknown): string {
     return `cache:message:chat-messages:${chatId}:${JSON.stringify(rest)}`;
   }
@@ -352,6 +371,9 @@ export class MessageService implements IMessageService {
     return `cache:message:${scope}:${JSON.stringify(payload)}`;
   }
 
+  // Deletes all cached pages for a chat after a write (send/edit/delete).
+  // Called with void so callers don't wait — the response goes to the client
+  // immediately and cache cleanup happens in the background.
   private async invalidateMessageCache(chatId: string): Promise<void> {
     try {
       await this.redisService.delByPattern(`cache:message:chat-messages:${chatId}:*`);

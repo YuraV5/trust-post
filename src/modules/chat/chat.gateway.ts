@@ -8,7 +8,7 @@ import {
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { Inject, UseGuards } from '@nestjs/common';
+import { Inject, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ChatService } from './services/chat.service';
 import { MessageService } from '../message/services/message.service';
 import { APP_LOGGER } from '../../shared/logger/services/app-logger';
@@ -22,6 +22,13 @@ import { type MessageWithSenderAndFiles } from '../message/types';
 import { Server } from 'socket.io';
 import { extractSocketToken } from '../../common/utils/extract-socket-token';
 import { UserRoles } from '@prisma/client';
+import {
+  WsChatActionDto,
+  WsDeleteMessageDto,
+  WsEditMessageDto,
+  WsSendMessageDto,
+  WsTypingDto,
+} from './dtos';
 
 const wsOrigins = (process.env.WS_CORS_ALLOW_ORIGIN || process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001')
   .split(',')
@@ -91,9 +98,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('chat:join')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async handleJoinChat(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string },
+    @MessageBody() data: WsChatActionDto,
   ): Promise<ChatActionGatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
@@ -126,13 +134,17 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('chat:leave')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async handleLeaveChat(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string },
+    @MessageBody() data: WsChatActionDto,
   ): Promise<ChatActionGatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
       const { chatId } = data;
+
+      // Verify user is a member before broadcasting leave activity.
+      await this.chatService.getChat(chatId, userId);
 
       // Leave Socket.IO room
       await client.leave(`chat:${chatId}`);
@@ -157,9 +169,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('message:send')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async handleSendMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string; content?: string },
+    @MessageBody() data: WsSendMessageDto,
   ): Promise<MessageGatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
@@ -191,9 +204,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('message:edit')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async handleEditMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { messageId: string; newContent: string },
+    @MessageBody() data: WsEditMessageDto,
   ): Promise<MessageGatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
@@ -223,9 +237,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('message:delete')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async handleDeleteMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { messageId: string },
+    @MessageBody() data: WsDeleteMessageDto,
   ): Promise<GatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
@@ -249,13 +264,17 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('chat:typing')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async handleTyping(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string; isTyping: boolean },
+    @MessageBody() data: WsTypingDto,
   ): Promise<GatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
       const { chatId, isTyping } = data;
+
+      // Verify user is a member before broadcasting typing activity.
+      await this.chatService.getChat(chatId, userId);
 
       // Broadcast typing indicator to others in the chat (exclude sender)
       client.to(`chat:${chatId}`).emit('user:typing', {
@@ -276,9 +295,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('chat:read')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }))
   async handleMarkAsRead(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { chatId: string },
+    @MessageBody() data: WsChatActionDto,
   ): Promise<GatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);

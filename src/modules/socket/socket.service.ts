@@ -1,10 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
+import { APP_LOGGER } from '../../shared/logger/services/app-logger';
+import { type IAppLogger } from '../../shared/logger/interfaces/interface';
 
 type NamespaceKey = string;
 
 @Injectable()
 export class SocketService {
+    constructor(@Inject(APP_LOGGER) private readonly logger: IAppLogger) {}
+
   // Saving Socket.IO servers for each namespace (chat, notifications, etc.)
   private readonly servers = new Map<NamespaceKey, Server>();
 
@@ -77,14 +81,27 @@ export class SocketService {
   // Sends an event to a specific room within a namespace.
   emitToRoom(namespace: NamespaceKey, room: string, event: string, payload: unknown): void {
     const server = this.servers.get(namespace);
-    if (!server) return;
+    if (!server) {
+      this.logger.warn('Socket emitToRoom skipped: namespace server is not registered', {
+        namespace,
+        room,
+        event,
+      });
+      return;
+    }
     server.to(room).emit(event, payload);
   }
 
   // Broadcasts an event to all connected clients within a namespace.
   emitToNamespace(namespace: NamespaceKey, event: string, payload: unknown): void {
     const server = this.servers.get(namespace);
-    if (!server) return;
+    if (!server) {
+      this.logger.warn('Socket emitToNamespace skipped: namespace server is not registered', {
+        namespace,
+        event,
+      });
+      return;
+    }
     server.emit(event, payload);
   }
 

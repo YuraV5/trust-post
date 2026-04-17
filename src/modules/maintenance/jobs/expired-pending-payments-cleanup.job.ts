@@ -7,8 +7,8 @@ import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 
 @Injectable()
 export class ExpiredPendingPaymentsCleanupJob {
-  private readonly JOB_NAME = 'expired-pending-payments-cleanup';
-  private readonly BATCH_SIZE = 100;
+  private static readonly JOB_NAME = 'expired-pending-payments-cleanup';
+  private static readonly BATCH_SIZE = 100;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -30,7 +30,7 @@ export class ExpiredPendingPaymentsCleanupJob {
 
       if (totalCandidates === 0) {
         this.logger.debug('No expired pending payments without attempts found', {
-          job: this.JOB_NAME,
+          job: ExpiredPendingPaymentsCleanupJob.JOB_NAME,
         });
         return;
       }
@@ -43,7 +43,7 @@ export class ExpiredPendingPaymentsCleanupJob {
             where,
             select: { id: true },
             orderBy: { expiredAt: 'asc' },
-            take: this.BATCH_SIZE,
+            take: ExpiredPendingPaymentsCleanupJob.BATCH_SIZE,
           });
 
           if (candidates.length === 0) {
@@ -66,21 +66,21 @@ export class ExpiredPendingPaymentsCleanupJob {
 
         deletedTotal += deletedInBatch;
 
-        if (deletedInBatch < this.BATCH_SIZE) {
+        if (deletedInBatch < ExpiredPendingPaymentsCleanupJob.BATCH_SIZE) {
           break;
         }
       }
 
       this.logger.info('Expired pending payments cleanup completed', {
-        job: this.JOB_NAME,
+        job: ExpiredPendingPaymentsCleanupJob.JOB_NAME,
         totalCandidates,
         deletedTotal,
-        batchSize: this.BATCH_SIZE,
+        batchSize: ExpiredPendingPaymentsCleanupJob.BATCH_SIZE,
         cutoffDate: now.toISOString(),
       });
     } catch (error) {
       this.logger.error('Expired pending payments cleanup failed', {
-        job: this.JOB_NAME,
+        job: ExpiredPendingPaymentsCleanupJob.JOB_NAME,
         error: error as Error,
       });
     }

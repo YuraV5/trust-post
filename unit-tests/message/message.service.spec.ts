@@ -34,9 +34,9 @@ describe('MessageService', () => {
   });
 
   describe('sendMessage', () => {
-    it('throws when message content is empty', async () => {
+    it('throws when message has no content and no attachments', async () => {
       await expect(service.sendMessage({ chatId: 'c-1', senderId: 'u-1', content: '   ' })).rejects.toThrow(
-        'Message content cannot be empty',
+        'Message must contain text or attachments',
       );
     });
 
@@ -48,17 +48,15 @@ describe('MessageService', () => {
       );
     });
 
-    it('creates message, updates chat timestamp and returns message', async () => {
-      const message = { id: 'msg-1', content: 'Hello', chatId: 'c-1', senderId: 'u-1' };
+    it('creates message and returns it', async () => {
+      const message = { id: 'msg-1', content: 'Hello', chatId: 'c-1', senderId: 'u-1', attachments: [] };
       mockMessageRepo.findChatMember.mockResolvedValue({ userId: 'u-1' });
       mockMessageRepo.createMessage.mockResolvedValue(message);
-      mockMessageRepo.touchChat.mockResolvedValue(undefined);
 
       const result = await service.sendMessage({ chatId: 'c-1', senderId: 'u-1', content: 'Hello' });
 
       expect(result).toEqual(message);
-      // Chat updatedAt must be refreshed after each message
-      expect(mockMessageRepo.touchChat).toHaveBeenCalledWith('c-1');
+      expect(mockMessageRepo.createMessage).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -69,66 +67,69 @@ describe('MessageService', () => {
       await expect(service.getMessages('c-1', 'u-1')).rejects.toThrow('You are not a member of this chat');
     });
 
-    it('returns messages in chronological order with pagination', async () => {
-      // Repo returns newest-first; service reverses to chronological order
-      const msg1 = { id: 'msg-1', content: 'A' };
+    it('returns cursor-based pagination result', async () => {
+      const msg1 = { id: 'msg-3', content: 'C' };
       const msg2 = { id: 'msg-2', content: 'B' };
-      const msg3 = { id: 'msg-3', content: 'C' };
       mockMessageRepo.findChatMember.mockResolvedValue({ userId: 'u-1' });
-      mockMessageRepo.findMessages.mockResolvedValue({ data: [msg3, msg2, msg1], total: 3 });
+      mockMessageRepo.findMessages.mockResolvedValue({ data: [msg1, msg2], nextCursor: '2026-01-01T00:00:00.000Z', hasMore: true });
 
-      const result = await service.getMessages('c-1', 'u-1', 1, 10);
+      const result = await service.getMessages('c-1', 'u-1', undefined, 10);
 
-      expect(result.data).toEqual([msg1, msg2, msg3]);
-      expect(result.pagination).toMatchObject({ page: 1, limit: 10, total: 3 });
+      expect(result.data).toEqual([msg1, msg2]);
+      expect(result.pagination).toMatchObject({ limit: 10, hasMore: true, nextCursor: '2026-01-01T00:00:00.000Z' });
     });
   });
 
   describe('editMessage', () => {
     it('throws when new content is empty', async () => {
-      await expect(service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: '' })).rejects.toThrow(
-        'Message content cannot be empty',
-      );
+      await expect(
+        service.editMessage({ messageId: 'msg-1', userId: 'u-1', role: UserRoles.USER, newContent: '' }),
+      ).rejects.toThrow('Message content cannot be empty');
     });
 
     it('throws when message does not exist', async () => {
       mockMessageRepo.findMessageById.mockResolvedValue(null);
 
-      await expect(service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: 'Updated' })).rejects.toThrow(
-        'Message not found',
-      );
+      await expect(
+        service.editMessage({ messageId: 'msg-1', userId: 'u-1', role: UserRoles.USER, newContent: 'Updated' }),
+      ).rejects.toThrow('Message not found');
     });
 
     it('throws when user is not the message sender', async () => {
       mockMessageRepo.findMessageById.mockResolvedValue({
         id: 'msg-1',
         senderId: 'other-user',
-        isDeleted: false,
+        deletedAt: null,
       });
 
-      await expect(service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: 'Updated' })).rejects.toThrow(
-        'You can only edit your own messages',
-      );
+      await expect(
+        service.editMessage({ messageId: 'msg-1', userId: 'u-1', role: UserRoles.USER, newContent: 'Updated' }),
+      ).rejects.toThrow('You can only edit your own messages');
     });
 
     it('throws when trying to edit a deleted message', async () => {
       mockMessageRepo.findMessageById.mockResolvedValue({
         id: 'msg-1',
         senderId: 'u-1',
-        isDeleted: true,
+        deletedAt: new Date().toISOString(),
       });
 
-      await expect(service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: 'Updated' })).rejects.toThrow(
-        'Cannot edit deleted message',
-      );
+      await expect(
+        service.editMessage({ messageId: 'msg-1', userId: 'u-1', role: UserRoles.USER, newContent: 'Updated' }),
+      ).rejects.toThrow('Cannot edit deleted message');
     });
 
     it('updates message content and returns updated message', async () => {
-      const updatedMessage = { id: 'msg-1', content: 'Updated', senderId: 'u-1' };
-      mockMessageRepo.findMessageById.mockResolvedValue({ id: 'msg-1', senderId: 'u-1', isDeleted: false });
+      const updatedMessage = { id: 'msg-1', content: 'Updated', senderId: 'u-1', attachments: [], type: 'TEXT' };
+      mockMessageRepo.findMessageById.mockResolvedValue({ id: 'msg-1', senderId: 'u-1', deletedAt: null });
       mockMessageRepo.updateMessageContent.mockResolvedValue(updatedMessage);
 
-      const result = await service.editMessage({ messageId: 'msg-1', userId: 'u-1', newContent: 'Updated' });
+      const result = await service.editMessage({
+        messageId: 'msg-1',
+        userId: 'u-1',
+        role: UserRoles.USER,
+        newContent: 'Updated',
+      });
 
       expect(result).toEqual(updatedMessage);
       expect(mockMessageRepo.updateMessageContent).toHaveBeenCalledWith('msg-1', 'Updated');
@@ -146,8 +147,9 @@ describe('MessageService', () => {
       mockMessageRepo.findMessageWithSenderAndFiles.mockResolvedValue({
         id: 'msg-1',
         senderId: 'other-user',
-        files: [],
+        attachments: [],
         chatId: 'c-1',
+        deletedAt: null,
       });
 
       await expect(service.deleteMessage('msg-1', 'u-1', UserRoles.USER)).rejects.toThrow(
@@ -159,8 +161,9 @@ describe('MessageService', () => {
       mockMessageRepo.findMessageWithSenderAndFiles.mockResolvedValue({
         id: 'msg-1',
         senderId: 'u-1',
-        files: [],
+        attachments: [],
         chatId: 'c-1',
+        deletedAt: null,
       });
       mockMessageRepo.softDeleteMessage.mockResolvedValue(undefined);
 

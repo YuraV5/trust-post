@@ -6,6 +6,7 @@ export const mockMessageRepo = {
   findMessageById: jest.fn(),
   findMessageWithSenderAndFiles: jest.fn(),
   updateMessageContent: jest.fn(),
+  updateMessageType: jest.fn(),
   softDeleteMessage: jest.fn(),
   deleteFilesByMessageId: jest.fn(),
   createMessageFile: jest.fn(),

@@ -381,6 +381,31 @@ enum ChatType {
   @@map("chat_types")
 }
 
+enum MessageType {
+  TEXT   @map("text")
+  FILE   @map("file")
+  MIXED  @map("mixed")
+  SYSTEM @map("system")
+
+  @@map("message_types")
+}
+
+enum MessageStatus {
+  SENDING @map("sending")
+  SENT    @map("sent")
+  FAILED  @map("failed")
+
+  @@map("message_statuses")
+}
+
+enum ChatFileType {
+  IMAGE @map("image")
+  VIDEO @map("video")
+  DOC   @map("doc")
+
+  @@map("chat_file_types")
+}
+
 model Chat {
   id        String   @id @default(uuid())
   type      ChatType @default(PRIVATE)
@@ -437,33 +462,36 @@ model ChatMember {
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  chatId    String   @map("chat_id")
-  senderId  String   @map("sender_id")
-  content   String   @db.Text
-  isDeleted Boolean  @default(false) @map("is_deleted")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id        String        @id @default(uuid())
+  chatId    String        @map("chat_id")
+  senderId  String        @map("sender_id")
+  content   String?       @db.Text
+  type      MessageType   @default(TEXT)
+  status    MessageStatus @default(SENT)
+  createdAt DateTime      @default(now()) @map("created_at")
+  editedAt  DateTime?     @map("edited_at")
+  deletedAt DateTime?     @map("deleted_at")
 
-  chat   Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  sender User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  files  MessageFile[]
+  chat        Chat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender      User       @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  attachments ChatFile[]
 
   @@index([chatId, createdAt(sort: Desc)])
-  @@index([chatId, isDeleted, createdAt(sort: Desc)])
   @@index([senderId, createdAt])
   @@index([createdAt])
+  @@index([deletedAt])
   @@map("messages")
 }
 
-model MessageFile {
+model ChatFile {
   id           String       @id @default(uuid())
   messageId    String       @map("message_id")
+  fileType     ChatFileType @map("file_type")
   url          String       @db.VarChar(512)
+  size         Int          @map("size")
   storageKey   String       @map("storage_key") @db.VarChar(255)
   provider     FileProvider @map("provider")
   mimeType     String       @map("mime_type") @db.VarChar(255)
-  size         Int          @map("size")
   originalName String       @map("original_name") @db.VarChar(255)
   createdAt    DateTime     @default(now()) @map("created_at")
 
@@ -472,5 +500,5 @@ model MessageFile {
   @@index([messageId])
   @@index([provider])
   @@index([createdAt])
-  @@map("message_files")
+  @@map("chat_files")
 }

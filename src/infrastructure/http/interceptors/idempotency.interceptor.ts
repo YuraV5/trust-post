@@ -78,6 +78,16 @@ export class IdempotencyInterceptor implements NestInterceptor {
       throw new AppBadRequestException('Idempotency-Key header is required for this endpoint.');
     }
 
+    // For optional routes, apply idempotency only when client explicitly provides Idempotency-Key.
+    // This avoids accidental replay for normal chat/message create requests with identical payloads.
+    if (!keyRequired && !rawKey) {
+      this.logger.debug('Idempotency skipped: optional route without Idempotency-Key', {
+        method: req.method,
+        path: req.originalUrl ?? req.url,
+      });
+      return next.handle();
+    }
+
     // Scope: user + method + route path — ensures UNIQUE(key, route)
     const scopeUser = req.user?.userId ?? 'anonymous';
     const routePath = req.route?.path ?? req.path;
@@ -92,8 +102,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
       }),
     );
 
-    // If no explicit key provided, fall back to a deterministic hash of the payload
-    const idempotencyKey = rawKey ?? this.hash(`${scope}:${requestHash}`);
+    const idempotencyKey = rawKey as string;
 
     const operationKey = this.hash(`${scope}:${idempotencyKey}`);
     const responseKey = `idem:resp:${operationKey}`;

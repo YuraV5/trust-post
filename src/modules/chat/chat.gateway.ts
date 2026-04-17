@@ -170,12 +170,6 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         content,
       });
 
-      // Broadcast to all users in the chat room
-      this.socketService.emitToRoom(this.namespace, `chat:${chatId}`, 'message:new', {
-        message,
-        chatId,
-      });
-
       this.logger.info('Message sent via WebSocket', {
         userId,
         chatId,
@@ -195,12 +189,12 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @SubscribeMessage('message:edit')
   async handleEditMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { messageId: string; newContent: string; chatId: string },
+    @MessageBody() data: { messageId: string; newContent: string },
   ): Promise<MessageGatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
       const role = (client.userRole as UserRoles | undefined) ?? UserRoles.USER;
-      const { messageId, newContent, chatId } = data;
+      const { messageId, newContent } = data;
 
       // Edit message via service
       const message = await this.messageService.editMessage({
@@ -211,12 +205,12 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       });
 
       // Broadcast to all users in the chat room
-      this.socketService.emitToRoom(this.namespace, `chat:${chatId}`, 'message:edited', {
+      this.socketService.emitToRoom(this.namespace, `chat:${message.chatId}`, 'message:edited', {
         message,
-        chatId,
+        chatId: message.chatId,
       });
 
-      this.logger.info('Message edited via WebSocket', { userId, messageId, chatId });
+      this.logger.info('Message edited via WebSocket', { userId, messageId, chatId: message.chatId });
 
       return { success: true, message };
     } catch (error: unknown) {
@@ -231,24 +225,18 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @SubscribeMessage('message:delete')
   async handleDeleteMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { messageId: string; chatId: string },
+    @MessageBody() data: { messageId: string },
   ): Promise<GatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
+      const role = (client.userRole as UserRoles | undefined) ?? UserRoles.USER;
 
-      const { messageId, chatId } = data;
+      const { messageId } = data;
 
       // Delete message via service
-      await this.messageService.deleteMessage(messageId, userId);
+      await this.messageService.deleteMessage(messageId, userId, role);
 
-      // Broadcast to all users in the chat room
-      this.socketService.emitToRoom(this.namespace, `chat:${chatId}`, 'message:deleted', {
-        messageId,
-        chatId,
-        timestamp: new Date().toISOString(),
-      });
-
-      this.logger.info('Message deleted via WebSocket', { userId, messageId, chatId });
+      this.logger.info('Message deleted via WebSocket', { userId, messageId });
 
       return { success: true };
     } catch (error: unknown) {

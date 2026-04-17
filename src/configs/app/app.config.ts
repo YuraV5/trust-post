@@ -13,8 +13,8 @@ export default (): IAppConfig => ({
   corsAllowOrigin: process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001',
   wsCorsAllowOrigin: process.env.WS_CORS_ALLOW_ORIGIN || process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001',
   trustProxy: parseBoolean(process.env.TRUST_PROXY, false),
-  swaggerEnabled: parseBoolean(process.env.SWAGGER_ENABLED, process.env.NODE_ENV !== 'production'),
-  serviceName: process.env.SERVICE_NAME || 'trust-post',
+  swaggerEnabled: parseBoolean(process.env.SWAGGER_ENABLED, false),
+  serviceName: process.env.SERVICE_NAME || 'trust-post-service',
   loggerLevel: process.env.LOGGER_LEVEL || 'info',
   loggerFileEnabled: parseBoolean(process.env.LOGGER_FILE_ENABLED, process.env.NODE_ENV !== 'test'),
   loggerFileMaxSizeMb: parseInt(process.env.LOGGER_FILE_MAX_SIZE_MB!, 10) || 10,
@@ -43,9 +43,9 @@ export default (): IAppConfig => ({
     password: process.env.REDIS_PASSWORD || undefined,
     port: parseInt(process.env.REDIS_PORT!, 10) || 6379,
     ttl: parseInt(process.env.REDIS_TTL!, 10) || 300,
-    maxRetries: parseInt(process.env.REDIS_MAX_RETRIES!, 10) || 3,
-    retryDelayMs: parseInt(process.env.REDIS_RETRY_DELAY_MS!, 10) || 100,
-    gracefulShutdownTimeoutMs: parseInt(process.env.REDIS_GRACEFUL_SHUTDOWN_TIMEOUT_MS!, 10) || 5000,
+    maxRetries: parseInt(process.env.REDIS_MAX_RETRIES!, 10) || 5,
+    retryDelayMs: parseInt(process.env.REDIS_RETRY_DELAY_MS!, 10) || 2000,
+    gracefulShutdownTimeoutMs: parseInt(process.env.REDIS_GRACEFUL_SHUTDOWN_TIMEOUT_MS!, 10) || 10000,
   },
 
   jwt: {

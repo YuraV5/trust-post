@@ -84,4 +84,8 @@ export interface IAppConfig {
   gemini: {
     apiKey: string;
   };
+
+  maintenance: {
+    deletedMessagesCleanupBatchLimit: number;
+  };
 }

@@ -468,6 +468,7 @@ model Message {
   content   String?       @db.Text
   type      MessageType   @default(TEXT)
   status    MessageStatus @default(SENT)
+  isDelete  Boolean       @default(false) @map("is_delete")
   createdAt DateTime      @default(now()) @map("created_at")
   editedAt  DateTime?     @map("edited_at")
   deletedAt DateTime?     @map("deleted_at")
@@ -479,6 +480,7 @@ model Message {
   @@index([chatId, createdAt(sort: Desc)])
   @@index([senderId, createdAt])
   @@index([createdAt])
+  @@index([isDelete])
   @@index([deletedAt])
   @@map("messages")
 }

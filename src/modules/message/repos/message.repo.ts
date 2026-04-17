@@ -85,6 +85,7 @@ export class MessageRepo implements IMessageRepo {
     const data = await this.db.message.findMany({
       where: {
         chatId,
+        isDelete: false,
         deletedAt: null,
         ...(cursor ? { createdAt: { lt: cursor } } : {}),
       },
@@ -166,6 +167,7 @@ export class MessageRepo implements IMessageRepo {
     await this.db.message.update({
       where: { id: messageId },
       data: {
+        isDelete: true,
         deletedAt: new Date(),
       },
     });

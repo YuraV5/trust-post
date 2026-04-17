@@ -9,6 +9,11 @@ import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { PaymentGatewayCreateInput, PaymentGatewayInitResult, PaymentWebhookResult } from '../types/payments-gateway';
 
+type WayForPayCheckoutResponse = {
+  invoiceUrl: string;
+  qrCode?: string;
+};
+
 @Injectable()
 export class WayForPayGateway implements IPaymentGateway {
   readonly provider = PaymentProvider.WAYFORPAY;
@@ -60,12 +65,11 @@ export class WayForPayGateway implements IPaymentGateway {
 
     payloadBase.merchantSignature = merchantSignature;
 
-    const paymentRequestUrl = await executeWithRetry(
-      async () => {
-        return await this.requestPaymentUrl(payloadBase);
-      },
-      { maxRetries: 2, timeoutMs: 1000, exponentialBackoff: true },
-    );
+    const paymentRequestUrl = await executeWithRetry((signal) => this.requestPaymentUrl(payloadBase, signal), {
+      maxRetries: 2,
+      timeoutMs: 1000,
+      exponentialBackoff: true,
+    });
 
     this.logger.debug('WayForPay create checkout response', { paymentRequestUrl });
 
@@ -112,16 +116,28 @@ export class WayForPayGateway implements IPaymentGateway {
     };
   }
 
-  private async requestPaymentUrl(payload: WayForPayCheckoutPayload): Promise<any> {
+  private async requestPaymentUrl(
+    payload: WayForPayCheckoutPayload,
+    signal?: AbortSignal,
+  ): Promise<WayForPayCheckoutResponse> {
     const result = await fetch(this.config.getOrThrow<string>('wayforpay.apiUrl'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
+      signal,
     });
+
+    if (!result.ok) {
+      const errorBody = await result.text();
+      const error = new Error(`WayForPay create checkout failed with status ${result.status}: ${errorBody}`);
+      (error as { status?: number }).status = result.status;
+      throw error;
+    }
+
     this.logger.debug('WayForPay create checkout response', { resultStatus: result.status });
-    return result.json();
+    return result.json() as Promise<WayForPayCheckoutResponse>;
   }
 
   private mapWebhookStatus(status: string): 'SUCCESS' | 'FAILED' | 'EXPIRED' {

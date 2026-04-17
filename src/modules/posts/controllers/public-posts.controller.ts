@@ -14,7 +14,7 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { PostsService } from '../services';
 import { type AuthenticatedUser } from '../../../common/interfaces';
-import { CurrentUser, PublicRoute } from '../../../common/decorators';
+import { CurrentUser, PublicRoute, RequireIdempotencyKey } from '../../../common/decorators';
 import { ResponseMessage } from '../../../common/types';
 import { CreatePostDto } from '../dtos/create-post.dto';
 import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
@@ -38,6 +38,7 @@ export class PublicPostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
+  @RequireIdempotencyKey()
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create new post' })

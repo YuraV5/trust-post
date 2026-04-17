@@ -13,10 +13,9 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { SkipThrottle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { MessageService } from './services/message.service';
-import { CurrentUser } from '../../common/decorators';
+import { CurrentUser, RequireIdempotencyKey } from '../../common/decorators';
 import { type AuthenticatedUser } from '../../common/interfaces';
 import { EditMessageDto, SendMessageDto } from './dtos';
 import { MessageActionResult, MessageListResult, MessageWithSenderAndFiles } from './types';
@@ -42,7 +41,7 @@ export class MessageController {
   }
 
   @Post('chats/:chatId/messages')
-  @SkipThrottle()
+  @RequireIdempotencyKey()
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FilesInterceptor('files', 10))
   @ApiConsumes('multipart/form-data')

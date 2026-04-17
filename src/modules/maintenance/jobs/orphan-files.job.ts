@@ -21,7 +21,7 @@ export class OrphanFilesJob {
   @Cron('0 3 * * *', { timeZone: 'Europe/Kyiv' }) // Run daily at 3:00 AM
   async handle(): Promise<void> {
     const appName = this.config.get<string>('serviceName') || 'trust-post';
-    this.logger.info(`Starting orphan files cleanup for folder: ${appName}`, { job: OrphanFilesJob.JOB_NAME });
+    this.logger.info('Starting orphan files cleanup', { job: OrphanFilesJob.JOB_NAME, folder: appName });
 
     let nextCursor: string | undefined;
     let totalChecked = 0;

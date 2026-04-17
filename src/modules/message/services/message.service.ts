@@ -141,6 +141,8 @@ export class MessageService implements IMessageService {
         message,
       });
 
+      void this.invalidateMessageCache(chatId);
+
       this.logger.info('Message sent', {
         messageId: message.id,
         chatId,
@@ -185,7 +187,7 @@ export class MessageService implements IMessageService {
     limit: number = this.DEFAULT_LIMIT,
   ): Promise<MessageListResult> {
     const safeLimit = Number.isFinite(limit) ? Math.min(Math.max(limit, 1), 50) : this.DEFAULT_LIMIT;
-    const cacheKey = this.buildCacheKey('chat-messages', { chatId, userId, cursor: cursor ?? null, limit: safeLimit });
+    const cacheKey = this.buildMessageCacheKey(chatId, { userId, cursor: cursor ?? null, limit: safeLimit });
     const cached = await this.readCache<MessageListResult>(cacheKey);
     if (cached) {
       return cached;
@@ -247,6 +249,8 @@ export class MessageService implements IMessageService {
       return this.repo.updateMessageType(updatedMessage.id, MessageType.MIXED);
     }
 
+    void this.invalidateMessageCache(updatedMessage.chatId);
+
     this.logger.info('Message edited', { messageId, userId });
     return updatedMessage;
   }
@@ -273,6 +277,8 @@ export class MessageService implements IMessageService {
       chatId: message.chatId,
       timestamp: new Date().toISOString(),
     });
+
+    void this.invalidateMessageCache(message.chatId);
 
     this.logger.info('Message deleted', { messageId, userId });
     return { message: 'Message deleted successfully' };
@@ -321,6 +327,8 @@ export class MessageService implements IMessageService {
       }
     }
 
+    void this.invalidateMessageCache(file.message.chatId);
+
     this.logger.info('File deleted', { fileId, userId });
     return { message: 'File deleted successfully' };
   }
@@ -336,8 +344,23 @@ export class MessageService implements IMessageService {
     return { message: 'Messages marked as read' };
   }
 
+  private buildMessageCacheKey(chatId: string, rest: unknown): string {
+    return `cache:message:chat-messages:${chatId}:${JSON.stringify(rest)}`;
+  }
+
   private buildCacheKey(scope: string, payload: unknown): string {
     return `cache:message:${scope}:${JSON.stringify(payload)}`;
+  }
+
+  private async invalidateMessageCache(chatId: string): Promise<void> {
+    try {
+      await this.redisService.delByPattern(`cache:message:chat-messages:${chatId}:*`);
+    } catch (error) {
+      this.logger.error('Message cache invalidation failed', {
+        chatId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   private async readCache<T>(key: string): Promise<T | null> {

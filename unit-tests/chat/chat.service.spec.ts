@@ -110,7 +110,10 @@ describe('ChatService', () => {
     });
 
     it('returns existing post chat and adds creator if not a member', async () => {
-      const existingChat = { id: 'chat-post-1' };
+      const existingChat = {
+        id: 'chat-post-1',
+        members: [{ userId: 'author-1' }],
+      };
       mockChatRepo.findPostById.mockResolvedValue({ id: 99, authorId: 'author-1' });
       mockChatRepo.findChatByPostId.mockResolvedValue(existingChat);
       // Creator is not a member yet

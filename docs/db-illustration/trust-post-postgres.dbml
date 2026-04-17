@@ -1,0 +1,335 @@
+Project trust_post {
+  database_type: 'PostgreSQL'
+  Note: 'Generated from Prisma schema/SQL for visualization in dbdiagram.io'
+}
+
+Enum user_roles {
+  user
+  admin
+  moderator
+}
+
+Enum auth_providers {
+  google
+  github
+}
+
+Enum post_statuses {
+  draft
+  pending_review
+  approved
+  rejected
+  blocked
+  archived
+  completed
+}
+
+Enum post_review_statuses {
+  pending
+  approved
+  rejected
+}
+
+Enum currencies {
+  uah
+}
+
+Enum payment_statuses {
+  pending
+  success
+  failed
+  expired
+}
+
+Enum payment_providers {
+  wayforpay
+}
+
+Enum moderators {
+  local
+  agent
+}
+
+Enum comment_statuses {
+  pending
+  processing
+  approved
+  rejected
+  failed
+  deleted
+}
+
+Enum file_providers {
+  cloudinary
+}
+
+Enum chat_types {
+  private
+  group
+  post
+}
+
+Enum message_types {
+  text
+  file
+  mixed
+  system
+}
+
+Enum message_statuses {
+  sending
+  sent
+  failed
+}
+
+Enum chat_file_types {
+  image
+  video
+  doc
+}
+
+Table users {
+  id uuid [pk]
+  email varchar(255) [unique]
+  name varchar(128)
+  password varchar
+  photo_url varchar(512)
+  role user_roles
+  is_active boolean
+  is_email_verified boolean
+  created_by_admin boolean
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table provider_accounts {
+  id uuid [pk]
+  provider auth_providers
+  provider_id varchar(255)
+  user_id uuid
+  provider_data json
+  access_token varchar(512)
+  refresh_token varchar(512)
+  token_expires_at timestamp
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (provider, provider_id) [unique]
+  }
+}
+
+Table sessions {
+  id uuid [pk]
+  user_id uuid
+  refresh_token_hash varchar(255)
+  device_id varchar(255)
+  user_agent varchar(512)
+  ip varchar(45)
+  last_used_at timestamp
+  expires_at timestamp
+  created_at timestamp
+
+  indexes {
+    (user_id, device_id) [unique]
+  }
+}
+
+Table user_role_periods {
+  id int [pk, increment]
+  name varchar(128)
+  user_id uuid
+  role user_roles
+  start_date timestamp
+  end_date timestamp
+  changed_by_id uuid
+  created_at timestamp
+}
+
+Table posts {
+  id int [pk, increment]
+  title varchar(255)
+  content text
+  target_amount decimal(12,2)
+  current_amount decimal(12,2)
+  currency currencies
+  reference_payment_id varchar(255) [unique]
+  target_date timestamp
+  status post_statuses
+  status_reason text
+  author_id uuid
+  total_comments int
+  total_likes int
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+}
+
+Table payments {
+  id uuid [pk]
+  post_id int
+  user_id uuid
+  amount decimal(12,2)
+  currency currencies
+  status payment_statuses
+  status_reason text
+  reference_payment_id varchar(255)
+  last_attempt_id uuid
+  confirmed_at timestamp
+  expired_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table payment_attempts {
+  id uuid [pk]
+  payment_id uuid
+  provider payment_providers
+  provider_payment_id varchar(255)
+  status payment_statuses
+  provider_response json
+  status_reason text
+  created_at timestamp
+
+  indexes {
+    (provider, provider_payment_id) [unique]
+  }
+}
+
+Table post_reviews {
+  id int [pk, increment]
+  post_id int
+  reviewed_by_id uuid
+  status post_review_statuses
+  is_active boolean
+  review_reason text
+  created_at timestamp
+}
+
+Table comments {
+  id int [pk, increment]
+  post_id int
+  author_id uuid
+  content text
+  status comment_statuses
+  total_likes int
+  moderation_provider varchar
+  moderation_score float
+  moderation_reason text
+  moderated_at timestamp
+  moderator_type moderators
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table comment_likes {
+  comment_id int [pk]
+  user_id uuid [pk]
+  created_at timestamp
+}
+
+Table post_likes {
+  post_id int [pk]
+  user_id uuid [pk]
+  created_at timestamp
+}
+
+Table post_files {
+  id int [pk, increment]
+  url varchar(512)
+  post_id int
+  uploaded_by_id uuid
+  storage_key varchar(255)
+  provider file_providers
+  mime_type varchar(255)
+  main_image boolean
+  size int
+  metadata json
+  original_name varchar(255)
+  created_at timestamp
+}
+
+Table chats {
+  id uuid [pk]
+  type chat_types
+  title varchar(255)
+  post_id int
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table private_chats {
+  id uuid [pk]
+  chat_id uuid [unique]
+  user1_id uuid
+  user2_id uuid
+  created_at timestamp
+
+  indexes {
+    (user1_id, user2_id) [unique]
+  }
+}
+
+Table chat_members {
+  id uuid [pk]
+  chat_id uuid
+  user_id uuid
+  joined_at timestamp
+
+  indexes {
+    (chat_id, user_id) [unique]
+  }
+}
+
+Table messages {
+  id uuid [pk]
+  chat_id uuid
+  sender_id uuid
+  content text
+  type message_types
+  status message_statuses
+  is_delete boolean
+  created_at timestamp
+  edited_at timestamp
+  deleted_at timestamp
+}
+
+Table chat_files {
+  id uuid [pk]
+  message_id uuid
+  file_type chat_file_types
+  url varchar(512)
+  size int
+  storage_key varchar(255)
+  provider file_providers
+  mime_type varchar(255)
+  original_name varchar(255)
+  created_at timestamp
+}
+
+Ref: provider_accounts.user_id > users.id
+Ref: sessions.user_id > users.id
+Ref: user_role_periods.user_id > users.id
+Ref: posts.author_id > users.id
+Ref: payments.post_id > posts.id
+Ref: payments.user_id > users.id
+Ref: payments.last_attempt_id > payment_attempts.id
+Ref: payment_attempts.payment_id > payments.id
+Ref: post_reviews.post_id > posts.id
+Ref: post_reviews.reviewed_by_id > users.id
+Ref: comments.post_id > posts.id
+Ref: comments.author_id > users.id
+Ref: comment_likes.comment_id > comments.id
+Ref: comment_likes.user_id > users.id
+Ref: post_likes.post_id > posts.id
+Ref: post_likes.user_id > users.id
+Ref: post_files.post_id > posts.id
+Ref: chats.post_id > posts.id
+Ref: private_chats.chat_id > chats.id
+Ref: private_chats.user1_id > users.id
+Ref: private_chats.user2_id > users.id
+Ref: chat_members.chat_id > chats.id
+Ref: chat_members.user_id > users.id
+Ref: messages.chat_id > chats.id
+Ref: messages.sender_id > users.id
+Ref: chat_files.message_id > messages.id

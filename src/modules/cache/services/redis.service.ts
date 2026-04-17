@@ -32,6 +32,21 @@ export class RedisService implements IRedisService {
     await this.connectionManager.getClient().del(key);
   }
 
+  async delByPattern(pattern: string): Promise<number> {
+    const client = this.connectionManager.getClient();
+    let cursor = '0';
+    let deleted = 0;
+    do {
+      const [nextCursor, keys] = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        await client.del(...keys);
+        deleted += keys.length;
+      }
+    } while (cursor !== '0');
+    return deleted;
+  }
+
   async ttl(key: string): Promise<number> {
     return this.connectionManager.getClient().ttl(key);
   }

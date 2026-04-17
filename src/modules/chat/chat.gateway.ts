@@ -68,7 +68,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
       this.logger.info('Client connected', { userId, socketId: client.id });
 
-      // Notify user of successful connection
+      // Tell the connecting client its own userId and socketId so the UI
+      // doesn't have to decode the JWT itself.
       client.emit('connected', { userId, socketId: client.id });
     } catch (error: unknown) {
       this.logger.error('Error handling connection', {
@@ -101,12 +102,13 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       // Verify user is member of chat
       await this.chatService.getChat(chatId, userId);
 
-      // Join Socket.IO room for this chat
+      // Add this socket to the Socket.IO room so it receives room broadcasts.
       await client.join(`chat:${chatId}`);
 
       this.logger.info('User joined chat room', { userId, chatId, socketId: client.id });
 
-      // Notify others in the chat
+      // client.to() sends to everyone in the room EXCEPT the sender.
+      // We don't need to notify the joining user about themselves.
       client.to(`chat:${chatId}`).emit('user:joined', {
         userId,
         chatId,
@@ -164,16 +166,12 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       const { chatId, content = '' } = data;
 
       // Send message via service
+      // The service handles both DB write and broadcasting message:new to the room,
+      // so we don't emit anything here — avoiding a duplicate event for the sender.
       const message = await this.messageService.sendMessage({
         chatId,
         senderId: userId,
         content,
-      });
-
-      // Broadcast to all users in the chat room
-      this.socketService.emitToRoom(this.namespace, `chat:${chatId}`, 'message:new', {
-        message,
-        chatId,
       });
 
       this.logger.info('Message sent via WebSocket', {
@@ -195,12 +193,12 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @SubscribeMessage('message:edit')
   async handleEditMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { messageId: string; newContent: string; chatId: string },
+    @MessageBody() data: { messageId: string; newContent: string },
   ): Promise<MessageGatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
       const role = (client.userRole as UserRoles | undefined) ?? UserRoles.USER;
-      const { messageId, newContent, chatId } = data;
+      const { messageId, newContent } = data;
 
       // Edit message via service
       const message = await this.messageService.editMessage({
@@ -210,13 +208,16 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         newContent,
       });
 
-      // Broadcast to all users in the chat room
-      this.socketService.emitToRoom(this.namespace, `chat:${chatId}`, 'message:edited', {
+      // emitToRoom (unlike client.to) includes the sender in the broadcast,
+      // so their own UI also updates immediately without a round-trip.
+      // chatId is taken from the persisted entity, not from client input,
+      // to prevent a client from spoofing broadcasts to a different chat.
+      this.socketService.emitToRoom(this.namespace, `chat:${message.chatId}`, 'message:edited', {
         message,
-        chatId,
+        chatId: message.chatId,
       });
 
-      this.logger.info('Message edited via WebSocket', { userId, messageId, chatId });
+      this.logger.info('Message edited via WebSocket', { userId, messageId, chatId: message.chatId });
 
       return { success: true, message };
     } catch (error: unknown) {
@@ -231,24 +232,18 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @SubscribeMessage('message:delete')
   async handleDeleteMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { messageId: string; chatId: string },
+    @MessageBody() data: { messageId: string },
   ): Promise<GatewayResult> {
     try {
       const userId = await this.getAuthenticatedUserId(client);
+      const role = (client.userRole as UserRoles | undefined) ?? UserRoles.USER;
 
-      const { messageId, chatId } = data;
+      const { messageId } = data;
 
       // Delete message via service
-      await this.messageService.deleteMessage(messageId, userId);
+      await this.messageService.deleteMessage(messageId, userId, role);
 
-      // Broadcast to all users in the chat room
-      this.socketService.emitToRoom(this.namespace, `chat:${chatId}`, 'message:deleted', {
-        messageId,
-        chatId,
-        timestamp: new Date().toISOString(),
-      });
-
-      this.logger.info('Message deleted via WebSocket', { userId, messageId, chatId });
+      this.logger.info('Message deleted via WebSocket', { userId, messageId });
 
       return { success: true };
     } catch (error: unknown) {
@@ -323,10 +318,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   private async getAuthenticatedUserId(client: AuthenticatedSocket): Promise<string> {
+    // Fast path: SocketAuthGuard already decoded the token on connect and
+    // stored userId on the socket object — no need to verify again.
     if (client.userId) {
       return client.userId;
     }
 
+    // Fallback for edge cases where the guard didn't run (e.g. reconnect race).
+    // We decode manually and cache the result on the socket for next calls.
     const token = extractSocketToken(client);
     if (!token) {
       throw new Error('Unauthorized');

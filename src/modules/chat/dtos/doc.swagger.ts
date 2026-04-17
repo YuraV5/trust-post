@@ -80,8 +80,14 @@ export class MessageResponseDto {
   @ApiProperty({ example: 1, description: 'Message ID' })
   id: number;
 
-  @ApiProperty({ example: 'Hello, how are you?', description: 'Message content' })
-  content: string;
+  @ApiProperty({ example: 'Hello, how are you?', nullable: true, description: 'Message content' })
+  content: string | null;
+
+  @ApiProperty({ example: 'mixed', enum: ['text', 'file', 'mixed', 'system'], description: 'Message type' })
+  type: string;
+
+  @ApiProperty({ example: 'sent', enum: ['sending', 'sent', 'failed'], description: 'Delivery status' })
+  status: string;
 
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Chat ID' })
   chatId: string;
@@ -93,13 +99,16 @@ export class MessageResponseDto {
     type: [MessageFileDto],
     description: 'Attached files',
   })
-  files: MessageFileDto[];
+  attachments: MessageFileDto[];
 
   @ApiProperty({ example: '2026-01-15T10:30:00Z', description: 'Message creation timestamp' })
   createdAt: Date;
 
   @ApiProperty({ example: '2026-01-15T11:00:00Z', nullable: true, description: 'Last edit timestamp' })
-  updatedAt: Date | null;
+  editedAt: Date | null;
+
+  @ApiProperty({ example: null, nullable: true, description: 'Soft delete timestamp' })
+  deletedAt: Date | null;
 }
 
 export class PaginatedMessagesResponseDto {

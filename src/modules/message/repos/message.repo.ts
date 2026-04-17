@@ -6,10 +6,12 @@ import {
   ChatMemberEntity,
   MessageEntity,
   MessageFileEntity,
+  MessageAttachmentCreateInput,
   MessageFileWithMessage,
   MessageRepoListResult,
   MessageWithSenderAndFiles,
 } from '../types';
+import { MessageStatus, MessageType } from '@prisma/client';
 
 @Injectable()
 export class MessageRepo implements IMessageRepo {
@@ -26,42 +28,29 @@ export class MessageRepo implements IMessageRepo {
     });
   }
 
-  async createMessage(chatId: string, senderId: string, content: string): Promise<MessageWithSenderAndFiles> {
-    return this.db.message.create({
-      data: {
-        chatId,
-        senderId,
-        content,
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            photoUrl: true,
-          },
-        },
-        files: true,
-      },
-    });
-  }
+  async createMessage(input: {
+    chatId: string;
+    senderId: string;
+    content: string | null;
+    type: 'TEXT' | 'FILE' | 'MIXED' | 'SYSTEM';
+    status: 'SENDING' | 'SENT' | 'FAILED';
+    files?: MessageAttachmentCreateInput[];
+  }): Promise<MessageWithSenderAndFiles> {
+    const { chatId, senderId, content, type, status, files = [] } = input;
 
-  async touchChat(chatId: string): Promise<void> {
-    await this.db.chat.update({
-      where: { id: chatId },
-      data: { updatedAt: new Date() },
-    });
-  }
-
-  async findMessages(chatId: string, page: number, limit: number): Promise<MessageRepoListResult> {
-    const skip = (page - 1) * limit;
-
-    const [data, total] = await Promise.all([
-      this.db.message.findMany({
-        where: {
+    return this.db.$transaction(async (tx) => {
+      const message = await tx.message.create({
+        data: {
           chatId,
-          isDeleted: false,
+          senderId,
+          content,
+          type: type as MessageType,
+          status: status as MessageStatus,
+          attachments: files.length
+            ? {
+                create: files,
+              }
+            : undefined,
         },
         include: {
           sender: {
@@ -72,23 +61,56 @@ export class MessageRepo implements IMessageRepo {
               photoUrl: true,
             },
           },
-          files: true,
+          attachments: true,
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        skip,
-        take: limit,
-      }),
-      this.db.message.count({
-        where: {
-          chatId,
-          isDeleted: false,
-        },
-      }),
-    ]);
+      });
 
-    return { data, total };
+      await tx.chat.update({
+        where: { id: chatId },
+        data: { updatedAt: new Date() },
+      });
+
+      return message;
+    });
+  }
+
+  async touchChat(chatId: string): Promise<void> {
+    await this.db.chat.update({
+      where: { id: chatId },
+      data: { updatedAt: new Date() },
+    });
+  }
+
+  async findMessages(chatId: string, cursor: Date | null, limit: number): Promise<MessageRepoListResult> {
+    const data = await this.db.message.findMany({
+      where: {
+        chatId,
+        isDelete: false,
+        deletedAt: null,
+        ...(cursor ? { createdAt: { lt: cursor } } : {}),
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            photoUrl: true,
+          },
+        },
+        attachments: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: limit + 1,
+    });
+
+    const hasMore = data.length > limit;
+    const slice = hasMore ? data.slice(0, limit) : data;
+    const nextCursor = hasMore ? slice[slice.length - 1].createdAt.toISOString() : null;
+
+    return { data: slice, nextCursor, hasMore };
   }
 
   async findMessageById(messageId: string): Promise<MessageEntity | null> {
@@ -100,7 +122,10 @@ export class MessageRepo implements IMessageRepo {
   async updateMessageContent(messageId: string, newContent: string): Promise<MessageWithSenderAndFiles> {
     return this.db.message.update({
       where: { id: messageId },
-      data: { content: newContent },
+      data: {
+        content: newContent,
+        editedAt: new Date(),
+      },
       include: {
         sender: {
           select: {
@@ -110,7 +135,30 @@ export class MessageRepo implements IMessageRepo {
             photoUrl: true,
           },
         },
-        files: true,
+        attachments: true,
+      },
+    });
+  }
+
+  async updateMessageType(
+    messageId: string,
+    type: 'TEXT' | 'FILE' | 'MIXED' | 'SYSTEM',
+  ): Promise<MessageWithSenderAndFiles> {
+    return this.db.message.update({
+      where: { id: messageId },
+      data: {
+        type: type as MessageType,
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            photoUrl: true,
+          },
+        },
+        attachments: true,
       },
     });
   }
@@ -118,18 +166,21 @@ export class MessageRepo implements IMessageRepo {
   async softDeleteMessage(messageId: string): Promise<void> {
     await this.db.message.update({
       where: { id: messageId },
-      data: { isDeleted: true },
+      data: {
+        isDelete: true,
+        deletedAt: new Date(),
+      },
     });
   }
 
   async createMessageFile(input: AddFileInput): Promise<MessageFileEntity> {
-    return this.db.messageFile.create({
+    return this.db.chatFile.create({
       data: input,
     });
   }
 
   async findFileById(fileId: string): Promise<MessageFileWithMessage | null> {
-    return this.db.messageFile.findUnique({
+    return this.db.chatFile.findUnique({
       where: { id: fileId },
       include: {
         message: true,
@@ -138,13 +189,13 @@ export class MessageRepo implements IMessageRepo {
   }
 
   async deleteFile(fileId: string): Promise<void> {
-    await this.db.messageFile.delete({
+    await this.db.chatFile.delete({
       where: { id: fileId },
     });
   }
 
   async deleteFilesByMessageId(messageId: string): Promise<void> {
-    await this.db.messageFile.deleteMany({
+    await this.db.chatFile.deleteMany({
       where: { messageId },
     });
   }
@@ -161,7 +212,7 @@ export class MessageRepo implements IMessageRepo {
             photoUrl: true,
           },
         },
-        files: true,
+        attachments: true,
       },
     });
   }

@@ -57,7 +57,7 @@ export class OrphanFilesJob {
         const chatFileKeys = candidates.map((c) => c.public_id).filter((key) => key.includes(`/${FileFolder.CHATS}/`));
 
         if (chatFileKeys.length > 0) {
-          const existingChatRecords = await this.prisma.messageFile.findMany({
+          const existingChatRecords = await this.prisma.chatFile.findMany({
             where: { storageKey: { in: chatFileKeys } },
             select: { storageKey: true },
           });

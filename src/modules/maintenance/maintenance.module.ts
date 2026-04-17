@@ -4,6 +4,7 @@ import { ExpiredSessionsCleanupJob } from './jobs/expired-sessions-cleanup.job';
 import { OrphanFilesJob } from './jobs/orphan-files.job';
 import { ExpiredPendingPaymentsCleanupJob } from './jobs/expired-pending-payments-cleanup.job';
 import { RejectedDeletedCommentsCleanupJob } from './jobs/rejected-deleted-comments-cleanup.job';
+import { DeletedMessagesCleanupJob } from './jobs/deleted-messages-cleanup.job';
 import { FilesModule } from '../files/files.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MetricsModule } from '../../infrastructure/metrics/metrics.module';
@@ -22,6 +23,7 @@ import { EmailsModule } from '../emails/emails.module';
     OrphanFilesJob,
     ExpiredPendingPaymentsCleanupJob,
     RejectedDeletedCommentsCleanupJob,
+    DeletedMessagesCleanupJob,
     ActiveUsersMetricsJob,
     PostsStatusMetricsJob,
     QueueHealthMetricsJob,

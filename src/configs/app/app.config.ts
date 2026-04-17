@@ -94,4 +94,8 @@ export default (): IAppConfig => ({
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
   },
+
+  maintenance: {
+    deletedMessagesCleanupBatchLimit: parseInt(process.env.MESSAGES_CLEANUP_BATCH_LIMIT!, 10) || 200,
+  },
 });

@@ -1,9 +1,21 @@
-import { type ChatMember, type FileProvider, type Message, type MessageFile, type UserRoles } from '@prisma/client';
+import {
+  type ChatFile,
+  type ChatFileType,
+  type ChatMember,
+  type FileProvider,
+  type Message,
+  type MessageStatus,
+  type MessageType,
+  type UserRoles,
+} from '@prisma/client';
 
 export type SendMessageInput = {
   chatId: string;
   senderId: string;
-  content: string;
+  content?: string;
+  files?: Express.Multer.File[];
+  status?: MessageStatus;
+  type?: MessageType;
 };
 
 export type EditMessageInput = {
@@ -13,14 +25,18 @@ export type EditMessageInput = {
   newContent: string;
 };
 
-export type AddFileInput = {
-  messageId: string;
+export type MessageAttachmentCreateInput = {
+  fileType: ChatFileType;
   url: string;
   storageKey: string;
   provider: FileProvider;
   mimeType: string;
   size: number;
   originalName: string;
+};
+
+export type AddFileInput = MessageAttachmentCreateInput & {
+  messageId: string;
 };
 
 export type MessageSender = {
@@ -32,30 +48,30 @@ export type MessageSender = {
 
 export type MessageWithSenderAndFiles = Message & {
   sender: MessageSender;
-  files: MessageFile[];
+  attachments: ChatFile[];
 };
 
-export type MessageFileWithMessage = MessageFile & {
+export type MessageFileWithMessage = ChatFile & {
   message: Message;
 };
 
 export type MessageListResult = {
   data: MessageWithSenderAndFiles[];
   pagination: {
-    page: number;
     limit: number;
-    total: number;
-    totalPages: number;
+    nextCursor: string | null;
+    hasMore: boolean;
   };
 };
 
 export type MessageRepoListResult = {
   data: MessageWithSenderAndFiles[];
-  total: number;
+  nextCursor: string | null;
+  hasMore: boolean;
 };
 
 export type MessageActionResult = { message: string };
 
 export type ChatMemberEntity = ChatMember;
 export type MessageEntity = Message;
-export type MessageFileEntity = MessageFile;
+export type MessageFileEntity = ChatFile;

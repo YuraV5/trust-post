@@ -8,7 +8,7 @@ describe('OrphanFilesJob', () => {
     postFile: {
       findMany: jest.fn(),
     },
-    messageFile: {
+    chatFile: {
       findMany: jest.fn(),
     },
   } as unknown as PrismaService;
@@ -36,7 +36,7 @@ describe('OrphanFilesJob', () => {
 
     (configMock.get as jest.Mock).mockReturnValue('trust-post-service');
     (prismaMock.postFile.findMany as jest.Mock).mockResolvedValue([]);
-    (prismaMock.messageFile.findMany as jest.Mock).mockResolvedValue([]);
+    (prismaMock.chatFile.findMany as jest.Mock).mockResolvedValue([]);
     (cloudinaryMock.findOrphanCandidates as jest.Mock).mockResolvedValue({
       resources: [],
       nextCursor: undefined,
@@ -63,11 +63,11 @@ describe('OrphanFilesJob', () => {
       nextCursor: undefined,
     });
 
-    (prismaMock.messageFile.findMany as jest.Mock).mockResolvedValue([{ storageKey: existingChatKey }]);
+    (prismaMock.chatFile.findMany as jest.Mock).mockResolvedValue([{ storageKey: existingChatKey }]);
 
     await job.handle();
 
-    expect(prismaMock.messageFile.findMany).toHaveBeenCalledWith({
+    expect(prismaMock.chatFile.findMany).toHaveBeenCalledWith({
       where: { storageKey: { in: [existingChatKey, orphanChatKey] } },
       select: { storageKey: true },
     });
@@ -82,7 +82,7 @@ describe('OrphanFilesJob', () => {
       nextCursor: undefined,
     });
 
-    (prismaMock.messageFile.findMany as jest.Mock).mockRejectedValue(new Error('db down'));
+    (prismaMock.chatFile.findMany as jest.Mock).mockRejectedValue(new Error('db down'));
 
     await expect(job.handle()).resolves.toBeUndefined();
     expect(loggerMock.error).toHaveBeenCalled();

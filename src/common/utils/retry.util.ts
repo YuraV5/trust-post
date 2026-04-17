@@ -18,13 +18,23 @@ export class RetryError extends Error {
   }
 }
 
+export class RequestTimeoutError extends Error {
+  constructor(
+    message: string,
+    public readonly cause?: unknown,
+  ) {
+    super(message);
+    this.name = 'RequestTimeoutError';
+  }
+}
+
 const DEFAULT_OPTIONS: Required<RetryOptions> = {
   maxRetries: 3,
   timeoutMs: 30000,
   exponentialBackoff: true,
   retryTimeouts: false,
   retryableStatuses: [408, 429, 500, 502, 503, 504],
-  retryableMessages: ['timeout', 'econnrefused', 'enotfound'],
+  retryableMessages: ['timeout', 'aborted', 'econnrefused', 'enotfound'],
 };
 
 export async function executeWithRetry<T>(
@@ -60,15 +70,27 @@ function executeWithTimeout<T>(fn: (signal?: AbortSignal) => Promise<T>, timeout
   const controller = new AbortController();
 
   return new Promise<T>((resolve, reject) => {
+    let timedOut = false;
     const timeoutId = setTimeout(() => {
+      timedOut = true;
       controller.abort();
-      reject(new Error('Request timeout'));
     }, timeoutMs);
+    timeoutId.unref?.();
 
     fn(controller.signal)
-      .then(resolve)
-      .catch(reject)
-      .finally(() => clearTimeout(timeoutId));
+      .then((value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId);
+        if (timedOut) {
+          reject(new RequestTimeoutError(`Request timeout after ${timeoutMs}ms`, error));
+          return;
+        }
+
+        reject(error);
+      });
   });
 }
 
@@ -82,7 +104,12 @@ function isRetryableError(error: unknown, config: Required<RetryOptions>): boole
 }
 
 function isTimeoutError(error: Error): boolean {
-  return error.message?.toLowerCase().includes('timeout') ?? false;
+  if (error instanceof RequestTimeoutError) {
+    return true;
+  }
+
+  const message = error.message?.toLowerCase() ?? '';
+  return message.includes('timeout') || message.includes('aborted') || error.name === 'AbortError';
 }
 
 function delay(ms: number): Promise<void> {

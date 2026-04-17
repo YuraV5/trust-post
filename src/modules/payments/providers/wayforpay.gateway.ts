@@ -65,10 +65,11 @@ export class WayForPayGateway implements IPaymentGateway {
 
     payloadBase.merchantSignature = merchantSignature;
 
-    const paymentRequestUrl = await executeWithRetry(
-      (signal) => this.requestPaymentUrl(payloadBase, signal),
-      { maxRetries: 2, timeoutMs: 1000, exponentialBackoff: true },
-    );
+    const paymentRequestUrl = await executeWithRetry((signal) => this.requestPaymentUrl(payloadBase, signal), {
+      maxRetries: 2,
+      timeoutMs: 1000,
+      exponentialBackoff: true,
+    });
 
     this.logger.debug('WayForPay create checkout response', { paymentRequestUrl });
 

@@ -89,7 +89,7 @@ function executeWithTimeout<T>(fn: (signal?: AbortSignal) => Promise<T>, timeout
           return;
         }
 
-        reject(error);
+        reject(error as Error);
       });
   });
 }

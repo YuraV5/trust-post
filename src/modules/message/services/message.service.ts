@@ -144,7 +144,7 @@ export class MessageService implements IMessageService {
         message,
       });
       // for new messages we can afford to invalidate the cache after responding to the client,
-      // since the new message won't be visible in the list until the next fetch anyway. 
+      // since the new message won't be visible in the list until the next fetch anyway.
       void this.invalidateMessageCache(chatId);
 
       this.logger.info('Message sent', {

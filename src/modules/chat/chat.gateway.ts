@@ -22,13 +22,7 @@ import { type MessageWithSenderAndFiles } from '../message/types';
 import { Server } from 'socket.io';
 import { extractSocketToken } from '../../common/utils/extract-socket-token';
 import { UserRoles } from '@prisma/client';
-import {
-  WsChatActionDto,
-  WsDeleteMessageDto,
-  WsEditMessageDto,
-  WsSendMessageDto,
-  WsTypingDto,
-} from './dtos';
+import { WsChatActionDto, WsDeleteMessageDto, WsEditMessageDto, WsSendMessageDto, WsTypingDto } from './dtos';
 
 const wsOrigins = (process.env.WS_CORS_ALLOW_ORIGIN || process.env.CORS_ALLOW_ORIGIN || 'http://localhost:3001')
   .split(',')

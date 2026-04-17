@@ -256,7 +256,7 @@ export class ChatService implements IChatService {
 
     for (const userId of uniqueUserIds) {
       try {
-        await this.redisService.delByPattern(`cache:chat:user-chats:*\"userId\":\"${userId}\"*`);
+        await this.redisService.delByPattern(`cache:chat:user-chats:*"userId":"${userId}"*`);
       } catch (error) {
         this.logger.warn('User chats cache invalidation failed', {
           userId,

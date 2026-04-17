@@ -7,7 +7,7 @@ type NamespaceKey = string;
 
 @Injectable()
 export class SocketService {
-    constructor(@Inject(APP_LOGGER) private readonly logger: IAppLogger) {}
+  constructor(@Inject(APP_LOGGER) private readonly logger: IAppLogger) {}
 
   // Saving Socket.IO servers for each namespace (chat, notifications, etc.)
   private readonly servers = new Map<NamespaceKey, Server>();

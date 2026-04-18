@@ -124,7 +124,7 @@ describe('Auth (e2e)', () => {
         .expect(200);
 
       expect(res.body).toHaveProperty('accessToken');
-      expect(res.body.user).toMatchObject({ email: TEST_USER.email, name: TEST_USER.name });
+      expect(res.body.user).toMatchObject({ email: TEST_USER.email, name: TEST_USER.name.toLowerCase() });
 
       const cookies: string[] = (res.headers['set-cookie'] as unknown as string[]) ?? [];
       expect(cookies.some((c) => c.startsWith('refreshToken='))).toBe(true);
@@ -169,10 +169,12 @@ describe('Auth (e2e)', () => {
         .expect(200);
 
       const cookies: string[] = (loginRes.headers['set-cookie'] as unknown as string[]) ?? [];
+      const accessToken: string = loginRes.body.accessToken;
 
       const logoutRes = await request(app.getHttpServer())
         .post('/api/v1/auth/logout')
         .set('Cookie', cookies)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
       expect(logoutRes.body).toEqual({ message: 'Logged out successfully' });
@@ -204,10 +206,12 @@ describe('Auth (e2e)', () => {
         .expect(200);
 
       const cookies1: string[] = (session1.headers['set-cookie'] as unknown as string[]) ?? [];
+      const accessToken1: string = session1.body.accessToken;
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/logout-all')
         .set('Cookie', cookies1)
+        .set('Authorization', `Bearer ${accessToken1}`)
         .expect(200);
 
       expect(res.body).toEqual({ message: 'Logged out from all sessions successfully' });

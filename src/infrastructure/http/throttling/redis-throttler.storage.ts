@@ -1,10 +1,12 @@
-import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ThrottlerStorage } from '@nestjs/throttler';
 import Redis from 'ioredis';
 import { REDIS_DB } from '../../../configs/redis/redis-db';
 import { ThrottlerStorageRecord } from '@nestjs/throttler/dist/throttler-storage-record.interface';
 import { AppServiceUnavailableException } from '../../../shared/errors/app-errors';
+import { APP_LOGGER } from '@app/shared/logger/services/app-logger';
+import { type IAppLogger } from '@app/shared/logger/interfaces/interface';
 
 type ThrottlerRecord = ThrottlerStorageRecord;
 
@@ -17,7 +19,6 @@ const PAYMENT_THROTTLERS = new Set(['paymentsAnonymous', 'paymentsWebhook']);
 
 @Injectable()
 export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShutdown {
-  private readonly logger = new Logger(RedisThrottlerStorage.name);
   private readonly client: Redis;
   private readonly isProduction: boolean;
   private readonly retryDelayMs: number;
@@ -25,7 +26,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
   private readonly localHits = new Map<string, LocalHitState>();
   private readonly localBlocks = new Map<string, number>();
 
-  constructor(private readonly config: ConfigService) {
+  constructor(@Inject(APP_LOGGER) private readonly logger: IAppLogger, private readonly config: ConfigService) {
     this.isProduction = this.config.get<string>('nodeEnv') === 'production';
     this.retryDelayMs = this.config.get<number>('redis.retryDelayMs', this.isProduction ? 2000 : 250);
     this.fallbackMaxKeys = this.config.get<number>('throttling.redisFallbackMaxKeys', 10_000);
@@ -34,7 +35,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
       host: this.config.get<string>('redis.host', 'localhost'),
       port: this.config.get<number>('redis.port', 6379),
       password: this.config.get<string>('redis.password') || undefined,
-      db: REDIS_DB.THROTTHLE,
+      db: REDIS_DB.THROTTLING,
       maxRetriesPerRequest: null,
       lazyConnect: true,
       enableOfflineQueue: false,
@@ -42,7 +43,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
     });
 
     this.client.on('connect', () => {
-      this.logger.log('Redis throttler connected');
+      this.logger.info('Redis throttler connected');
     });
 
     this.client.on('error', (error) => {
@@ -72,13 +73,18 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
   }
 
   async onApplicationShutdown(): Promise<void> {
-    this.logger.log('Shutting down Redis throttler');
+    this.logger.info('Shutting down Redis throttler');
 
-    if (this.client.status === 'end') {
+    if (this.client.status !== 'ready') {
       return;
     }
 
-    await this.client.quit();
+    try {
+      await this.client.quit();
+    } catch {
+      // client may have disconnected between the status check and quit()
+      this.logger.warn('Redis throttler client quit failed, it may have already been disconnected');
+    }
   }
 
   private buildKeys(key: string, throttlerName: string): { hitKey: string; blockKey: string } {

@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RedisThrottlerStorage } from './redis-throttler.storage';
+import { APP_LOGGER } from '@app/shared/logger/services/app-logger';
+import { type IAppLogger } from '@app/shared/logger/interfaces/interface';
 
 const PAYMENT_ANONYMOUS_ROUTE = '/api/v1/payments/anonymous';
 const WAYFORPAY_WEBHOOK_ROUTE = '/api/v1/payments/webhook/wayforpay';
@@ -9,9 +11,9 @@ const WAYFORPAY_WEBHOOK_ROUTE = '/api/v1/payments/webhook/wayforpay';
 @Module({
   imports: [
     ThrottlerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        storage: new RedisThrottlerStorage(config),
+      inject: [APP_LOGGER, ConfigService],
+      useFactory: (logger: IAppLogger, config: ConfigService) => ({
+        storage: new RedisThrottlerStorage(logger, config),
         // Skip all throttling in test environment
         skipIf: (context) => {
           if (config.get<string>('nodeEnv') === 'test') return true;

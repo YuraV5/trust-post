@@ -7,6 +7,7 @@ import {
   NotFoundException,
   Inject,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Request, Response } from 'express';
 import { Context } from '../../../shared/contex/context.service';
@@ -22,6 +23,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly adapterHost: HttpAdapterHost,
     private readonly metricsService: MetricsService,
+    private readonly config: ConfigService,
   ) {}
 
   catch(exception: HttpException, host: ArgumentsHost): void {
@@ -64,7 +66,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message = 'Service unavailable';
     }
 
-    this.logger.error('HTTP exception occurred', {
+    const meta = {
       requestId,
       status,
       code,
@@ -74,7 +76,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
       method: req.method,
       stack: exception instanceof Error ? exception.stack : undefined,
       context: 'HttpExceptionFilter',
-    });
+    };
+
+    const isTest = this.config.get<string>('nodeEnv') === 'test';
+    if (status >= 500) {
+      this.logger.error('HTTP exception occurred', meta);
+    } else if (isTest) {
+      this.logger.info('HTTP exception occurred (expected in tests)', {
+        ...meta,
+        stack: undefined,
+      });
+    } else {
+      this.logger.error('HTTP exception occurred', meta);
+    }
 
     // Record exception response metrics with the mapped final status code.
     this.metricsService.recordHttpRequest(req.method, this.metricsService.resolveRouteLabel(req), status, 0);

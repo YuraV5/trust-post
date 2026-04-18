@@ -1,5 +1,6 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EMAIL_NOTIFICATION_QUEUE } from './const';
 import { EmailProcessor } from './email-queue.processor';
 import { EmailQueueService } from './email-queue.service';
@@ -11,11 +12,17 @@ import { REDIS_DB } from '../../configs/redis/redis-db';
   imports: [
     QueuesModule,
     EmailsProviderModule,
-    BullModule.registerQueue({
+    BullModule.registerQueueAsync({
       name: EMAIL_NOTIFICATION_QUEUE,
-      connection: {
-        db: REDIS_DB.EMAIL,
-      },
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get<string>('redis.host', 'localhost'),
+          port: config.get<number>('redis.port', 6379),
+          db: REDIS_DB.EMAIL,
+        },
+      }),
     }),
   ],
   providers: [EmailProcessor, EmailQueueService],

@@ -5,9 +5,7 @@
     "ts"
   ],
   "rootDir": "..",
-  "globalSetup": "<rootDir>/test/testcontainers-global-setup.ts",
   "testEnvironment": "node",
-  "globalTeardown": "<rootDir>/test/testcontainers-global-teardown.ts",
   "maxWorkers": 4,
   "testRegex": ".e2e-spec.ts$",
   "transform": {

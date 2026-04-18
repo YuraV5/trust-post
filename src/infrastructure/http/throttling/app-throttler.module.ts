@@ -12,7 +12,9 @@ const WAYFORPAY_WEBHOOK_ROUTE = '/api/v1/payments/webhook/wayforpay';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         storage: new RedisThrottlerStorage(config),
+        // Skip all throttling in test environment
         skipIf: (context) => {
+          if (config.get<string>('nodeEnv') === 'test') return true;
           const request = context.switchToHttp().getRequest();
           return request?.url?.startsWith('/health');
         },

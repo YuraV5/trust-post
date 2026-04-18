@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CoreAgentsModule } from '../../core-agents/core-agents.module';
 import { CommentsService } from './services/comments.service';
 import { CommentsController } from './comments.controller';
@@ -14,11 +15,17 @@ import { SecurityModule } from '../../security/security.module';
   imports: [
     CoreAgentsModule,
     SecurityModule,
-    BullModule.registerQueue({
+    BullModule.registerQueueAsync({
       name: COMMENTS_MODERATION_QUEUE,
-      connection: {
-        db: REDIS_DB.COMMENTS,
-      },
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get<string>('redis.host', 'localhost'),
+          port: config.get<number>('redis.port', 6379),
+          db: REDIS_DB.COMMENTS,
+        },
+      }),
     }),
   ],
   controllers: [CommentsController],

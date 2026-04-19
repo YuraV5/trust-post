@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (e.g. v1.2.3)'
-        required: true
+        description: 'Tag to release (leave empty to see last 10 tags in logs)'
+        required: false
 
 jobs:
   release:
@@ -14,12 +14,45 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag }}
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --tags
+
+      - name: Show last 10 tags
+        run: |
+          echo "Last 10 tags:"
+          git tag --sort=-v:refname | head -n 10
+
+      - name: Validate tag
+        if: ${{ github.event.inputs.tag != '' }}
+        run: |
+          if git rev-parse "${{ github.event.inputs.tag }}" >/dev/null 2>&1; then
+            echo "Tag exists: ${{ github.event.inputs.tag }}"
+          else
+            echo "Tag not found: ${{ github.event.inputs.tag }}"
+            exit 1
+          fi
+
+      - name: Use latest tag if empty
+        id: resolve_tag
+        run: |
+          if [ -z "${{ github.event.inputs.tag }}" ]; then
+            TAG=$(git tag --sort=-v:refname | head -n 1)
+          else
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve_tag.outputs.tag }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag }}
+          tag_name: ${{ steps.resolve_tag.outputs.tag }}

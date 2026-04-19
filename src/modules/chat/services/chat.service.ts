@@ -220,6 +220,7 @@ export class ChatService implements IChatService {
   }
 
   private buildCacheKey(scope: string, payload: unknown): string {
+    // JSON payload keeps cache keys deterministic across all read methods.
     return `cache:chat:${scope}:${JSON.stringify(payload)}`;
   }
 
@@ -256,6 +257,7 @@ export class ChatService implements IChatService {
 
     for (const userId of uniqueUserIds) {
       try {
+        // User chat lists are cached by page+limit, so we invalidate all variants for the user.
         await this.redisService.delByPattern(`cache:chat:user-chats:*"userId":"${userId}"*`);
       } catch (error) {
         this.logger.warn('User chats cache invalidation failed', {

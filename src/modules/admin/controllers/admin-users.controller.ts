@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { UserRoles } from '@prisma/client';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../../../common/decorators';
 import { RolesGuard } from '../../../common/guards';
 import { UUIDParamDto } from '../../../common/dtos/req-params.dto';
@@ -30,12 +30,26 @@ export class AdminUsersController {
 
   @Roles(UserRoles.ADMIN)
   @Get()
+  @ApiOperation({ summary: 'Get all users for admin panel (paginated, filterable)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name or email' })
+  @ApiQuery({ name: 'role', required: false, type: String, description: 'Filter by user role' })
+  @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Missing or invalid token', type: UnauthorizedErrorResponse })
+  @ApiResponse({ status: 403, description: 'Admin role required', type: ForbiddenErrorResponse })
   async getAllUsers(@Query() query: AdminUsersQueryDto): Promise<PaginatedResult<UserAdminOutput>> {
     return this.adminService.findAllForAdmin(query);
   }
 
   @Roles(UserRoles.ADMIN)
   @Post()
+  @ApiOperation({ summary: 'Create user by admin' })
+  @ApiBody({ type: AdminUserCreationDto })
+  @ApiResponse({ status: 201, description: 'User created successfully', type: MessageResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid payload', type: BadRequestErrorResponse })
+  @ApiResponse({ status: 401, description: 'Missing or invalid token', type: UnauthorizedErrorResponse })
+  @ApiResponse({ status: 403, description: 'Admin role required', type: ForbiddenErrorResponse })
   async createUser(
     @Body() inp: AdminUserCreationDto,
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -45,12 +59,24 @@ export class AdminUsersController {
 
   @Roles(UserRoles.ADMIN)
   @Get('/:id')
+  @ApiOperation({ summary: 'Get user details by id (Admin only)' })
+  @ApiParam({ name: 'id', type: String, description: 'User UUID' })
+  @ApiResponse({ status: 200, description: 'User found' })
+  @ApiResponse({ status: 401, description: 'Missing or invalid token', type: UnauthorizedErrorResponse })
+  @ApiResponse({ status: 403, description: 'Admin role required', type: ForbiddenErrorResponse })
+  @ApiResponse({ status: 404, description: 'User not found', type: NotFoundErrorResponse })
   async getUserById(@Param() params: UUIDParamDto): Promise<UserAdminOutput> {
     return this.adminService.findByIdForAdmin(params.id);
   }
 
   @Roles(UserRoles.ADMIN)
   @Patch('/:id/toggle-status')
+  @ApiOperation({ summary: 'Toggle user active status (Admin only)' })
+  @ApiParam({ name: 'id', type: String, description: 'User UUID' })
+  @ApiResponse({ status: 200, description: 'User status updated successfully', type: MessageResponseDto })
+  @ApiResponse({ status: 401, description: 'Missing or invalid token', type: UnauthorizedErrorResponse })
+  @ApiResponse({ status: 403, description: 'Admin role required', type: ForbiddenErrorResponse })
+  @ApiResponse({ status: 404, description: 'User not found', type: NotFoundErrorResponse })
   async updateStatus(@Param() params: UUIDParamDto): Promise<ResponseMessage> {
     return this.adminService.updateStatus(params.id);
   }
@@ -90,6 +116,12 @@ export class AdminUsersController {
 
   @Roles(UserRoles.ADMIN)
   @Delete()
+  @ApiOperation({ summary: 'Delete users in bulk (Admin only)' })
+  @ApiBody({ type: AdminDeleteDto })
+  @ApiResponse({ status: 200, description: 'Users deleted successfully', type: MessageResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid request payload', type: BadRequestErrorResponse })
+  @ApiResponse({ status: 401, description: 'Missing or invalid token', type: UnauthorizedErrorResponse })
+  @ApiResponse({ status: 403, description: 'Admin role required', type: ForbiddenErrorResponse })
   async deleteUser(@Body() data: AdminDeleteDto): Promise<ResponseMessage> {
     return this.adminService.deleteMany(data.ids);
   }

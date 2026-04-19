@@ -79,10 +79,7 @@ jobs:
         run: npm ci
 
       - name: Write .env.test
-        run: |
-            cat << 'EOF' > .env.test
-            ${{ secrets.ENV_TEST }}
-            EOF
+        run: echo "${{ secrets.ENV_TEST }}" > .env.test
 
       - name: E2E tests (testcontainers)
         run: npm run test:e2e

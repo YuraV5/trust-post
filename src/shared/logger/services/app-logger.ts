@@ -14,6 +14,7 @@ export const APP_LOGGER = Symbol('APP_LOGGER');
 export class AppLogger implements IAppLogger {
   private readonly logger: Logger;
   private readonly nodeEnv: string;
+  private readonly consoleLoggingEnabled: boolean;
   private readonly logLevel: string;
   private readonly fileLoggingEnabled: boolean;
   private readonly cwdPattern: RegExp;
@@ -24,6 +25,7 @@ export class AppLogger implements IAppLogger {
 
   constructor(private readonly config: ConfigService) {
     this.nodeEnv = this.config.getOrThrow<string>('nodeEnv');
+    this.consoleLoggingEnabled = this.nodeEnv !== APP_MODE.TEST;
     this.logLevel = this.config.get('loggerLevel') || 'info';
     this.fileLoggingEnabled = this.config.get<boolean>('loggerFileEnabled') ?? this.nodeEnv !== APP_MODE.TEST;
     this.cwdPattern = this.buildCwdPattern(process.cwd());
@@ -60,6 +62,7 @@ export class AppLogger implements IAppLogger {
   private createProdLogger(): Logger {
     const fileTransports = this.createFileTransports();
     const errorFileHandlers = this.createErrorFileHandlers();
+    const consoleTransport = this.createConsoleTransport();
 
     return createLogger({
       level: this.logLevel || 'info',
@@ -111,15 +114,16 @@ export class AppLogger implements IAppLogger {
           return JSON.stringify(logData);
         }),
       ),
-      transports: [new transports.Console(), ...fileTransports],
-      exceptionHandlers: [new transports.Console(), ...errorFileHandlers],
-      rejectionHandlers: [new transports.Console(), ...errorFileHandlers],
+      transports: [consoleTransport, ...fileTransports],
+      exceptionHandlers: [consoleTransport, ...errorFileHandlers],
+      rejectionHandlers: [consoleTransport, ...errorFileHandlers],
     });
   }
 
   private createDevLogger(): Logger {
     const fileTransports = this.createFileTransports();
     const errorFileHandlers = this.createErrorFileHandlers();
+    const consoleTransport = this.createConsoleTransport();
 
     return createLogger({
       level: this.logLevel || 'debug',
@@ -162,9 +166,15 @@ export class AppLogger implements IAppLogger {
           return log;
         }),
       ),
-      transports: [new transports.Console(), ...fileTransports],
-      exceptionHandlers: [new transports.Console(), ...errorFileHandlers],
-      rejectionHandlers: [new transports.Console(), ...errorFileHandlers],
+      transports: [consoleTransport, ...fileTransports],
+      exceptionHandlers: [consoleTransport, ...errorFileHandlers],
+      rejectionHandlers: [consoleTransport, ...errorFileHandlers],
+    });
+  }
+
+  private createConsoleTransport(): transports.ConsoleTransportInstance {
+    return new transports.Console({
+      silent: !this.consoleLoggingEnabled,
     });
   }
 

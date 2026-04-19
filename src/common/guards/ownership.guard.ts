@@ -3,6 +3,7 @@ import { UserRoles } from '@prisma/client';
 import { PrismaService } from '../../modules/prisma/prisma.service';
 import { AppNotFoundException, AppForbiddenException } from '../../shared/errors/app-errors';
 import { AuthenticatedRequest } from '../interfaces';
+import { PrismaClient } from '@prisma/client/extension';
 
 type ResourceModel = 'post' | 'comment' | 'postReview' | 'commentLike' | 'postLike' | 'user' | 'postFile';
 
@@ -77,7 +78,7 @@ export function OwnershipGuard(options: OwnershipGuardOptions): Type<CanActivate
       }
 
       // Check if the resource exists and get the owner field
-      const entity = await (this.prisma as any)[model].findUnique({
+      const entity = await (this.prisma as PrismaClient)[model].findUnique({
         where: { id: this.convertIdType(resourceId, model) },
         select: { [resolvedOwnerField]: true },
       });

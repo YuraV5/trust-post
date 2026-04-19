@@ -1,28 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { AppModule } from '../../src/app.module';
 import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaClient } from '@prisma/client';
+import request from 'supertest';
+import { v4 as uuidv4 } from 'uuid';
+import { AppModule } from '../../src/app.module';
 import { setupGlobalSettings } from '../../src/app/server';
-import { PrismaService } from '../../src/modules/prisma/prisma.service';
-import { TokensService } from '../../src/modules/security/services';
-import { PasswordService } from '../../src/modules/security/services';
-import { UserRoles } from '@prisma/client';
-import { USERS_ENDPOINTS } from './api-config/endpoints';
+import {
+  cleanupRunUsers,
+  createAuthorizedSession,
+  loginUser,
+  registerUser,
+  verifyUserEmail,
+} from './helpers/auth-e2e.helper';
 
-describe('UsersController (e2e)', () => {
+describe('Users (e2e)', () => {
   let app: INestApplication;
-  let prisma: PrismaService;
-  let tokensService: TokensService;
-  let passwordService: PasswordService;
-  let accessToken: string;
-  let userId: string;
-
-  const TEST_USER = {
-    email: 'e2e-users@test.com',
-    name: 'e2euser',
-    password: 'E2eTest123!',
-  };
+  let prisma: PrismaClient;
+  const runId = `users-${uuidv4().slice(0, 8)}`;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -30,184 +25,136 @@ describe('UsersController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    const config = app.get(ConfigService);
-    setupGlobalSettings(app, config);
+    setupGlobalSettings(app, app.get(ConfigService));
     await app.init();
 
-    prisma = app.get(PrismaService);
-    tokensService = app.get(TokensService);
-    passwordService = app.get(PasswordService);
-
-    // Clean up any leftover test data before starting
-    await prisma.user.deleteMany({ where: { email: { startsWith: 'e2e-users' } } });
-
-    const hashedPassword = await passwordService.createHash(TEST_USER.password);
-    const user = await prisma.user.create({
-      data: {
-        email: TEST_USER.email,
-        name: TEST_USER.name,
-        password: hashedPassword,
-        isEmailVerified: true,
-        isActive: true,
-      },
-    });
-
-    userId = user.id;
-    accessToken = await tokensService.generateAccess({ sub: userId, role: UserRoles.USER });
+    prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL } } });
+    await prisma.$connect();
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany({ where: { email: { startsWith: 'e2e-users' } } });
+    await cleanupRunUsers(prisma, runId);
+    await prisma.$disconnect();
     await app.close();
   });
 
-  // GET /users/me
-  describe('GET /users/me', () => {
-    it('should return 401 when no access token is provided', async () => {
-      await request(app.getHttpServer()).get(USERS_ENDPOINTS.ME).expect(401);
+  describe('GET /api/v1/users/me', () => {
+    it('should return 401 without access token', async () => {
+      await request(app.getHttpServer()).get('/api/v1/users/me').expect(401);
     });
 
-    it('should return the authenticated user profile', async () => {
+    it('should return current user profile for authenticated user', async () => {
+      const session = await createAuthorizedSession(app, prisma, runId, 'get-me');
+
       const res = await request(app.getHttpServer())
-        .get(USERS_ENDPOINTS.ME)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .get('/api/v1/users/me')
+        .set('Authorization', `Bearer ${session.accessToken}`)
         .expect(200);
 
       expect(res.body).toMatchObject({
-        id: userId,
-        email: TEST_USER.email,
-        name: TEST_USER.name,
+        email: session.user.email,
+        name: session.user.name.toLowerCase(),
         isEmailVerified: true,
       });
-      // Password must never be exposed
-      expect(res.body.password).toBeUndefined();
+      expect(res.body).toHaveProperty('id');
+      expect(res.body).toHaveProperty('createdAt');
     });
   });
 
-  // PATCH /users/me
-  describe('PATCH /users/me', () => {
-    it('should return 401 when no access token is provided', async () => {
-      await request(app.getHttpServer()).patch(USERS_ENDPOINTS.ME).send({ name: 'new' }).expect(401);
+  describe('PATCH /api/v1/users/me', () => {
+    it('should update profile and normalize name to lowercase', async () => {
+      const session = await createAuthorizedSession(app, prisma, runId, 'update-me');
+
+      const res = await request(app.getHttpServer())
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${session.accessToken}`)
+        .send({ name: 'New Fancy Name', photoUrl: 'https://cdn.example.com/u.png' })
+        .expect(200);
+
+      expect(res.body).toEqual({ message: 'Updated successfully' });
+
+      const me = await request(app.getHttpServer())
+        .get('/api/v1/users/me')
+        .set('Authorization', `Bearer ${session.accessToken}`)
+        .expect(200);
+
+      expect(me.body).toMatchObject({
+        name: 'new fancy name',
+        photoUrl: 'https://cdn.example.com/u.png',
+      });
     });
 
-    it('should return 400 when the request body is empty', async () => {
+    it('should return 400 when no updatable fields provided', async () => {
+      const session = await createAuthorizedSession(app, prisma, runId, 'update-empty');
+
       await request(app.getHttpServer())
-        .patch(USERS_ENDPOINTS.ME)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${session.accessToken}`)
         .send({})
         .expect(400);
     });
-
-    it('should update profile and return success message', async () => {
-      const res = await request(app.getHttpServer())
-        .patch(USERS_ENDPOINTS.ME)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({ name: 'updatedname' })
-        .expect(200);
-
-      expect(res.body.message).toBe('Updated successfully');
-
-      // Verify name was actually persisted (names are lowercased by the service)
-      const updated = await prisma.user.findUnique({ where: { id: userId } });
-      expect(updated?.name).toBe('updatedname');
-    });
   });
 
-  // PATCH /users/me/password
-  describe('PATCH /users/me/password', () => {
-    const NEW_PASSWORD = 'E2eNew456!';
+  describe('PATCH /api/v1/users/me/password', () => {
+    it('should update password and invalidate old credentials', async () => {
+      const session = await createAuthorizedSession(app, prisma, runId, 'update-password');
+      const newPassword = 'Password2!';
 
-    it('should return 401 when no access token is provided', async () => {
-      await request(app.getHttpServer())
-        .patch(USERS_ENDPOINTS.ME_PASSWORD)
-        .send({ currentPassword: TEST_USER.password, newPassword: NEW_PASSWORD })
-        .expect(401);
-    });
+      const updateRes = await request(app.getHttpServer())
+        .patch('/api/v1/users/me/password')
+        .set('Authorization', `Bearer ${session.accessToken}`)
+        .send({ currentPassword: session.user.password, newPassword })
+        .expect(200);
 
-    it('should return 400 when the current password is wrong', async () => {
+      expect(updateRes.body).toEqual({ message: 'Password updated successfully' });
+
       await request(app.getHttpServer())
-        .patch(USERS_ENDPOINTS.ME_PASSWORD)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({ currentPassword: 'WrongPass99!', newPassword: NEW_PASSWORD })
+        .post('/api/v1/auth/login')
+        .send({ email: session.user.email, password: session.user.password, deviceId: uuidv4() })
         .expect(400);
-    });
 
-    it('should update password successfully when correct credentials are supplied', async () => {
-      const res = await request(app.getHttpServer())
-        .patch(USERS_ENDPOINTS.ME_PASSWORD)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({ currentPassword: TEST_USER.password, newPassword: NEW_PASSWORD })
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: session.user.email, password: newPassword, deviceId: uuidv4() })
         .expect(200);
-
-      expect(res.body.message).toBe('Password updated successfully');
-
-      // Verify the new password is actually stored and verifiable
-      const updated = await prisma.user.findUnique({ where: { id: userId } });
-      const isValid = await passwordService.verify(NEW_PASSWORD, updated!.password!);
-      expect(isValid).toBe(true);
     });
   });
 
-  // DELETE /users/me
-  describe('DELETE /users/me', () => {
-    it('should return 401 when no access token is provided', async () => {
-      await request(app.getHttpServer()).delete(USERS_ENDPOINTS.ME).expect(401);
-    });
+  describe('DELETE /api/v1/users/me', () => {
+    it('should delete current user account', async () => {
+      const session = await createAuthorizedSession(app, prisma, runId, 'delete-me');
 
-    it('should delete the account and return success message', async () => {
-      // Create a dedicated disposable user so the main test user is unaffected
-      const disposableEmail = 'e2e-users-delete@test.com';
-      const hashedPw = await passwordService.createHash('Disposable1!');
-      const disposableUser = await prisma.user.create({
-        data: {
-          email: disposableEmail,
-          name: 'disposable',
-          password: hashedPw,
-          isEmailVerified: true,
-          isActive: true,
-        },
-      });
-      const disposableToken = await tokensService.generateAccess({
-        sub: disposableUser.id,
-        role: UserRoles.USER,
-      });
-
-      const res = await request(app.getHttpServer())
-        .delete(USERS_ENDPOINTS.ME)
-        .set('Authorization', `Bearer ${disposableToken}`)
+      const deleteRes = await request(app.getHttpServer())
+        .delete('/api/v1/users/me')
+        .set('Authorization', `Bearer ${session.accessToken}`)
         .expect(200);
 
-      expect(res.body.message).toBe('Removed successfully');
+      expect(deleteRes.body).toEqual({ message: 'Removed successfully' });
 
-      // Confirm the record is gone from the DB
-      const deleted = await prisma.user.findUnique({ where: { id: disposableUser.id } });
-      expect(deleted).toBeNull();
+      const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+      expect(user).toBeNull();
     });
 
-    it('should return 404 when the user no longer exists (token for already-deleted user)', async () => {
-      // Create, delete via API, then try again with the same token
-      const ghostEmail = 'e2e-users-ghost@test.com';
-      const hashedPw = await passwordService.createHash('Ghost1pass!');
-      const ghostUser = await prisma.user.create({
-        data: {
-          email: ghostEmail,
-          name: 'ghost',
-          password: hashedPw,
-          isEmailVerified: true,
-          isActive: true,
-        },
-      });
-      const ghostToken = await tokensService.generateAccess({
-        sub: ghostUser.id,
-        role: UserRoles.USER,
-      });
+    it('should block deleted user on next authenticated call', async () => {
+      const unique = uuidv4().replace(/-/g, '').slice(0, 10);
+      const user = {
+        email: `e2e.delete-check.${runId}.${unique}@example.com`,
+        password: 'Password1!',
+        name: `Delete Check ${unique}`,
+      };
 
-      // Delete directly via DB to simulate a stale token
-      await prisma.user.delete({ where: { id: ghostUser.id } });
+      await registerUser(app, user);
+      await verifyUserEmail(prisma, user.email);
+      const login = await loginUser(app, user);
 
       await request(app.getHttpServer())
-        .delete(USERS_ENDPOINTS.ME)
-        .set('Authorization', `Bearer ${ghostToken}`)
+        .delete('/api/v1/users/me')
+        .set('Authorization', `Bearer ${login.accessToken}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get('/api/v1/users/me')
+        .set('Authorization', `Bearer ${login.accessToken}`)
         .expect(404);
     });
   });

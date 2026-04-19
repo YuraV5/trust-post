@@ -11,10 +11,10 @@ import { APP_MODE } from '../../common/consts';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         connection: {
-          host: config.get<string>('REDIS_HOST'),
-          port: config.get<number>('REDIS_PORT', 6379),
+          host: config.get<string>('redis.host', 'localhost'),
+          port: config.get<number>('redis.port', 6379),
           password:
-            config.get<string>('nodeEnv') === APP_MODE.PRODUCTION ? config.get<string>('REDIS_PASSWORD') : undefined,
+            config.get<string>('nodeEnv') === APP_MODE.PRODUCTION ? config.get<string>('redis.password') : undefined,
         },
       }),
     }),

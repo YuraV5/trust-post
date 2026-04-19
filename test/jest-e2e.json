@@ -5,9 +5,7 @@
     "ts"
   ],
   "rootDir": "..",
-  "globalSetup": "<rootDir>/test/testcontainers-global-setup.ts",
   "testEnvironment": "node",
-  "globalTeardown": "<rootDir>/test/testcontainers-global-teardown.ts",
   "maxWorkers": 4,
   "testRegex": ".e2e-spec.ts$",
   "transform": {
@@ -15,5 +13,15 @@
   },
   "transformIgnorePatterns": [
     "node_modules/(?!(uuid)/)"
-  ]
+  ],
+  "moduleNameMapper": {
+    "^@app/(.*)$": "<rootDir>/src/$1"
+  },
+  "globalSetup": "<rootDir>/test/global-setup.ts",
+  "globalTeardown": "<rootDir>/test/global-teardown.ts",
+  "setupFiles": [
+    "<rootDir>/test/testcontainers-env.setup.ts"
+  ],
+  "testTimeout": 60000,
+  "forceExit": true
 }

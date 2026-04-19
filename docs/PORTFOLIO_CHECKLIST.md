@@ -13,8 +13,6 @@
 
 - [ ] Public demo environment (read-only)
 - [x] API collection (Postman or Bruno)
-- [ ] Short load-test report with baseline numbers
-- [ ] Security scan in CI (npm audit or SAST)
 - [ ] Release tags and changelog automation
 
 ## Suggested Recruiter Demo Flow (5 minutes)

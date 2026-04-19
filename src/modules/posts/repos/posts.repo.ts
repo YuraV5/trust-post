@@ -28,6 +28,7 @@ export class PostsRepo implements IPostsRepo {
     return await client.post.findUnique({
       where: {
         id,
+        status: PostStatus.APPROVED,
       },
     });
   }

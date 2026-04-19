@@ -1,5 +1,6 @@
 import { UsersModule } from './../users/users.module';
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PostsService } from './services/posts.service';
 import { PublicPostsController, StaffPostsController } from './controllers';
 import { PostsLikeRepo, PostsRepo, PostsReviewRepo } from './repos';
@@ -15,11 +16,17 @@ import { MetricsModule } from '../../infrastructure/metrics/metrics.module';
 
 @Module({
   imports: [
-    BullModule.registerQueue({
+    BullModule.registerQueueAsync({
       name: POSTS_QUEUE,
-      connection: {
-        db: REDIS_DB.POSTS,
-      },
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get<string>('redis.host', 'localhost'),
+          port: config.get<number>('redis.port', 6379),
+          db: REDIS_DB.POSTS,
+        },
+      }),
     }),
     UsersModule,
     EmailsModule,

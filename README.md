@@ -134,3 +134,8 @@ See short engineering notes:
 - docs/API_SWAGGER.md
 - docs/TESTING_SHORT.md
 - docs/PORTFOLIO_CHECKLIST.md
+
+## Version bump is controlled by keywords in commit messages or PR title:
+  #major  → v1.0.0 → v2.0.0
+  #minor  → v1.0.0 → v1.1.0
+  #patch  → v1.0.0 → v1.0.1  (default if no keyword found)

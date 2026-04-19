@@ -31,6 +31,7 @@ background jobs, payments, observability, and Docker-based environments.
 ```bash
 npm ci
 cp .env.example .env
+cp .env.example .env.test
 ```
 
 ### 2. Start infra
@@ -129,4 +130,7 @@ See short engineering notes:
 
 - docs/ARCHITECTURE.md
 - docs/DECISIONS.md
+- docs/GETTING_STARTED.md
+- docs/API_SWAGGER.md
+- docs/TESTING_SHORT.md
 - docs/PORTFOLIO_CHECKLIST.md

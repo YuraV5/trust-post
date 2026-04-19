@@ -112,9 +112,7 @@ describe('Comments (e2e)', () => {
       const content = 'Comment for listing test, enough content here.';
       const commentId = await createCommentAndGetId(session.accessToken, session.user.email, post.id, content);
 
-      const res = await request(app.getHttpServer())
-        .get(POST_ROUTES.comments(post.id))
-        .expect(200);
+      const res = await request(app.getHttpServer()).get(POST_ROUTES.comments(post.id)).expect(200);
 
       expect(res.body).toHaveProperty('data');
       expect(Array.isArray(res.body.data)).toBe(true);

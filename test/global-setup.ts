@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { execSync } from 'child_process';
@@ -7,9 +8,8 @@ import * as path from 'path';
 export const ENV_SNAPSHOT_FILE = path.join(__dirname, '.testcontainers.env.json');
 
 declare global {
-  // eslint-disable-next-line no-var
   var __pg_container__: StartedPostgreSqlContainer;
-  // eslint-disable-next-line no-var
+
   var __redis_container__: StartedRedisContainer;
 }
 

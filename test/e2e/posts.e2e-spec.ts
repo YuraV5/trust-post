@@ -39,9 +39,7 @@ describe('Posts (e2e)', () => {
 
   describe('GET /api/v1/posts', () => {
     it('should return paginated list without auth', async () => {
-      const res = await request(app.getHttpServer())
-        .get(`${POST_ROUTES.base}?limit=100`)
-        .expect(200);
+      const res = await request(app.getHttpServer()).get(`${POST_ROUTES.base}?limit=100`).expect(200);
 
       // Response always has pagination shape
       expect(res.body).toHaveProperty('data');
@@ -56,9 +54,7 @@ describe('Posts (e2e)', () => {
       // Bypass review queue — set status directly in DB
       await approvePost(prisma, post.id);
 
-      const res = await request(app.getHttpServer())
-        .get(POST_ROUTES.base)
-        .expect(200);
+      const res = await request(app.getHttpServer()).get(POST_ROUTES.base).expect(200);
 
       const found = res.body.data.find((p: { id: number }) => p.id === post.id);
       expect(found).toBeDefined();
@@ -69,9 +65,7 @@ describe('Posts (e2e)', () => {
 
   describe('GET /api/v1/posts/:id', () => {
     it('should return 404 for non-existent post', async () => {
-      await request(app.getHttpServer())
-        .get(POST_ROUTES.byId(999999999))
-        .expect(404);
+      await request(app.getHttpServer()).get(POST_ROUTES.byId(999999999)).expect(404);
     });
 
     it('should return post by id', async () => {
@@ -79,9 +73,7 @@ describe('Posts (e2e)', () => {
       const post = await createPost(app, session.accessToken);
       await approvePost(prisma, post.id);
 
-      const res = await request(app.getHttpServer())
-        .get(POST_ROUTES.byId(post.id))
-        .expect(200);
+      const res = await request(app.getHttpServer()).get(POST_ROUTES.byId(post.id)).expect(200);
 
       expect(res.body.id).toBe(post.id);
       expect(res.body.title).toBe(post.title);
@@ -165,10 +157,7 @@ describe('Posts (e2e)', () => {
 
   describe('PATCH /api/v1/posts/:id', () => {
     it('should return 401 without auth', async () => {
-      await request(app.getHttpServer())
-        .patch(POST_ROUTES.byId(1))
-        .send({ title: 'New Title Here Ok' })
-        .expect(401);
+      await request(app.getHttpServer()).patch(POST_ROUTES.byId(1)).send({ title: 'New Title Here Ok' }).expect(401);
     });
 
     it('should update post title', async () => {

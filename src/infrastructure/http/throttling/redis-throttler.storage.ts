@@ -26,7 +26,10 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
   private readonly localHits = new Map<string, LocalHitState>();
   private readonly localBlocks = new Map<string, number>();
 
-  constructor(@Inject(APP_LOGGER) private readonly logger: IAppLogger, private readonly config: ConfigService) {
+  constructor(
+    @Inject(APP_LOGGER) private readonly logger: IAppLogger,
+    private readonly config: ConfigService,
+  ) {
     this.isProduction = this.config.get<string>('nodeEnv') === 'production';
     this.retryDelayMs = this.config.get<number>('redis.retryDelayMs', this.isProduction ? 2000 : 250);
     this.fallbackMaxKeys = this.config.get<number>('throttling.redisFallbackMaxKeys', 10_000);

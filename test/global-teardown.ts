@@ -1,3 +1,4 @@
+/* eslint-disable */
 import * as fs from 'fs';
 import { ENV_SNAPSHOT_FILE } from './global-setup';
 

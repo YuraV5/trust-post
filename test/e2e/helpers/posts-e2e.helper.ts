@@ -11,12 +11,14 @@ export type CreatedPost = {
 };
 
 // Valid post payload that passes all validation rules
-export const buildPostPayload = (overrides: Partial<{
-  title: string;
-  content: string;
-  targetAmount: number;
-  targetDate: string;
-}> = {}) => ({
+export const buildPostPayload = (
+  overrides: Partial<{
+    title: string;
+    content: string;
+    targetAmount: number;
+    targetDate: string;
+  }> = {},
+) => ({
   title: overrides.title ?? 'E2E Test Post Title Here',
   content: overrides.content ?? 'This is the e2e test post content with enough characters to pass validation checks.',
   targetAmount: overrides.targetAmount ?? 1000,

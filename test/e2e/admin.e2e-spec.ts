@@ -6,7 +6,14 @@ import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 import { AppModule } from '../../src/app.module';
 import { setupGlobalSettings } from '../../src/app/server';
-import { cleanupRunUsers, createAuthorizedSession, buildE2ETestUser, registerUser, verifyUserEmail, loginUser } from './helpers/auth-e2e.helper';
+import {
+  cleanupRunUsers,
+  createAuthorizedSession,
+  buildE2ETestUser,
+  registerUser,
+  verifyUserEmail,
+  loginUser,
+} from './helpers/auth-e2e.helper';
 import { ADMIN_ROUTES } from './constants/routes';
 
 // Sets the role of a user directly in the DB to bypass the API (needed to make an admin)

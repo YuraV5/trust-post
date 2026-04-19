@@ -6,7 +6,14 @@ import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 import { AppModule } from '../../src/app.module';
 import { setupGlobalSettings } from '../../src/app/server';
-import { cleanupRunUsers, createAuthorizedSession, loginUser, registerUser, verifyUserEmail, buildE2ETestUser } from './helpers/auth-e2e.helper';
+import {
+  cleanupRunUsers,
+  createAuthorizedSession,
+  loginUser,
+  registerUser,
+  verifyUserEmail,
+  buildE2ETestUser,
+} from './helpers/auth-e2e.helper';
 import { SESSION_ROUTES } from './constants/routes';
 
 describe('Sessions (e2e)', () => {

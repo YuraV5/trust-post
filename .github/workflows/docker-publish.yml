@@ -63,6 +63,6 @@ jobs:
             org.opencontainers.image.version=${{ needs.tag.outputs.new_tag }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            branch=${{ github.event.pull_request.head.ref }}
+            org.opencontainers.image.ref.name=${{ github.ref_name }} 
           cache-from: type=gha
           cache-to: type=gha,mode=max

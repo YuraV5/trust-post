@@ -26,42 +26,46 @@ background jobs, payments, observability, and Docker-based environments.
 
 ## Quick Start (Local)
 
-### 1. Install
+## Quick Start
+
+```bash
+cp .env.example .env
+# Fill in your values: DOCKERHUB_USERNAME, JWT secrets, etc.
+make start
+```
+
+Pulls the latest image from DockerHub and starts app + db + redis + full monitoring stack.
+
+```bash
+make stop   # stop everything
+```
+
+| Service    | URL                         |
+|------------|-----------------------------|
+| App        | http://localhost:3001        |
+| Docs       | http://localhost:3001/docs   |
+| Grafana    | http://localhost:3000        |
+| Prometheus | http://localhost:9090        |
+| Alertmanager | http://localhost:9093      |
+| Loki       | http://localhost:3100        |
+
+## Development (app on host)
 
 ```bash
 npm ci
 cp .env.example .env
 cp .env.example .env.test
+make dev-up       # start Postgres + Redis
+npm run mgr:dev   # run migrations
+npm run seed:full # seed demo data
+npm run dev       # start app with hot reload
 ```
 
-### 2. Start infra
+Local monitoring (scrapes the host app):
 
 ```bash
-npm run docker:dev
-```
-
-### 3. Run migrations and seed
-
-```bash
-npm run mgr:dev
-npm run seed:full
-```
-
-### 4. Start app
-
-```bash
-npm run dev
-```
-
-App: http://localhost:3001
-Docs: http://localhost:3001/docs
-
-## Monitoring
-
-Local monitoring for app running on host:
-
-```bash
-npm run docker:monitor:dev
+make monitor-up
+make monitor-down
 ```
 
 Application logs are written to the console and, when `LOGGER_FILE_ENABLED=true`, also to:
@@ -69,13 +73,6 @@ Application logs are written to the console and, when `LOGGER_FILE_ENABLED=true`
 - `logs/normal/app.log`
 - `logs/error/error.log`
 - `logs/error/exceptions.log`
-
-Main endpoints:
-
-- Prometheus: http://localhost:9090
-- Alertmanager: http://localhost:9093
-- Grafana: http://localhost:3000
-- Loki: http://localhost:3100
 
 Queue observability baseline includes:
 

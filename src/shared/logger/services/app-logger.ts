@@ -25,7 +25,7 @@ export class AppLogger implements IAppLogger {
 
   constructor(private readonly config: ConfigService) {
     this.nodeEnv = this.config.getOrThrow<string>('nodeEnv');
-    this.consoleLoggingEnabled = this.nodeEnv !== APP_MODE.TEST;
+    this.consoleLoggingEnabled = this.config.get<boolean>('loggerConsoleEnabled') ?? this.nodeEnv !== APP_MODE.TEST;
     this.logLevel = this.config.get('loggerLevel') || 'info';
     this.fileLoggingEnabled = this.config.get<boolean>('loggerFileEnabled') ?? this.nodeEnv !== APP_MODE.TEST;
     this.cwdPattern = this.buildCwdPattern(process.cwd());

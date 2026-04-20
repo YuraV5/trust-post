@@ -13,3 +13,7 @@ if (fs.existsSync(ENV_SNAPSHOT_FILE)) {
   const snapshot: Record<string, string> = JSON.parse(fs.readFileSync(ENV_SNAPSHOT_FILE, 'utf-8'));
   Object.assign(process.env, snapshot);
 }
+
+// Keep queue/job failures visible during e2e runs unless explicitly overridden.
+process.env.LOGGER_CONSOLE_ENABLED = process.env.LOGGER_CONSOLE_ENABLED ?? 'true';
+process.env.LOGGER_LEVEL = process.env.LOGGER_LEVEL ?? 'debug';

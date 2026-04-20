@@ -7,6 +7,7 @@ export interface IAppConfig {
   swaggerEnabled: boolean;
   serviceName: string;
   loggerLevel: string;
+  loggerConsoleEnabled: boolean;
   loggerFileEnabled: boolean;
   loggerFileMaxSizeMb: number;
   loggerFileMaxFiles: number;

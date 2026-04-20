@@ -51,10 +51,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: |
-          cat > .env.test <<'EOF'
-          ${{ secrets.ENV_TEST }}
-          EOF
+      - run: printf "%s" "${{ secrets.ENV_TEST }}" > .env.test
       - run: npm run test:e2e
         env:
           TESTCONTAINERS_RYUK_DISABLED: true

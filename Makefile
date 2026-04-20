@@ -3,11 +3,15 @@ DOCKER_COMPOSE := docker compose --env-file $(ENV_FILE)
 LOCAL_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml
 LOCAL_MONITORING_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml -f docker-compose.monitoring.dev.yml
 
-.PHONY: help dev-up dev-down dev-logs app-dev monitor-up monitor-down monitor-logs prod-up prod-down prod-logs build lint test test-e2e seed-users seed-posts seed-comments seed-full prisma-generate prisma-migrate prisma-reset
+.PHONY: help start stop dev-up dev-down dev-logs app-dev monitor-up monitor-down monitor-logs prod-up prod-down prod-logs build lint test test-e2e seed-users seed-posts seed-comments seed-full prisma-generate prisma-migrate prisma-reset
 
 # Show the main commands.
 help:
 	@echo "Trust Post command list"
+	@echo ""
+	@echo "Quick start:"
+	@echo "  make start             Start full dev stack in Docker (app + db + redis, with hot reload)"
+	@echo "  make stop              Stop the dev Docker stack"
 	@echo ""
 	@echo "Local development:"
 	@echo "  make dev-up            Start local Postgres and Redis"
@@ -39,6 +43,19 @@ help:
 	@echo "  make seed-full         Seed full demo data"
 	@echo ""
 	@echo "Optional: set custom env file, example: make dev-up ENV_FILE=.env.example"
+
+# Pull the latest image from DockerHub and start app + db + redis + monitoring.
+start:
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "No $(ENV_FILE) found — copying .env.example"; \
+		cp .env.example $(ENV_FILE); \
+	fi
+	$(DOCKER_COMPOSE) --profile monitoring pull app
+	$(DOCKER_COMPOSE) --profile monitoring up -d
+
+# Stop the full stack.
+stop:
+	$(DOCKER_COMPOSE) --profile monitoring down
 
 # Start only local infrastructure for development.
 dev-up:

@@ -33,6 +33,8 @@ jobs:
         run: npm run test:e2e
         env:
           TESTCONTAINERS_RYUK_DISABLED: true
+          LOGGER_CONSOLE_ENABLED: 'true'
+          LOGGER_LEVEL: 'debug'
 
   docker-build:
     runs-on: ubuntu-latest

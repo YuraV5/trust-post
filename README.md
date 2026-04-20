@@ -94,13 +94,12 @@ npm run build
 
 ## CI
 
-Pull request checks include:
+Pull request checks depend on the target branch:
 
-- lint check
-- format check
-- unit tests
-- build
-- docker image build validation
+- PR to non-main: quick checks (lint + format) and build validation (app build + Docker build without push)
+- PR to main: full checks (lint + format + unit + e2e) and Docker build validation
+
+After merge to main, a separate workflow bumps the version tag and pushes Docker images.
 
 Workflow files are under .github/workflows.
 

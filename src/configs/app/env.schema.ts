@@ -9,6 +9,11 @@ export const configValidation = Joi.object({
   SWAGGER_ENABLED: Joi.boolean().truthy('true', '1', 'yes', 'on').falsy('false', '0', 'no', 'off').default(false),
   SERVICE_NAME: Joi.string().default('trust-post-service'),
   LOGGER_LEVEL: Joi.string().default('info'),
+  LOGGER_CONSOLE_ENABLED: Joi.when('NODE_ENV', {
+    is: 'test',
+    then: Joi.boolean().truthy('true', '1', 'yes', 'on').falsy('false', '0', 'no', 'off').default(false),
+    otherwise: Joi.boolean().truthy('true', '1', 'yes', 'on').falsy('false', '0', 'no', 'off').default(true),
+  }),
   LOGGER_FILE_ENABLED: Joi.when('NODE_ENV', {
     is: 'test',
     then: Joi.boolean().truthy('true', '1', 'yes', 'on').falsy('false', '0', 'no', 'off').default(false),

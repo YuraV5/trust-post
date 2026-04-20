@@ -1,11 +1,7 @@
 import { INestApplication } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, UserRoles } from '@prisma/client';
 import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
-import { AppModule } from '../../src/app.module';
-import { setupGlobalSettings } from '../../src/app/server';
 import {
   cleanupRunUsers,
   createAuthorizedSession,
@@ -15,6 +11,7 @@ import {
   loginUser,
 } from './helpers/auth-e2e.helper';
 import { ADMIN_ROUTES } from './constants/routes';
+import { createE2EApp } from './helpers/e2e-app.helper';
 
 // Sets the role of a user directly in the DB to bypass the API (needed to make an admin)
 const grantAdminRole = async (prisma: PrismaClient, email: string): Promise<void> => {
@@ -30,13 +27,7 @@ describe('Admin (e2e)', () => {
   const runId = `admin-${uuidv4().slice(0, 8)}`;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    setupGlobalSettings(app, app.get(ConfigService));
-    await app.init();
+    app = await createE2EApp();
 
     prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL } } });
     await prisma.$connect();

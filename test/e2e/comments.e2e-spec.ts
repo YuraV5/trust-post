@@ -1,14 +1,11 @@
 import { INestApplication } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaClient } from '@prisma/client';
+import { CommentStatus, PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
-import { AppModule } from '../../src/app.module';
-import { setupGlobalSettings } from '../../src/app/server';
 import { cleanupRunUsers, createAuthorizedSession } from './helpers/auth-e2e.helper';
 import { POST_ROUTES, COMMENT_ROUTES } from './constants/routes';
 import { approvePost, cleanupRunPosts, createPost } from './helpers/posts-e2e.helper';
+import { createE2EApp } from './helpers/e2e-app.helper';
 
 describe('Comments (e2e)', () => {
   let app: INestApplication;
@@ -43,13 +40,7 @@ describe('Comments (e2e)', () => {
   };
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    setupGlobalSettings(app, app.get(ConfigService));
-    await app.init();
+    app = await createE2EApp();
 
     prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL } } });
     await prisma.$connect();
@@ -99,11 +90,7 @@ describe('Comments (e2e)', () => {
   // ─── List comments ────────────────────────────────────────────────────────────
 
   describe('GET /api/v1/posts/:postId/comments', () => {
-    // NOTE:
-    // This route test can be unstable without paid Gemini quota/subscription,
-    // because comment moderation runs in background and free-tier rate limits
-    // can affect comment visibility timing in public listing.
-    it.skip('should return comments without auth (public route)', async () => {
+    it('should return comments without auth (public route)', async () => {
       const session = await createAuthorizedSession(app, prisma, runId, 'list-comments');
       const post = await createPost(app, session.accessToken);
       await approvePost(prisma, post.id);
@@ -112,11 +99,18 @@ describe('Comments (e2e)', () => {
       const content = 'Comment for listing test, enough content here.';
       const commentId = await createCommentAndGetId(session.accessToken, session.user.email, post.id, content);
 
+      // In e2e we mock queue workers, so moderation does not run automatically.
+      await prisma.comment.update({
+        where: { id: commentId },
+        data: { status: CommentStatus.APPROVED },
+      });
+
       const res = await request(app.getHttpServer()).get(POST_ROUTES.comments(post.id)).expect(200);
 
       expect(res.body).toHaveProperty('data');
       expect(Array.isArray(res.body.data)).toBe(true);
       expect(res.body).toHaveProperty('total');
+      expect(res.body.data.some((c: { id: number }) => c.id === commentId)).toBe(true);
       expect(commentId).toBeGreaterThan(0);
     });
   });

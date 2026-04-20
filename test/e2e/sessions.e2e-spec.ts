@@ -1,11 +1,7 @@
 import { INestApplication } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
-import { AppModule } from '../../src/app.module';
-import { setupGlobalSettings } from '../../src/app/server';
 import {
   cleanupRunUsers,
   createAuthorizedSession,
@@ -15,6 +11,7 @@ import {
   buildE2ETestUser,
 } from './helpers/auth-e2e.helper';
 import { SESSION_ROUTES } from './constants/routes';
+import { createE2EApp } from './helpers/e2e-app.helper';
 
 describe('Sessions (e2e)', () => {
   let app: INestApplication;
@@ -22,13 +19,7 @@ describe('Sessions (e2e)', () => {
   const runId = `sessions-${uuidv4().slice(0, 8)}`;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    setupGlobalSettings(app, app.get(ConfigService));
-    await app.init();
+    app = await createE2EApp();
 
     prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL } } });
     await prisma.$connect();

@@ -1,6 +1,6 @@
 services:
   app:
-    image: trust-post:latest
+    image: ${DOCKERHUB_USERNAME}/trust-post:latest
     container_name: trust_post_app
     env_file:
       - .env

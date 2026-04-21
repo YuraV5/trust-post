@@ -4,8 +4,6 @@ import { AppBadRequestException, AppNotFoundException, AppForbiddenException } f
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import {
-  ChatEntity,
-  ChatWithMembers,
   ChatWithMembersAndPrivate,
   CreateGroupChatInput,
   CreatePostChatInput,
@@ -16,6 +14,7 @@ import {
 import { IChatService } from '../interfaces';
 import { ChatRepo } from '../repos';
 import { RedisService } from '../../cache/services';
+import { SocketService } from '../../socket/socket.service';
 
 @Injectable()
 export class ChatService implements IChatService {
@@ -25,9 +24,10 @@ export class ChatService implements IChatService {
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly repo: ChatRepo,
     private readonly redisService: RedisService,
+    private readonly socketService: SocketService,
   ) {}
 
-  async createPrivateChat(input: CreatePrivateChatInput): Promise<ChatWithMembers | ChatEntity> {
+  async createPrivateChat(input: CreatePrivateChatInput): Promise<ChatWithMembersAndPrivate> {
     const { userId, otherUserId } = input;
 
     if (userId === otherUserId) {
@@ -39,18 +39,23 @@ export class ChatService implements IChatService {
 
     if (existingChat) {
       await this.invalidateUserChatsCache([userId, otherUserId]);
-      return existingChat.chat;
+      const fullChat = await this.getChat(existingChat.chat.id, userId);
+      this.emitChatUpserted(fullChat);
+      return fullChat;
     }
 
     // Create new private chat
     const chat = await this.repo.createPrivateChat(input);
     await this.invalidateUserChatsCache([userId, otherUserId]);
 
+    const fullChat = await this.getChat(chat.id, userId);
+    this.emitChatUpserted(fullChat);
+
     this.logger.info('Private chat created', { chatId: chat.id, userId, otherUserId });
-    return chat;
+    return fullChat;
   }
 
-  async createGroupChat(input: CreateGroupChatInput): Promise<ChatWithMembers> {
+  async createGroupChat(input: CreateGroupChatInput): Promise<ChatWithMembersAndPrivate> {
     const { title, creatorId, participantIds } = input;
 
     if (!title || title.trim().length === 0) {
@@ -65,11 +70,14 @@ export class ChatService implements IChatService {
     const chat = await this.repo.createGroupChat(input);
     await this.invalidateUserChatsCache(allParticipants);
 
+    const fullChat = await this.getChat(chat.id, creatorId);
+    this.emitChatUpserted(fullChat);
+
     this.logger.info('Group chat created', { chatId: chat.id, creatorId, participantsCount: allParticipants.length });
-    return chat;
+    return fullChat;
   }
 
-  async createPostChat(input: CreatePostChatInput): Promise<ChatWithMembers> {
+  async createPostChat(input: CreatePostChatInput): Promise<ChatWithMembersAndPrivate> {
     const { postId, creatorId } = input;
 
     // Check if post exists
@@ -90,7 +98,10 @@ export class ChatService implements IChatService {
       }
       const memberIds = Array.from(new Set([creatorId, ...existingChat.members.map((member) => member.userId)]));
       await this.invalidateUserChatsCache(memberIds);
-      return existingChat;
+
+      const fullChat = await this.getChat(existingChat.id, creatorId);
+      this.emitChatUpserted(fullChat);
+      return fullChat;
     }
 
     // Create chat for the post with post author as initial member
@@ -102,8 +113,11 @@ export class ChatService implements IChatService {
     }
     await this.invalidateUserChatsCache([creatorId, post.authorId]);
 
+    const fullChat = await this.getChat(chat.id, creatorId);
+    this.emitChatUpserted(fullChat);
+
     this.logger.info('Post chat created', { chatId: chat.id, postId, creatorId });
-    return chat;
+    return fullChat;
   }
 
   async joinChat(chatId: string, userId: string): Promise<JoinLeaveActionResult> {
@@ -265,6 +279,16 @@ export class ChatService implements IChatService {
           error: error instanceof Error ? error.message : String(error),
         });
       }
+    }
+  }
+
+  private emitChatUpserted(chat: ChatWithMembersAndPrivate): void {
+    const memberIds = Array.from(new Set(chat.members.map((member) => member.userId)));
+
+    for (const memberId of memberIds) {
+      this.socketService.emitToUser('chat', memberId, 'chat:upserted', {
+        chat,
+      });
     }
   }
 }

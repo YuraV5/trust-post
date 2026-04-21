@@ -5,8 +5,6 @@ import { CurrentUser } from '../../common/decorators';
 import { type AuthenticatedUser } from '../../common/interfaces';
 import { ChatType, CreateChatDto } from './dtos/create-chat.dto';
 import {
-  ChatEntity,
-  ChatWithMembers,
   ChatWithMembersAndPrivate,
   JoinLeaveActionResult,
   UserChatsResult,
@@ -26,7 +24,7 @@ export class ChatController {
   async createChat(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateChatDto,
-  ): Promise<ChatWithMembers | ChatEntity> {
+  ): Promise<ChatWithMembersAndPrivate> {
     if (dto.type === ChatType.PRIVATE) {
       if (dto.participantIds.length !== 1) {
         throw new BadRequestException('Private chat must have exactly one other participant');
@@ -51,7 +49,7 @@ export class ChatController {
   async createPostChat(
     @CurrentUser() user: AuthenticatedUser,
     @Param('postId', ParseIntPipe) postId: number,
-  ): Promise<ChatWithMembers> {
+  ): Promise<ChatWithMembersAndPrivate> {
     return this.chatService.createPostChat({
       postId,
       creatorId: user.userId,

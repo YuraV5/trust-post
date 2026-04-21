@@ -4,7 +4,8 @@ import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { ChatService } from '../../src/modules/chat/services/chat.service';
 import { ChatRepo } from '../../src/modules/chat/repos';
 import { RedisService } from '../../src/modules/cache/services';
-import { StubAppLogger, mockRedisService } from '../__mock__';
+import { SocketService } from '../../src/modules/socket/socket.service';
+import { StubAppLogger, mockRedisService, mockSocketService } from '../__mock__';
 
 describe('ChatService', () => {
   let service: ChatService;
@@ -32,6 +33,7 @@ describe('ChatService', () => {
         ChatService,
         { provide: ChatRepo, useValue: mockChatRepo },
         { provide: RedisService, useValue: mockRedisService },
+        { provide: SocketService, useValue: mockSocketService },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();
@@ -52,23 +54,41 @@ describe('ChatService', () => {
 
     it('returns existing chat when private chat already exists', async () => {
       const existingChat = { id: 'chat-1', type: ChatType.PRIVATE };
+      const hydratedChat = {
+        id: 'chat-1',
+        type: ChatType.PRIVATE,
+        members: [{ userId: 'user-1' }, { userId: 'user-2' }],
+        PrivateChat: null,
+      };
       mockChatRepo.findPrivateChatBetweenUsers.mockResolvedValue({ chat: existingChat });
+      mockChatRepo.findChatWithMembers.mockResolvedValue(hydratedChat);
 
       const result = await service.createPrivateChat({ userId: 'user-1', otherUserId: 'user-2' });
 
-      expect(result).toEqual(existingChat);
+      expect(result).toEqual(hydratedChat);
       expect(mockChatRepo.createPrivateChat).not.toHaveBeenCalled();
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-1', 'chat:upserted', { chat: hydratedChat });
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-2', 'chat:upserted', { chat: hydratedChat });
     });
 
     it('creates a new private chat when none exists', async () => {
       const newChat = { id: 'chat-new', type: ChatType.PRIVATE };
+      const hydratedChat = {
+        id: 'chat-new',
+        type: ChatType.PRIVATE,
+        members: [{ userId: 'user-1' }, { userId: 'user-2' }],
+        PrivateChat: null,
+      };
       mockChatRepo.findPrivateChatBetweenUsers.mockResolvedValue(null);
       mockChatRepo.createPrivateChat.mockResolvedValue(newChat);
+      mockChatRepo.findChatWithMembers.mockResolvedValue(hydratedChat);
 
       const result = await service.createPrivateChat({ userId: 'user-1', otherUserId: 'user-2' });
 
-      expect(result).toEqual(newChat);
+      expect(result).toEqual(hydratedChat);
       expect(mockChatRepo.createPrivateChat).toHaveBeenCalledWith({ userId: 'user-1', otherUserId: 'user-2' });
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-1', 'chat:upserted', { chat: hydratedChat });
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-2', 'chat:upserted', { chat: hydratedChat });
     });
   });
 
@@ -87,7 +107,14 @@ describe('ChatService', () => {
 
     it('creates group chat and returns it', async () => {
       const chat = { id: 'group-chat-1', type: ChatType.GROUP };
+      const hydratedChat = {
+        id: 'group-chat-1',
+        type: ChatType.GROUP,
+        members: [{ userId: 'user-1' }, { userId: 'user-2' }, { userId: 'user-3' }],
+        PrivateChat: null,
+      };
       mockChatRepo.createGroupChat.mockResolvedValue(chat);
+      mockChatRepo.findChatWithMembers.mockResolvedValue(hydratedChat);
 
       const result = await service.createGroupChat({
         title: 'Dev Team',
@@ -95,8 +122,11 @@ describe('ChatService', () => {
         participantIds: ['user-2', 'user-3'],
       });
 
-      expect(result).toEqual(chat);
+      expect(result).toEqual(hydratedChat);
       expect(mockChatRepo.createGroupChat).toHaveBeenCalled();
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-1', 'chat:upserted', { chat: hydratedChat });
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-2', 'chat:upserted', { chat: hydratedChat });
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-3', 'chat:upserted', { chat: hydratedChat });
     });
   });
 
@@ -114,26 +144,43 @@ describe('ChatService', () => {
         id: 'chat-post-1',
         members: [{ userId: 'author-1' }],
       };
+      const hydratedChat = {
+        id: 'chat-post-1',
+        type: 'POST',
+        members: [{ userId: 'author-1' }, { userId: 'user-1' }],
+        PrivateChat: null,
+      };
       mockChatRepo.findPostById.mockResolvedValue({ id: 99, authorId: 'author-1' });
       mockChatRepo.findChatByPostId.mockResolvedValue(existingChat);
-      // Creator is not a member yet
       mockChatRepo.findChatMember.mockResolvedValue(null);
+      mockChatRepo.findChatWithMembers.mockResolvedValue(hydratedChat);
 
       const result = await service.createPostChat({ postId: 99, creatorId: 'user-1' });
 
-      expect(result).toEqual(existingChat);
+      expect(result).toEqual(hydratedChat);
       expect(mockChatRepo.addChatMember).toHaveBeenCalledWith('chat-post-1', 'user-1');
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'author-1', 'chat:upserted', { chat: hydratedChat });
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-1', 'chat:upserted', { chat: hydratedChat });
     });
 
     it('creates post chat and adds creator when creator is not the author', async () => {
+      const hydratedChat = {
+        id: 'new-post-chat',
+        type: 'POST',
+        members: [{ userId: 'author-1' }, { userId: 'user-1' }],
+        PrivateChat: null,
+      };
       mockChatRepo.findPostById.mockResolvedValue({ id: 99, authorId: 'author-1' });
       mockChatRepo.findChatByPostId.mockResolvedValue(null);
       mockChatRepo.createPostChat.mockResolvedValue({ id: 'new-post-chat' });
+      mockChatRepo.findChatWithMembers.mockResolvedValue(hydratedChat);
 
-      await service.createPostChat({ postId: 99, creatorId: 'user-1' });
+      const result = await service.createPostChat({ postId: 99, creatorId: 'user-1' });
 
-      // Creator is different from author, so they should be added as member
+      expect(result).toEqual(hydratedChat);
       expect(mockChatRepo.addChatMember).toHaveBeenCalledWith('new-post-chat', 'user-1');
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'author-1', 'chat:upserted', { chat: hydratedChat });
+      expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-1', 'chat:upserted', { chat: hydratedChat });
     });
   });
 

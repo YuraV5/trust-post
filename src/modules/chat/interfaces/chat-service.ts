@@ -1,6 +1,4 @@
 import {
-  ChatEntity,
-  ChatWithMembers,
   ChatWithMembersAndPrivate,
   CreateGroupChatInput,
   CreatePostChatInput,
@@ -10,9 +8,9 @@ import {
 } from '../types';
 
 export interface IChatService {
-  createPrivateChat(input: CreatePrivateChatInput): Promise<ChatWithMembers | ChatEntity>;
-  createGroupChat(input: CreateGroupChatInput): Promise<ChatWithMembers>;
-  createPostChat(input: CreatePostChatInput): Promise<ChatWithMembers>;
+  createPrivateChat(input: CreatePrivateChatInput): Promise<ChatWithMembersAndPrivate>;
+  createGroupChat(input: CreateGroupChatInput): Promise<ChatWithMembersAndPrivate>;
+  createPostChat(input: CreatePostChatInput): Promise<ChatWithMembersAndPrivate>;
   joinChat(chatId: string, userId: string): Promise<JoinLeaveActionResult>;
   leaveChat(chatId: string, userId: string): Promise<JoinLeaveActionResult>;
   deleteChatForUser(chatId: string, userId: string): Promise<JoinLeaveActionResult>;

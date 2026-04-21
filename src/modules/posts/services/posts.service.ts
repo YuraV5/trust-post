@@ -138,7 +138,7 @@ export class PostsService implements IPostsService {
       if (res.status === 'rejected') {
         this.logger.error('Failed to enqueue reviewer assignment', {
           postId: postIds[index],
-          error: res.reason,
+          error: res.reason instanceof Error ? res.reason.message : String(res.reason),
         });
       }
     });
@@ -274,9 +274,9 @@ export class PostsService implements IPostsService {
 
   private async invalidateLikeRelatedCache(postId: number, userId: string): Promise<void> {
     const patterns = [
-      `cache:posts:post-by-id:*\"id\":${postId}*`,
+      `cache:posts:post-by-id:*"id":${postId}*`,
       `cache:posts:public-posts:*`,
-      `cache:posts:user-posts:*\"userId\":\"${userId}\"*`,
+      `cache:posts:user-posts:*"userId":"${userId}"*`,
       `cache:posts:staff-posts:*`,
     ];
 

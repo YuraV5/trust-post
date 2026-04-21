@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query, Res, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiHeader } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { PublicRoute } from '../../../../common/decorators';
+import { PublicRoute, DeviceId } from '../../../../common/decorators';
 import { AuthCookiesService } from '../../services';
 import { OAuthService } from '../services/oauth.service';
 import { OAuthStartDto, OAuthCallbackDto } from '../dtos';
@@ -20,7 +20,7 @@ export class OAuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Redirect to OAuth provider' })
   @ApiParam({ name: 'provider', type: String, description: 'OAuth provider (google, github, etc)' })
-  @ApiQuery({ name: 'deviceId', required: false, type: String })
+  @ApiHeader({ name: 'x-device-id', description: 'Client device UUID', required: true })
   @ApiQuery({ name: 'redirectTo', required: false, type: String })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -31,8 +31,13 @@ export class OAuthController {
     description: 'Invalid provider or parameters',
     type: BadRequestErrorResponse,
   })
-  redirect(@Param('provider') provider: string, @Query() query: OAuthStartDto, @Res() res: Response): void {
-    const url = this.oauthService.getRedirectUrl(provider, query.deviceId, query.redirectTo);
+  redirect(
+    @Param('provider') provider: string,
+    @Query() query: OAuthStartDto,
+    @DeviceId() deviceId: string,
+    @Res() res: Response,
+  ): void {
+    const url = this.oauthService.getRedirectUrl(provider, deviceId, query.redirectTo);
     res.redirect(url);
   }
 

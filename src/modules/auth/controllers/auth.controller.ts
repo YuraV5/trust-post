@@ -1,11 +1,11 @@
 import { Controller, Post, Body, Res, UseGuards, Req, Get, Param, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiHeader } from '@nestjs/swagger';
 import { AuthService } from '../services/auth.service';
 import { LoginDto, RegisterDto } from '../dtos';
 import { type ResponseMessage } from '../../../common/types';
 import { AuthResponse } from '../types';
 import { type Response } from 'express';
-import { PublicRoute } from '../../../common/decorators';
+import { PublicRoute, DeviceId } from '../../../common/decorators';
 import { RefreshTokenGuard } from '../../../common/guards';
 import { type RefreshTokenRequest } from '../../../common/interfaces';
 import { AuthCookiesService } from '../services';
@@ -58,6 +58,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'User login with email and password' })
+  @ApiHeader({ name: 'x-device-id', description: 'Client device UUID', required: true })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -78,8 +79,12 @@ export class AuthController {
     status: HttpStatus.TOO_MANY_REQUESTS,
     description: 'Rate limit exceeded (5 requests per minute)',
   })
-  async login(@Body() inp: LoginDto, @Res({ passthrough: true }) resp: Response): Promise<AuthResponse> {
-    const { accessToken, refreshToken, user } = await this.authService.login(inp);
+  async login(
+    @Body() inp: LoginDto,
+    @DeviceId() deviceId: string,
+    @Res({ passthrough: true }) resp: Response,
+  ): Promise<AuthResponse> {
+    const { accessToken, refreshToken, user } = await this.authService.login({ ...inp, deviceId });
 
     this.cookieService.setRefresh(resp, refreshToken);
     return {

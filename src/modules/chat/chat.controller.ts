@@ -105,7 +105,7 @@ export class ChatController {
   }
 
   @Delete(':chatId')
-  @ApiOperation({ summary: 'Delete chat for current user (removes user from chat)' })
+  @ApiOperation({ summary: 'Delete chat for current user (hides chat via soft delete)' })
   @ApiResponse({ status: 200, description: 'Chat deleted successfully' })
   @ApiResponse({ status: 404, description: 'Not a member of this chat' })
   async deleteChatForUser(

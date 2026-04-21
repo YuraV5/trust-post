@@ -19,6 +19,7 @@ describe('ChatService', () => {
     findChatMember: jest.fn(),
     addChatMember: jest.fn(),
     removeChatMember: jest.fn(),
+    softDeleteChatMember: jest.fn(),
     createPostChat: jest.fn(),
     findChatById: jest.fn(),
     findUserChats: jest.fn(),
@@ -67,6 +68,8 @@ describe('ChatService', () => {
 
       expect(result).toEqual(hydratedChat);
       expect(mockChatRepo.createPrivateChat).not.toHaveBeenCalled();
+      expect(mockChatRepo.addChatMember).toHaveBeenCalledWith('chat-1', 'user-1');
+      expect(mockChatRepo.addChatMember).toHaveBeenCalledWith('chat-1', 'user-2');
       expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-1', 'chat:upserted', { chat: hydratedChat });
       expect(mockSocketService.emitToUser).toHaveBeenCalledWith('chat', 'user-2', 'chat:upserted', { chat: hydratedChat });
     });
@@ -241,13 +244,14 @@ describe('ChatService', () => {
       await expect(service.deleteChatForUser('chat-1', 'user-1')).rejects.toThrow('You are not a member of this chat');
     });
 
-    it('removes user and returns delete confirmation', async () => {
+    it('soft-deletes user chat and returns delete confirmation', async () => {
       mockChatRepo.findChatMember.mockResolvedValue({ userId: 'user-1' });
-      mockChatRepo.removeChatMember.mockResolvedValue(undefined);
+      mockChatRepo.softDeleteChatMember.mockResolvedValue(undefined);
 
       const result = await service.deleteChatForUser('chat-1', 'user-1');
 
       expect(result).toEqual({ message: 'Chat deleted successfully' });
+      expect(mockChatRepo.softDeleteChatMember).toHaveBeenCalledWith('chat-1', 'user-1');
     });
   });
 

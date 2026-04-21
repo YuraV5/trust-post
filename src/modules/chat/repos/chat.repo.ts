@@ -177,23 +177,34 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
-  async findChatMember(chatId: string, userId: string): Promise<ChatMemberEntity | null> {
-    return this.db.chatMember.findUnique({
+  async findChatMember(chatId: string, userId: string, includeDeleted: boolean = false): Promise<ChatMemberEntity | null> {
+    const where: Record<string, unknown> = {
+      chatId,
+      userId,
+    };
+    if (!includeDeleted) {
+      where.isDelete = false;
+    }
+
+    return this.db.chatMember.findFirst({ where: where as any });
+  }
+
+  async addChatMember(chatId: string, userId: string): Promise<void> {
+    await this.db.chatMember.upsert({
       where: {
         chatId_userId: {
           chatId,
           userId,
         },
       },
-    });
-  }
-
-  async addChatMember(chatId: string, userId: string): Promise<void> {
-    await this.db.chatMember.create({
-      data: {
+      create: {
         chatId,
         userId,
       },
+      update: {
+        isDelete: false,
+        deletedAt: null,
+      } as any,
     });
   }
 
@@ -208,6 +219,21 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
+  async softDeleteChatMember(chatId: string, userId: string): Promise<void> {
+    await this.db.chatMember.update({
+      where: {
+        chatId_userId: {
+          chatId,
+          userId,
+        },
+      },
+      data: {
+        isDelete: true,
+        deletedAt: new Date(),
+      } as any,
+    });
+  }
+
   async findUserChats(userId: string, page: number, limit: number): Promise<ChatRepoUserChatsResult> {
     const skip = (page - 1) * limit;
 
@@ -215,9 +241,10 @@ export class ChatRepo implements IChatRepo {
       this.db.chat.findMany({
         where: {
           members: {
-            some: {
+            some: ({
               userId,
-            },
+              isDelete: false,
+            } as any),
           },
         },
         include: {
@@ -258,9 +285,10 @@ export class ChatRepo implements IChatRepo {
       this.db.chat.count({
         where: {
           members: {
-            some: {
+            some: ({
               userId,
-            },
+              isDelete: false,
+            } as any),
           },
         },
       }),
@@ -274,6 +302,9 @@ export class ChatRepo implements IChatRepo {
       where: { id: chatId },
       include: {
         members: {
+          where: ({
+            isDelete: false,
+          } as any),
           include: {
             user: {
               select: {

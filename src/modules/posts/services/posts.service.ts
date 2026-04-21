@@ -100,6 +100,14 @@ export class PostsService implements IPostsService {
     return post;
   }
 
+  async findByIdForAuthor(id: number, authorId: string): Promise<Post> {
+    const post = await this.postsRepo.getPostByIdForAuthor(id, authorId);
+    if (!post) {
+      throw new AppNotFoundException('No posts found');
+    }
+    return post;
+  }
+
   async editUserPostStatus(postId: number, data: EditUserPostStatus): Promise<ResponseMessage> {
     const result = await this.postsRepo.updateStatus(postId, {
       postStatus: data.status,
@@ -163,10 +171,12 @@ export class PostsService implements IPostsService {
 
     if (like) {
       await this.postLikeRepo.deleteLike(postId, userId);
+      await this.invalidateLikeRelatedCache(postId, userId);
       return { message: 'Like removed', liked: false };
     }
 
     await this.postLikeRepo.createLike(postId, userId);
+    await this.invalidateLikeRelatedCache(postId, userId);
     return { message: 'Like added', liked: true };
   }
 
@@ -258,6 +268,28 @@ export class PostsService implements IPostsService {
         key,
         error: error instanceof Error ? error.message : String(error),
       });
+    }
+  }
+
+  private async invalidateLikeRelatedCache(postId: number, userId: string): Promise<void> {
+    const patterns = [
+      `cache:posts:post-by-id:*\"id\":${postId}*`,
+      `cache:posts:public-posts:*`,
+      `cache:posts:user-posts:*\"userId\":\"${userId}\"*`,
+      `cache:posts:staff-posts:*`,
+    ];
+
+    for (const pattern of patterns) {
+      try {
+        await this.redisService.delByPattern(pattern);
+      } catch (error) {
+        this.logger.warn('Posts cache invalidation failed after like toggle', {
+          pattern,
+          postId,
+          userId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 }

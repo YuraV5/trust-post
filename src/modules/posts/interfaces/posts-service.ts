@@ -10,6 +10,7 @@ export interface IPostsService {
   getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<Post>>;
   getAllStaffPosts(query: PostsStaffQueryDto): Promise<PaginatedResult<Post>>;
   findById(id: number): Promise<Post>;
+  findByIdForAuthor(id: number, authorId: string): Promise<Post>;
   editUserPostStatus(postId: number, data: EditUserPostStatus): Promise<ResponseMessage>;
   update(postIds: number[], data: StaffPostUpdate): Promise<ResponseMessage>;
   delete(postIds: number[], statusReason?: string): Promise<ResponseMessage>;

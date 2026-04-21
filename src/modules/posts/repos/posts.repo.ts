@@ -33,6 +33,15 @@ export class PostsRepo implements IPostsRepo {
     });
   }
 
+  async getPostByIdForAuthor(id: number, authorId: string): Promise<Post | null> {
+    return await this.db.post.findFirst({
+      where: {
+        id,
+        authorId,
+      },
+    });
+  }
+
   async findByAuthorId(authorId: string): Promise<Post[]> {
     return await this.db.post.findMany({
       where: {

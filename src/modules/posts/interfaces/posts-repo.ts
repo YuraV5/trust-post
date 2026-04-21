@@ -14,6 +14,7 @@ import {
 export interface IPostsRepo {
   create(authorId: string, inp: CreatePost): Promise<PostId>;
   getPostById(id: number): Promise<Post | null>;
+  getPostByIdForAuthor(id: number, authorId: string): Promise<Post | null>;
   findByAuthorId(authorId: string): Promise<Post[]>;
   findByAuthorIdPaginated(authorId: string, query: NormalizedUserQuery): Promise<PaginatedResult<Post>>;
   findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<Post>>;

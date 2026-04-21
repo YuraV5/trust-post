@@ -38,6 +38,9 @@ export class ChatService implements IChatService {
     const existingChat = await this.repo.findPrivateChatBetweenUsers(userId, otherUserId);
 
     if (existingChat) {
+      // Restore memberships if either side previously hid this private chat.
+      await this.repo.addChatMember(existingChat.chat.id, userId);
+      await this.repo.addChatMember(existingChat.chat.id, otherUserId);
       await this.invalidateUserChatsCache([userId, otherUserId]);
       const fullChat = await this.getChat(existingChat.chat.id, userId);
       this.emitChatUpserted(fullChat);
@@ -166,7 +169,7 @@ export class ChatService implements IChatService {
       throw new AppNotFoundException('You are not a member of this chat');
     }
 
-    await this.repo.removeChatMember(chatId, userId);
+    await this.repo.softDeleteChatMember(chatId, userId);
     await this.invalidateUserChatsCache([userId]);
 
     this.logger.info('Chat deleted for user', { chatId, userId });

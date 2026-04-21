@@ -18,9 +18,10 @@ export interface IChatRepo {
   findChatByPostId(postId: number): Promise<ChatWithMembers | null>;
   createPostChat(postId: number, authorId: string): Promise<ChatWithMembers>;
   findChatById(chatId: string): Promise<ChatEntity | null>;
-  findChatMember(chatId: string, userId: string): Promise<ChatMemberEntity | null>;
+  findChatMember(chatId: string, userId: string, includeDeleted?: boolean): Promise<ChatMemberEntity | null>;
   addChatMember(chatId: string, userId: string): Promise<void>;
   removeChatMember(chatId: string, userId: string): Promise<void>;
+  softDeleteChatMember(chatId: string, userId: string): Promise<void>;
   findUserChats(userId: string, page: number, limit: number): Promise<ChatRepoUserChatsResult>;
   findChatWithMembers(chatId: string): Promise<ChatWithMembersAndPrivate | null>;
 }

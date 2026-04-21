@@ -110,6 +110,12 @@ export class PostsRepo implements IPostsRepo {
     if (query.currentAmount !== undefined) {
       where.currentAmount = new Prisma.Decimal(String(query.currentAmount));
     }
+    if (query.search) {
+      where.OR = [
+        { title: { contains: query.search, mode: 'insensitive' } },
+        { content: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
 
     // Build orderBy
     const orderBy: Prisma.PostOrderByWithRelationInput = {

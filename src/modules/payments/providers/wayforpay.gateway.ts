@@ -72,7 +72,7 @@ export class WayForPayGateway implements IPaymentGateway {
     });
 
     this.logger.debug('WayForPay create checkout response', { paymentRequestUrl });
-
+    console.log('WayForPay create checkout response', { paymentRequestUrl });
     return {
       checkoutUrl: paymentRequestUrl.invoiceUrl,
       qrCodeUrl: paymentRequestUrl.qrCode,

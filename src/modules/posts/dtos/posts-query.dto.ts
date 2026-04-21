@@ -55,6 +55,11 @@ export class PostsQueryDto {
   @IsOptional()
   @IsIn(SORT_ORDERS)
   sortOrder?: SortOrder = 'desc';
+
+  @ApiProperty({ example: 'please help', description: 'Full-text search across title and content' })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }
 
 export class PostsStaffQueryDto extends PostsQueryDto {

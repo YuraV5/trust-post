@@ -195,6 +195,7 @@ export class PostsService implements IPostsService {
       targetDate: query.targetDate,
       targetAmount: query.targetAmount,
       currentAmount: query.currentAmount,
+      search: query.search,
       sortBy,
       sortOrder,
     };

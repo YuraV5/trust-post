@@ -138,7 +138,7 @@ export class PostsService implements IPostsService {
       if (res.status === 'rejected') {
         this.logger.error('Failed to enqueue reviewer assignment', {
           postId: postIds[index],
-          error: res.reason instanceof Error ? res.reason.message : String(res.reason),
+          error: res.reason,
         });
       }
     });

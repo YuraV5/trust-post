@@ -33,6 +33,11 @@
       "type": "default"
     },
     {
+      "key": "deviceId",
+      "value": "8f3c9e1e-6b2a-4f91-9a27-0d4a5b7c2e91",
+      "type": "default"
+    },
+    {
       "key": "chatId",
       "value": "",
       "type": "default"
@@ -130,10 +135,16 @@
               "type": "noauth"
             },
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "x-device-id",
+                "value": "{{deviceId}}",
+                "description": "Client device UUID (required)"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"Secret!123\",\n  \"deviceId\": \"8f3c9e1e-6b2a-4f91-9a27-0d4a5b7c2e91\"\n}",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"Secret!123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -370,7 +381,13 @@
               "type": "noauth"
             },
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "x-device-id",
+                "value": "{{deviceId}}",
+                "description": "Client device UUID (required)"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/auth/google",
               "host": [
@@ -381,7 +398,7 @@
                 "google"
               ]
             },
-            "description": "Open in a browser — redirects to Google consent screen."
+            "description": "Open in a browser — redirects to Google consent screen. x-device-id header is required."
           },
           "response": []
         },

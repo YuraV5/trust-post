@@ -44,7 +44,8 @@ export const loginUser = async (
 ): Promise<{ accessToken: string; cookies: string[]; deviceId: string }> => {
   const res = await request(app.getHttpServer())
     .post('/api/v1/auth/login')
-    .send({ email: creds.email, password: creds.password, deviceId })
+    .set('x-device-id', deviceId)
+    .send({ email: creds.email, password: creds.password })
     .expect(200);
 
   return {

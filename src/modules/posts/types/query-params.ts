@@ -12,6 +12,7 @@ export type NormalizedPublicQuery = {
   targetDate?: string;
   targetAmount?: number;
   currentAmount?: number;
+  search?: string;
 };
 
 export type NormalizedStaffQuery = NormalizedPublicQuery & {

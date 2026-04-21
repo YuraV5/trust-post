@@ -50,6 +50,30 @@ describe('Posts (e2e)', () => {
       const found = res.body.data.find((p: { id: number }) => p.id === post.id);
       expect(found).toBeDefined();
     });
+
+    it('should filter posts by search query matching title', async () => {
+      const uniqueWord = `search-${uuidv4().slice(0, 8)}`;
+      const session = await createAuthorizedSession(app, prisma, runId, 'search-title');
+      const post = await createPost(app, session.accessToken, {
+        title: `${uniqueWord} Test Post Title Here`,
+        content: 'This is the e2e test post content with enough characters to pass validation checks.',
+      });
+      await approvePost(prisma, post.id);
+
+      const res = await request(app.getHttpServer()).get(`${POST_ROUTES.base}?search=${uniqueWord}`).expect(200);
+
+      expect(res.body.data.length).toBeGreaterThan(0);
+      const found = res.body.data.find((p: { id: number }) => p.id === post.id);
+      expect(found).toBeDefined();
+    });
+
+    it('should not return non-matching posts when searching', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`${POST_ROUTES.base}?search=xyzzy-no-match-${uuidv4()}`)
+        .expect(200);
+
+      expect(res.body.data).toHaveLength(0);
+    });
   });
 
   // ─── Get by ID ───────────────────────────────────────────────────────────────

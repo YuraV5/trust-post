@@ -73,7 +73,7 @@ export class ChatRepo implements IChatRepo {
 
   async createGroupChat(input: CreateGroupChatInput): Promise<ChatWithMembers> {
     const { title, creatorId, participantIds } = input;
-    const allParticipants = Array.from(new Set([creatorId, ...participantIds]));
+    const allParticipants = Array.from(new Set([creatorId, ...(participantIds ?? [])]));
 
     return this.db.chat.create({
       data: {
@@ -177,23 +177,49 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
-  async findChatMember(chatId: string, userId: string): Promise<ChatMemberEntity | null> {
-    return this.db.chatMember.findUnique({
+  async findUserByEmail(email: string): Promise<{ id: string; isEmailVerified: boolean; isActive: boolean } | null> {
+    return this.db.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        isEmailVerified: true,
+        isActive: true,
+      },
+    });
+  }
+
+  async findChatMember(
+    chatId: string,
+    userId: string,
+    includeDeleted: boolean = false,
+  ): Promise<ChatMemberEntity | null> {
+    const where: Record<string, unknown> = {
+      chatId,
+      userId,
+    };
+    if (!includeDeleted) {
+      where.isDelete = false;
+    }
+
+    return this.db.chatMember.findFirst({ where: where as any });
+  }
+
+  async addChatMember(chatId: string, userId: string): Promise<void> {
+    await this.db.chatMember.upsert({
       where: {
         chatId_userId: {
           chatId,
           userId,
         },
       },
-    });
-  }
-
-  async addChatMember(chatId: string, userId: string): Promise<void> {
-    await this.db.chatMember.create({
-      data: {
+      create: {
         chatId,
         userId,
       },
+      update: {
+        isDelete: false,
+        deletedAt: null,
+      } as any,
     });
   }
 
@@ -208,6 +234,21 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
+  async softDeleteChatMember(chatId: string, userId: string): Promise<void> {
+    await this.db.chatMember.update({
+      where: {
+        chatId_userId: {
+          chatId,
+          userId,
+        },
+      },
+      data: {
+        isDelete: true,
+        deletedAt: new Date(),
+      } as any,
+    });
+  }
+
   async findUserChats(userId: string, page: number, limit: number): Promise<ChatRepoUserChatsResult> {
     const skip = (page - 1) * limit;
 
@@ -217,7 +258,8 @@ export class ChatRepo implements IChatRepo {
           members: {
             some: {
               userId,
-            },
+              isDelete: false,
+            } as any,
           },
         },
         include: {
@@ -260,7 +302,8 @@ export class ChatRepo implements IChatRepo {
           members: {
             some: {
               userId,
-            },
+              isDelete: false,
+            } as any,
           },
         },
       }),
@@ -274,6 +317,9 @@ export class ChatRepo implements IChatRepo {
       where: { id: chatId },
       include: {
         members: {
+          where: {
+            isDelete: false,
+          } as any,
           include: {
             user: {
               select: {

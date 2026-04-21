@@ -37,7 +37,10 @@ interface OwnershipGuardOptions {
   notFoundMessage?: string;
 }
 
-// This function generates a dynamic guard class based on the provided options. It checks if the authenticated user is the owner of the resource specified by the route parameter.
+/**
+ * Generates a dynamic guard class that checks if the authenticated user
+ * owns the resource identified by the route parameter.
+ */
 export function OwnershipGuard(options: OwnershipGuardOptions): Type<CanActivate> {
   const {
     model,

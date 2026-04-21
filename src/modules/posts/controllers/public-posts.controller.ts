@@ -217,6 +217,33 @@ export class PublicPostsController {
     return await this.postsService.delete([params.id], inp.statusReason);
   }
 
+  @Get('/my/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get current user post by ID (any status)' })
+  @ApiParam({ name: 'id', type: Number, description: 'Post ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'User post retrieved successfully',
+    type: PostResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Post not found',
+    type: NotFoundErrorResponse,
+  })
+  async getMyPostById(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: NumericIdParamDto,
+  ): Promise<Publication> {
+    return await this.postsService.findByIdForAuthor(params.id, user.userId);
+  }
+
   @Get('/:id')
   @PublicRoute()
   @HttpCode(HttpStatus.OK)

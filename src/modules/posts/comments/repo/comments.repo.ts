@@ -55,6 +55,7 @@ export class CommentsRepo implements ICommentsRepo {
               authorId: viewerId,
               status: {
                 in: [CommentStatus.PENDING, CommentStatus.PROCESSING],
+                notIn: [CommentStatus.FAILED, CommentStatus.REJECTED, CommentStatus.DELETED],
               },
             },
           ],

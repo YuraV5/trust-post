@@ -12,7 +12,7 @@ export function setupGlobalSettings(app: INestApplication, config: ConfigService
   // Keep API routes under /api while exposing /metrics without prefix.
   app.setGlobalPrefix('api', { exclude: ['metrics'] });
 
-  // Trust proxy settings for correct client IP and protocol handling
+  // Trust proxy settings for correct client IP and protocol handling.
   if (config.get<boolean>('trustProxy')) {
     const httpAdapter = app.getHttpAdapter().getInstance();
     if (typeof httpAdapter.set === 'function') {
@@ -24,6 +24,8 @@ export function setupGlobalSettings(app: INestApplication, config: ConfigService
   app.enableCors({
     origin: config.get<string>('corsAllowOrigin'),
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-device-id', 'idempotency-key'],
+    exposedHeaders: ['x-idempotency-status'],
   });
 
   // Security and parsing middlewares

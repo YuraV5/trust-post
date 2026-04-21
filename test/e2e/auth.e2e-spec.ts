@@ -73,7 +73,8 @@ describe('Auth (e2e)', () => {
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({ email: testUser.email, password: testUser.password, deviceId: uuidv4() })
+        .set('x-device-id', uuidv4())
+        .send({ email: testUser.email, password: testUser.password })
         .expect(400);
 
       expect(res.body.message).toMatch(/verify your email/i);
@@ -86,14 +87,16 @@ describe('Auth (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({ email: testUser.email, password: 'WrongPass9!', deviceId: uuidv4() })
+        .set('x-device-id', uuidv4())
+        .send({ email: testUser.email, password: 'WrongPass9!' })
         .expect(400);
     });
 
     it('should return 400 with non-existent email', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({ email: `missing.${uuidv4()}@example.com`, password: 'Password1!', deviceId: uuidv4() })
+        .set('x-device-id', uuidv4())
+        .send({ email: `missing.${uuidv4()}@example.com`, password: 'Password1!' })
         .expect(400);
     });
 
@@ -104,7 +107,8 @@ describe('Auth (e2e)', () => {
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({ email: testUser.email, password: testUser.password, deviceId: uuidv4() })
+        .set('x-device-id', uuidv4())
+        .send({ email: testUser.email, password: testUser.password })
         .expect(200);
 
       expect(res.body).toHaveProperty('accessToken');
@@ -160,12 +164,14 @@ describe('Auth (e2e)', () => {
 
       const session1 = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({ email: testUser.email, password: testUser.password, deviceId: uuidv4() })
+        .set('x-device-id', uuidv4())
+        .send({ email: testUser.email, password: testUser.password })
         .expect(200);
 
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({ email: testUser.email, password: testUser.password, deviceId: uuidv4() })
+        .set('x-device-id', uuidv4())
+        .send({ email: testUser.email, password: testUser.password })
         .expect(200);
 
       const cookies1: string[] = (session1.headers['set-cookie'] as unknown as string[]) ?? [];

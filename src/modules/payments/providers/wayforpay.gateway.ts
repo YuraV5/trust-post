@@ -44,7 +44,7 @@ export class WayForPayGateway implements IPaymentGateway {
       productPrice: [input.amount],
       productCount: [1],
       returnUrl: this.config.getOrThrow<string>('wayforpay.returnUrl'),
-      serviceUrl: this.config.getOrThrow<string>('wayforpay.serviceUrl'),
+      serviceUrl: this.config.getOrThrow<string>('wayforpay.webhookUrl'),
       notifyMethod: 'email',
       paymentSystem: 'card',
     };
@@ -72,7 +72,6 @@ export class WayForPayGateway implements IPaymentGateway {
     });
 
     this.logger.debug('WayForPay create checkout response', { paymentRequestUrl });
-
     return {
       checkoutUrl: paymentRequestUrl.invoiceUrl,
       qrCodeUrl: paymentRequestUrl.qrCode,

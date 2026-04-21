@@ -122,6 +122,7 @@ The cursor points to the `createdAt` of the oldest message on the current page.
 | Event            | Payload                                     | Trigger                              |
 |------------------|---------------------------------------------|--------------------------------------|
 | `connected`      | `{ userId, socketId }`                      | On successful connection             |
+| `chat:upserted`  | `{ chat }`                                  | Room created or updated; sent to all members — add or merge room in local state without a fetch |
 | `message:new`    | `{ chatId, message }`                       | Any new message (WS or HTTP/files)   |
 | `message:edited` | `{ chatId, message }`                       | Content or type change               |
 | `message:deleted`| `{ chatId, messageId, timestamp }`          | Soft-delete of message               |
@@ -187,8 +188,11 @@ To change the batch size without redeploying, update the env variable.
 
 `MessageService.getMessages` and `ChatService.getChat` / `getUserChats` cache
 results in Redis with short TTLs (messages: 15 s, chats: 30 s).
-Cache is not invalidated on write — it expires naturally, so a client
-receiving realtime events via WebSocket will always have the freshest view.
+
+On every chat create or member change the relevant user-chats cache keys are
+invalidated immediately, and a `chat:upserted` WebSocket event is emitted to
+all members so clients receive the updated room state in real time without
+needing a follow-up `GET /chats` request.
 
 ---
 

@@ -8,7 +8,18 @@ export type CreatePrivateChatInput = {
 export type CreateGroupChatInput = {
   title: string;
   creatorId: string;
-  participantIds: string[];
+  participantIds?: string[];
+};
+
+export type AddMemberByEmailInput = {
+  chatId: string;
+  requesterId: string;
+  email: string;
+};
+
+export type AddMemberByEmailResult = {
+  message: string;
+  chat: ChatWithMembersAndPrivate;
 };
 
 export type CreatePostChatInput = {

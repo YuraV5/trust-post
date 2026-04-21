@@ -101,12 +101,14 @@ describe('Users (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({ email: session.user.email, password: session.user.password, deviceId: uuidv4() })
+        .set('x-device-id', uuidv4())
+        .send({ email: session.user.email, password: session.user.password })
         .expect(400);
 
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({ email: session.user.email, password: newPassword, deviceId: uuidv4() })
+        .set('x-device-id', uuidv4())
+        .send({ email: session.user.email, password: newPassword })
         .expect(200);
     });
   });

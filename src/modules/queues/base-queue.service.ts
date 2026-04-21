@@ -37,7 +37,7 @@ export abstract class BaseQueueService implements IQueueService {
     lifo: false,
   };
 
-  // Build a queue-specific DLQ using the same Redis connection as the source queue.
+  /** Builds a queue-specific DLQ using the same Redis connection as the source queue. */
   protected getDlqQueue(): Queue {
     if (!this.dlqQueue) {
       this.dlqQueue = new Queue(`${this.queue.name}.dlq`, {
@@ -49,7 +49,7 @@ export abstract class BaseQueueService implements IQueueService {
     return this.dlqQueue;
   }
 
-  // Add a job to the queue with the specified data and options
+  /** Adds a job to the queue with the specified name, data, and options. */
   async add<T>(jobName: string, data: T, options?: JobOptions): Promise<void> {
     try {
       // Check if the queue is available
@@ -95,7 +95,7 @@ export abstract class BaseQueueService implements IQueueService {
     }
   }
 
-  // Get the name of the queue (useful for logging and debugging)
+  /** Returns the name of the underlying BullMQ queue. */
   getQueueName(): string {
     return this.queue.name;
   }

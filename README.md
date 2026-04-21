@@ -1,89 +1,123 @@
 # Trust-Post
 
-Trust-Post is a modular social platform backend built with NestJS and Prisma.
-It demonstrates production-focused backend engineering: authentication, real-time chat,
-background jobs, payments, observability, and Docker-based environments.
+A production-style social platform backend built with **NestJS 11** and **TypeScript 5**.  
+Features JWT auth with Google OAuth, real-time chat (Socket.io), BullMQ queues with DLQ,
+WayForPay payments, AI comment moderation (Gemini), and a full observability stack
+(Prometheus + Grafana + Loki).
+
+> API docs available at `http://localhost:3001/docs` once the app is running.  
+> For a full module breakdown see [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
+
+---
 
 ## Stack
 
-- NestJS 11, TypeScript 5
-- PostgreSQL + Prisma
-- Redis + BullMQ
-- Socket.io (real-time chat)
-- Swagger/OpenAPI
-- Prometheus + Grafana + Loki
-- Docker + GitHub Actions
+| Category | Technology |
+|---|---|
+| Framework | NestJS 11, TypeScript 5 (strict) |
+| Database | PostgreSQL 15 + Prisma 6 |
+| Cache / Queues | Redis 7 + BullMQ 5 |
+| Real-time | Socket.io 4 |
+| Auth | JWT, Argon2, Google OAuth |
+| Storage | Cloudinary |
+| Email | Resend |
+| Payments | WayForPay |
+| Observability | Prometheus + Grafana + Loki + Winston |
+| Testing | Jest 30 + Supertest + Testcontainers |
+| CI/CD | GitHub Actions + Docker |
 
-## Core Features
+---
 
-- JWT auth and OAuth providers
-- Posts, comments, likes, and file upload flow
-- Real-time chat over WebSockets
-- Queue-based email and background jobs
-- Payment module (WayForPay integration)
-- Role-based admin and moderation flows
-- Rate limiting and validation guards
+## Quick Start (Docker — recommended)
 
-## Quick Start (Local)
-
-## Quick Start
+> Requires: Docker, `make`, a filled-in `.env` file.
 
 ```bash
 cp .env.example .env
-# Fill in your values: DOCKERHUB_USERNAME, JWT secrets, etc.
+# Edit .env: set JWT secrets, DB password, Redis password, Cloudinary keys, etc.
 make start
 ```
 
-Pulls the latest image from DockerHub and starts app + db + redis + full monitoring stack.
+This pulls the latest image from DockerHub and starts the app, PostgreSQL, Redis,
+and the full monitoring stack in one command.
 
 ```bash
-make stop   # stop everything
+make stop   # stop all containers
 ```
 
-| Service    | URL                         |
-|------------|-----------------------------|
-| App        | http://localhost:3001        |
-| Docs       | http://localhost:3001/docs   |
-| Grafana    | http://localhost:3000        |
-| Prometheus | http://localhost:9090        |
-| Alertmanager | http://localhost:9093      |
-| Loki       | http://localhost:3100        |
+**Service URLs after startup:**
 
-## Development (app on host)
+| Service | URL |
+|---|---|
+| API | http://localhost:3001/api/v1 |
+| Swagger UI | http://localhost:3001/docs |
+| Grafana | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
+| Alertmanager | http://localhost:9093 |
+| Loki | http://localhost:3100 |
+
+---
+
+## Local Development (app on host)
+
+> Requires: Node 20, Docker (for Postgres + Redis), `make`.
 
 ```bash
+# 1. Install dependencies
 npm ci
+
+# 2. Set up environment files
 cp .env.example .env
-cp .env.example .env.test # NODE_ENV=test need to be replaced with test values ​​such as fba keys base url
-make dev-up       # start Postgres + Redis
-npm run mgr:dev   # run migrations
-npm run seed:full # seed demo data
-npm run dev       # start app with hot reload
+cp .env.example .env.test
+# In .env.test: set NODE_ENV=test and replace external service keys with test values
+
+# 3. Start Postgres + Redis in Docker
+make dev-up
+
+# 4. Apply database migrations
+npm run mgr:dev
+
+# 5. Seed demo data (optional)
+npm run seed:full
+
+# 6. Start the app with hot reload
+npm run dev
 ```
 
-Local monitoring (scrapes the host app):
+App runs at `http://localhost:3001`.
+
+**Optional: start the monitoring stack** (scrapes the host app):
 
 ```bash
-make monitor-up
-make monitor-down
+make monitor-up    # start Grafana, Prometheus, Loki
+make monitor-down  # stop monitoring stack
 ```
 
-Application logs are written to the console and, when `LOGGER_FILE_ENABLED=true`, also to:
+**Logs** are written to the console. When `LOGGER_FILE_ENABLED=true` they are also saved to:
 
-- `logs/normal/app.log`
-- `logs/error/error.log`
-- `logs/error/exceptions.log`
+```
+logs/normal/app.log
+logs/error/error.log
+logs/error/exceptions.log
+```
 
-Queue observability baseline includes:
+---
 
-- DLQ per queue (`<queue>.dlq`) for terminally failed jobs
-- Queue health metrics (`queue_jobs_current`, `queue_oldest_waiting_job_age_seconds`, `queue_failed_retried_jobs_current`)
-- DLQ metrics and alerts (`queue_dlq_jobs_current`, `queue_dlq_total`)
-- Prometheus alerts for queue lag, backlog SLA, repeated failures, and DLQ growth
+## Testing
 
-## Quality Checks
+```bash
+npm run test        # unit tests
+npm run test:e2e    # E2E tests — spins up real Postgres + Redis via Testcontainers
+npm run test:cov    # unit test coverage report
+```
 
-Run these checks before pushing:
+E2E tests require Docker (Testcontainers pulls images automatically on first run).
+
+---
+
+## Code Quality
+
+Run before every push:
 
 ```bash
 npm run lint:check
@@ -92,46 +126,47 @@ npm run test
 npm run build
 ```
 
-## CI
+---
 
-Pull request checks depend on the target branch:
+## CI/CD
 
-- PR to non-main: quick checks (lint + format) and build validation (app build + Docker build without push)
-- PR to main: full checks (lint + format + unit + e2e) and Docker build validation
+| Trigger | What runs |
+|---|---|
+| PR → any non-main branch | Lint + format + Docker build validation |
+| PR → main | Lint + format + unit tests + E2E tests + Docker build |
+| Merge → main | Docker image build and push to DockerHub |
+| Commit with `#major` / `#minor` / `#patch` | Automatic version bump and Git tag |
 
-After merge to main, a separate workflow bumps the version tag and pushes Docker images.
+Workflow files: `.github/workflows/`
 
-Workflow files are under .github/workflows.
+---
 
 ## Project Structure
 
-```text
+```
 src/
-  app/              # app bootstrapping and global setup
-  common/           # guards, decorators, shared helpers
-  configs/          # typed config modules
-  infrastructure/   # adapters and integrations
-  modules/          # feature modules (auth, posts, chat, payments, etc.)
-  shared/           # shared services and logger
-prisma/             # schema and migrations
-monitoring/         # prometheus, grafana, loki, alertmanager config
-unit-tests/         # unit test suites
-test/               # integration and container test setup
+  app/              # Bootstrap and global settings (CORS, Swagger, versioning)
+  common/           # Guards, decorators, validators, shared utils
+  configs/          # Typed env config with Joi validation
+  infrastructure/   # Exception filters, interceptors, health checks, metrics
+  modules/          # Feature modules: auth, posts, chat, payments, queues, ...
+  shared/           # Logger, error classes, execution context
+prisma/             # Prisma schema and migration history
+monitoring/         # Prometheus, Grafana, Loki, Alertmanager configs
+unit-tests/         # Unit test suites
+test/               # E2E test setup (Testcontainers, helpers)
+docs/               # Architecture, decisions, API guide, project overview
 ```
 
-## Portfolio Notes
+---
 
-This project is focused on backend architecture and operational readiness.
-See short engineering notes:
+## Documentation
 
-- docs/ARCHITECTURE.md
-- docs/DECISIONS.md
-- docs/GETTING_STARTED.md
-- docs/API_SWAGGER.md
-- docs/TESTING_SHORT.md
-- docs/PORTFOLIO_CHECKLIST.md
-
-## Version bump is controlled by keywords in commit messages or PR title:
-  #major  → v1.0.0 → v2.0.0
-  #minor  → v1.0.0 → v1.1.0
-  #patch  → v1.0.0 → v1.0.1  (default if no keyword found)
+| File | Content |
+|---|---|
+| [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | Module table, auth flow, async processing, security |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | High-level components and runtime flow |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Technology choices with trade-offs |
+| [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) | Step-by-step onboarding guide |
+| [docs/API_SWAGGER.md](docs/API_SWAGGER.md) | How to use Swagger UI and authenticate |
+| [docs/TESTING_SHORT.md](docs/TESTING_SHORT.md) | Test setup notes and commands |

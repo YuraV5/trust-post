@@ -60,9 +60,7 @@ describe('Posts (e2e)', () => {
       });
       await approvePost(prisma, post.id);
 
-      const res = await request(app.getHttpServer())
-        .get(`${POST_ROUTES.base}?search=${uniqueWord}`)
-        .expect(200);
+      const res = await request(app.getHttpServer()).get(`${POST_ROUTES.base}?search=${uniqueWord}`).expect(200);
 
       expect(res.body.data.length).toBeGreaterThan(0);
       const found = res.body.data.find((p: { id: number }) => p.id === post.id);

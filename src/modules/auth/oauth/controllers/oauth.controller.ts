@@ -20,8 +20,9 @@ export class OAuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Redirect to OAuth provider' })
   @ApiParam({ name: 'provider', type: String, description: 'OAuth provider (google, github, etc)' })
-  @ApiHeader({ name: 'x-device-id', description: 'Client device UUID', required: true })
+  @ApiHeader({ name: 'x-device-id', description: 'Client device UUID (optional if deviceId query used)', required: false })
   @ApiQuery({ name: 'redirectTo', required: false, type: String })
+  @ApiQuery({ name: 'deviceId', required: false, type: String })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Redirects to OAuth provider login page',

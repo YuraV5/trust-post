@@ -4,10 +4,20 @@ import type { Request } from 'express';
 
 export const DeviceId = createParamDecorator((_: unknown, ctx: ExecutionContext): string => {
   const req = ctx.switchToHttp().getRequest<Request>();
-  const raw = req.headers['x-device-id'];
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  if (!value || !isUUID(value)) {
-    throw new BadRequestException('x-device-id header must be a valid UUID');
+  
+  const headerRaw = req.headers['x-device-id'];
+  const headerValue = Array.isArray(headerRaw) ? headerRaw[0] : headerRaw;
+
+  const queryRaw = req.query?.deviceId;
+  // Cast or check type to satisfy the compiler
+  const queryValue = Array.isArray(queryRaw) ? queryRaw[0] : (queryRaw as string);
+
+  const value = headerValue ?? queryValue;
+
+  // We use isUUID here, which acts as a type guard for the final return
+  if (typeof value !== 'string' || !isUUID(value)) {
+    throw new BadRequestException('deviceId must be a valid UUID in x-device-id header or query param');
   }
+
   return value;
 });

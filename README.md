@@ -54,7 +54,7 @@ make stop   # stop everything
 ```bash
 npm ci
 cp .env.example .env
-cp .env.example .env.test
+cp .env.example .env.test # NODE_ENV=test need to be replaced with test values ​​such as fba keys base url
 make dev-up       # start Postgres + Redis
 npm run mgr:dev   # run migrations
 npm run seed:full # seed demo data

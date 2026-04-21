@@ -73,7 +73,7 @@ export class ChatRepo implements IChatRepo {
 
   async createGroupChat(input: CreateGroupChatInput): Promise<ChatWithMembers> {
     const { title, creatorId, participantIds } = input;
-    const allParticipants = Array.from(new Set([creatorId, ...participantIds]));
+    const allParticipants = Array.from(new Set([creatorId, ...(participantIds ?? [])]));
 
     return this.db.chat.create({
       data: {
@@ -174,6 +174,17 @@ export class ChatRepo implements IChatRepo {
   async findChatById(chatId: string): Promise<ChatEntity | null> {
     return this.db.chat.findUnique({
       where: { id: chatId },
+    });
+  }
+
+  async findUserByEmail(email: string): Promise<{ id: string; isEmailVerified: boolean; isActive: boolean } | null> {
+    return this.db.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        isEmailVerified: true,
+        isActive: true,
+      },
     });
   }
 

@@ -17,6 +17,7 @@ export interface IChatRepo {
   findChatByTitle(title: string): Promise<ChatEntity | null>;
   findChatByPostId(postId: number): Promise<ChatWithMembers | null>;
   createPostChat(postId: number, authorId: string): Promise<ChatWithMembers>;
+  findUserByEmail(email: string): Promise<{ id: string; isEmailVerified: boolean; isActive: boolean } | null>;
   findChatById(chatId: string): Promise<ChatEntity | null>;
   findChatMember(chatId: string, userId: string, includeDeleted?: boolean): Promise<ChatMemberEntity | null>;
   addChatMember(chatId: string, userId: string): Promise<void>;

@@ -4,6 +4,7 @@ import { AppBadRequestException, AppNotFoundException, AppForbiddenException } f
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import {
+  AddMemberByEmailResult,
   ChatWithMembersAndPrivate,
   CreateGroupChatInput,
   CreatePostChatInput,
@@ -65,12 +66,12 @@ export class ChatService implements IChatService {
       throw new AppBadRequestException('Group chat title is required');
     }
 
-    if (participantIds.length === 0) {
-      throw new AppBadRequestException('At least one participant is required');
-    }
-
-    const allParticipants = Array.from(new Set([creatorId, ...participantIds]));
-    const chat = await this.repo.createGroupChat(input);
+    const normalizedParticipantIds = participantIds ?? [];
+    const allParticipants = Array.from(new Set([creatorId, ...normalizedParticipantIds]));
+    const chat = await this.repo.createGroupChat({
+      ...input,
+      participantIds: normalizedParticipantIds,
+    });
     await this.invalidateUserChatsCache(allParticipants);
 
     const fullChat = await this.getChat(chat.id, creatorId);
@@ -78,6 +79,55 @@ export class ChatService implements IChatService {
 
     this.logger.info('Group chat created', { chatId: chat.id, creatorId, participantsCount: allParticipants.length });
     return fullChat;
+  }
+
+  async addMemberByEmail(chatId: string, requesterId: string, email: string): Promise<AddMemberByEmailResult> {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      throw new AppBadRequestException('Email is required');
+    }
+
+    const chat = await this.repo.findChatById(chatId);
+    if (!chat) {
+      throw new AppNotFoundException('Chat not found');
+    }
+
+    if (chat.type === ChatType.PRIVATE) {
+      throw new AppBadRequestException('Cannot add members to private chat');
+    }
+
+    const requesterMember = await this.repo.findChatMember(chatId, requesterId);
+    if (!requesterMember) {
+      throw new AppForbiddenException('You are not a member of this chat');
+    }
+
+    const user = await this.repo.findUserByEmail(normalizedEmail);
+    if (!user || !user.isEmailVerified || !user.isActive) {
+      throw new AppBadRequestException('User with verified email not found');
+    }
+
+    const existingMember = await this.repo.findChatMember(chatId, user.id);
+    if (existingMember) {
+      throw new AppBadRequestException('User is already a member of this chat');
+    }
+
+    await this.repo.addChatMember(chatId, user.id);
+    await this.invalidateUserChatsCache([requesterId, user.id]);
+
+    const fullChat = await this.getChat(chatId, requesterId);
+    this.emitChatUpserted(fullChat);
+
+    this.logger.info('User added to chat by email', {
+      chatId,
+      requesterId,
+      userId: user.id,
+      email: normalizedEmail,
+    });
+
+    return {
+      message: 'User added to chat successfully',
+      chat: fullChat,
+    };
   }
 
   async createPostChat(input: CreatePostChatInput): Promise<ChatWithMembersAndPrivate> {

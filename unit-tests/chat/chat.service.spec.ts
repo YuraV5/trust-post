@@ -16,6 +16,7 @@ describe('ChatService', () => {
     createGroupChat: jest.fn(),
     findPostById: jest.fn(),
     findChatByPostId: jest.fn(),
+    findUserByEmail: jest.fn(),
     findChatMember: jest.fn(),
     addChatMember: jest.fn(),
     removeChatMember: jest.fn(),
@@ -102,10 +103,25 @@ describe('ChatService', () => {
       ).rejects.toThrow('Group chat title is required');
     });
 
-    it('throws when no participants are provided', async () => {
-      await expect(
-        service.createGroupChat({ title: 'My Group', creatorId: 'user-1', participantIds: [] }),
-      ).rejects.toThrow('At least one participant is required');
+    it('allows creating group chat without additional participants', async () => {
+      const chat = { id: 'group-chat-empty', type: ChatType.GROUP };
+      const hydratedChat = {
+        id: 'group-chat-empty',
+        type: ChatType.GROUP,
+        members: [{ userId: 'user-1' }],
+        PrivateChat: null,
+      };
+      mockChatRepo.createGroupChat.mockResolvedValue(chat);
+      mockChatRepo.findChatWithMembers.mockResolvedValue(hydratedChat);
+
+      const result = await service.createGroupChat({ title: 'My Group', creatorId: 'user-1', participantIds: [] });
+
+      expect(result).toEqual(hydratedChat);
+      expect(mockChatRepo.createGroupChat).toHaveBeenCalledWith({
+        title: 'My Group',
+        creatorId: 'user-1',
+        participantIds: [],
+      });
     });
 
     it('creates group chat and returns it', async () => {
@@ -216,6 +232,55 @@ describe('ChatService', () => {
 
       expect(result).toEqual({ message: 'Successfully joined the chat' });
       expect(mockChatRepo.addChatMember).toHaveBeenCalledWith('chat-1', 'user-1');
+    });
+  });
+
+  describe('addMemberByEmail', () => {
+    it('throws when chat does not exist', async () => {
+      mockChatRepo.findChatById.mockResolvedValue(null);
+
+      await expect(service.addMemberByEmail('chat-1', 'user-1', 'a@test.com')).rejects.toThrow('Chat not found');
+    });
+
+    it('throws when requester is not chat member', async () => {
+      mockChatRepo.findChatById.mockResolvedValue({ id: 'chat-1', type: ChatType.GROUP });
+      mockChatRepo.findChatMember.mockResolvedValue(null);
+
+      await expect(service.addMemberByEmail('chat-1', 'user-1', 'a@test.com')).rejects.toThrow(
+        'You are not a member of this chat',
+      );
+    });
+
+    it('throws when target user email is not verified', async () => {
+      mockChatRepo.findChatById.mockResolvedValue({ id: 'chat-1', type: ChatType.GROUP });
+      mockChatRepo.findChatMember.mockResolvedValueOnce({ userId: 'user-1' });
+      mockChatRepo.findUserByEmail.mockResolvedValue({ id: 'user-2', isEmailVerified: false, isActive: true });
+
+      await expect(service.addMemberByEmail('chat-1', 'user-1', 'a@test.com')).rejects.toThrow(
+        'User with verified email not found',
+      );
+    });
+
+    it('adds member by verified email and returns updated chat', async () => {
+      const hydratedChat = {
+        id: 'chat-1',
+        type: ChatType.GROUP,
+        members: [{ userId: 'user-1' }, { userId: 'user-2' }],
+        PrivateChat: null,
+      };
+
+      mockChatRepo.findChatById.mockResolvedValue({ id: 'chat-1', type: ChatType.GROUP });
+      mockChatRepo.findChatMember.mockResolvedValueOnce({ userId: 'user-1' }).mockResolvedValueOnce(null);
+      mockChatRepo.findUserByEmail.mockResolvedValue({ id: 'user-2', isEmailVerified: true, isActive: true });
+      mockChatRepo.findChatWithMembers.mockResolvedValue(hydratedChat);
+
+      const result = await service.addMemberByEmail('chat-1', 'user-1', 'member@test.com');
+
+      expect(mockChatRepo.addChatMember).toHaveBeenCalledWith('chat-1', 'user-2');
+      expect(result).toEqual({
+        message: 'User added to chat successfully',
+        chat: hydratedChat,
+      });
     });
   });
 

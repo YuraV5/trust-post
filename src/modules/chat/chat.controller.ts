@@ -3,8 +3,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { ChatService } from './services/chat.service';
 import { CurrentUser } from '../../common/decorators';
 import { type AuthenticatedUser } from '../../common/interfaces';
-import { ChatType, CreateChatDto } from './dtos/create-chat.dto';
-import { ChatWithMembersAndPrivate, JoinLeaveActionResult, UserChatsResult } from './types';
+import { AddMemberByEmailDto, ChatType, CreateChatDto } from './dtos';
+import { AddMemberByEmailResult, ChatWithMembersAndPrivate, JoinLeaveActionResult, UserChatsResult } from './types';
 import { ChatResponseDto, PaginatedChatsResponseDto } from './dtos/doc.swagger';
 
 @ApiTags('chats')
@@ -21,21 +21,37 @@ export class ChatController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateChatDto,
   ): Promise<ChatWithMembersAndPrivate> {
+    const participantIds = dto.participantIds ?? [];
+
     if (dto.type === ChatType.PRIVATE) {
-      if (dto.participantIds.length !== 1) {
+      if (participantIds.length !== 1) {
         throw new BadRequestException('Private chat must have exactly one other participant');
       }
       return this.chatService.createPrivateChat({
         userId: user.userId,
-        otherUserId: dto.participantIds[0],
+        otherUserId: participantIds[0],
       });
     } else {
       return this.chatService.createGroupChat({
         title: dto.title || 'Group Chat',
         creatorId: user.userId,
-        participantIds: dto.participantIds,
+        participantIds,
       });
     }
+  }
+
+  @Post(':chatId/members/by-email')
+  @ApiOperation({ summary: 'Add verified user to group/post chat by email' })
+  @ApiResponse({ status: 201, description: 'User added to chat successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid request' })
+  @ApiResponse({ status: 403, description: 'Requester is not a chat member' })
+  @ApiResponse({ status: 404, description: 'Chat not found' })
+  async addMemberByEmail(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('chatId') chatId: string,
+    @Body() dto: AddMemberByEmailDto,
+  ): Promise<AddMemberByEmailResult> {
+    return this.chatService.addMemberByEmail(chatId, user.userId, dto.email);
   }
 
   @Post('posts/:postId/chat')

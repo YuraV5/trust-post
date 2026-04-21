@@ -1,4 +1,5 @@
 import {
+  AddMemberByEmailResult,
   ChatWithMembersAndPrivate,
   CreateGroupChatInput,
   CreatePostChatInput,
@@ -11,6 +12,7 @@ export interface IChatService {
   createPrivateChat(input: CreatePrivateChatInput): Promise<ChatWithMembersAndPrivate>;
   createGroupChat(input: CreateGroupChatInput): Promise<ChatWithMembersAndPrivate>;
   createPostChat(input: CreatePostChatInput): Promise<ChatWithMembersAndPrivate>;
+  addMemberByEmail(chatId: string, requesterId: string, email: string): Promise<AddMemberByEmailResult>;
   joinChat(chatId: string, userId: string): Promise<JoinLeaveActionResult>;
   leaveChat(chatId: string, userId: string): Promise<JoinLeaveActionResult>;
   deleteChatForUser(chatId: string, userId: string): Promise<JoinLeaveActionResult>;

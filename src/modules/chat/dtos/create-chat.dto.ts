@@ -16,8 +16,9 @@ export class CreateChatDto {
   @IsString()
   title?: string;
 
-  @ApiProperty({ type: [String], example: ['123e4567-e89b-12d3-a456-426614174000'] })
+  @ApiPropertyOptional({ type: [String], example: ['123e4567-e89b-12d3-a456-426614174000'] })
+  @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
-  participantIds: string[];
+  participantIds?: string[];
 }

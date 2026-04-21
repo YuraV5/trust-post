@@ -58,6 +58,7 @@ export const COMMENT_ROUTES = {
 export const CHAT_ROUTES = {
   base: `${V1}/chats`,
   byId: (chatId: string) => `${V1}/chats/${chatId}`,
+  addMemberByEmail: (chatId: string) => `${V1}/chats/${chatId}/members/by-email`,
   join: (chatId: string) => `${V1}/chats/${chatId}/join`,
   leave: (chatId: string) => `${V1}/chats/${chatId}/leave`,
   read: (chatId: string) => `${V1}/chats/${chatId}/read`,

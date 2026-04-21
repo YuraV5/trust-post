@@ -84,6 +84,46 @@ describe('Chat (e2e)', () => {
 
       expect(res.body).toHaveProperty('id');
     });
+
+    it('should create an empty group chat (creator only)', async () => {
+      const creator = await createAuthorizedSession(app, prisma, runId, 'group-chat-empty-creator');
+
+      const res = await request(app.getHttpServer())
+        .post(CHAT_ROUTES.base)
+        .set('Authorization', `Bearer ${creator.accessToken}`)
+        .send({
+          type: 'GROUP',
+          title: 'Empty Group Chat',
+          participantIds: [],
+        })
+        .expect(201);
+
+      expect(res.body).toHaveProperty('id');
+    });
+
+    it('should add a verified user to group chat by email', async () => {
+      const creator = await createAuthorizedSession(app, prisma, runId, 'group-chat-email-creator');
+      const member = await createAuthorizedSession(app, prisma, runId, 'group-chat-email-member');
+
+      const chatRes = await request(app.getHttpServer())
+        .post(CHAT_ROUTES.base)
+        .set('Authorization', `Bearer ${creator.accessToken}`)
+        .send({
+          type: 'GROUP',
+          title: 'Invite By Email Group',
+          participantIds: [],
+        })
+        .expect(201);
+
+      const addRes = await request(app.getHttpServer())
+        .post(CHAT_ROUTES.addMemberByEmail(chatRes.body.id))
+        .set('Authorization', `Bearer ${creator.accessToken}`)
+        .send({ email: member.user.email })
+        .expect(201);
+
+      expect(addRes.body).toHaveProperty('message', 'User added to chat successfully');
+      expect(addRes.body.chat).toHaveProperty('id', chatRes.body.id);
+    });
   });
 
   // ─── List chats ───────────────────────────────────────────────────────────────

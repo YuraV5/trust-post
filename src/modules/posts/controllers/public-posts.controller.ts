@@ -237,7 +237,10 @@ export class PublicPostsController {
     description: 'Post not found',
     type: NotFoundErrorResponse,
   })
-  async getMyPostById(@CurrentUser() user: AuthenticatedUser, @Param() params: NumericIdParamDto): Promise<Publication> {
+  async getMyPostById(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: NumericIdParamDto,
+  ): Promise<Publication> {
     return await this.postsService.findByIdForAuthor(params.id, user.userId);
   }
 

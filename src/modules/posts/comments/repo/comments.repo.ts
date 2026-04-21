@@ -16,7 +16,7 @@ import { ICommentsRepo } from '../interfaces';
 
 @Injectable()
 export class CommentsRepo implements ICommentsRepo {
-  constructor(private readonly db: PrismaService) { }
+  constructor(private readonly db: PrismaService) {}
 
   async create(authorId: string, data: CreateCommentInput): Promise<Comment> {
     return await this.db.comment.create({
@@ -48,22 +48,22 @@ export class CommentsRepo implements ICommentsRepo {
 
     const where: Prisma.CommentWhereInput = viewerId
       ? {
-        postId,
-        OR: [
-          { status: CommentStatus.APPROVED },
-          {
-            authorId: viewerId,
-            status: {
-              in: [CommentStatus.PENDING, CommentStatus.PROCESSING],
-              notIn: [CommentStatus.FAILED, CommentStatus.REJECTED, CommentStatus.DELETED],
+          postId,
+          OR: [
+            { status: CommentStatus.APPROVED },
+            {
+              authorId: viewerId,
+              status: {
+                in: [CommentStatus.PENDING, CommentStatus.PROCESSING],
+                notIn: [CommentStatus.FAILED, CommentStatus.REJECTED, CommentStatus.DELETED],
+              },
             },
-          },
-        ],
-      }
+          ],
+        }
       : {
-        postId,
-        status: CommentStatus.APPROVED,
-      };
+          postId,
+          status: CommentStatus.APPROVED,
+        };
 
     const orderBy: Prisma.CommentOrderByWithRelationInput = {
       [sortBy]: sortOrder,

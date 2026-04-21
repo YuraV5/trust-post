@@ -72,4 +72,4 @@ const WAYFORPAY_WEBHOOK_ROUTE = '/api/v1/payments/webhook/wayforpay';
   providers: [RedisThrottlerStorage],
   exports: [RedisThrottlerStorage],
 })
-export class AppThrottlerModule { }
+export class AppThrottlerModule {}

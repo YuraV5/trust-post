@@ -4,11 +4,7 @@ import { ChatService } from './services/chat.service';
 import { CurrentUser } from '../../common/decorators';
 import { type AuthenticatedUser } from '../../common/interfaces';
 import { ChatType, CreateChatDto } from './dtos/create-chat.dto';
-import {
-  ChatWithMembersAndPrivate,
-  JoinLeaveActionResult,
-  UserChatsResult,
-} from './types';
+import { ChatWithMembersAndPrivate, JoinLeaveActionResult, UserChatsResult } from './types';
 import { ChatResponseDto, PaginatedChatsResponseDto } from './dtos/doc.swagger';
 
 @ApiTags('chats')

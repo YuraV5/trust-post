@@ -177,7 +177,11 @@ export class ChatRepo implements IChatRepo {
     });
   }
 
-  async findChatMember(chatId: string, userId: string, includeDeleted: boolean = false): Promise<ChatMemberEntity | null> {
+  async findChatMember(
+    chatId: string,
+    userId: string,
+    includeDeleted: boolean = false,
+  ): Promise<ChatMemberEntity | null> {
     const where: Record<string, unknown> = {
       chatId,
       userId,
@@ -241,10 +245,10 @@ export class ChatRepo implements IChatRepo {
       this.db.chat.findMany({
         where: {
           members: {
-            some: ({
+            some: {
               userId,
               isDelete: false,
-            } as any),
+            } as any,
           },
         },
         include: {
@@ -285,10 +289,10 @@ export class ChatRepo implements IChatRepo {
       this.db.chat.count({
         where: {
           members: {
-            some: ({
+            some: {
               userId,
               isDelete: false,
-            } as any),
+            } as any,
           },
         },
       }),
@@ -302,9 +306,9 @@ export class ChatRepo implements IChatRepo {
       where: { id: chatId },
       include: {
         members: {
-          where: ({
+          where: {
             isDelete: false,
-          } as any),
+          } as any,
           include: {
             user: {
               select: {

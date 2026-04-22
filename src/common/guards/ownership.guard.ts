@@ -102,11 +102,11 @@ export function OwnershipGuard(options: OwnershipGuardOptions): Type<CanActivate
      * Converts the ID to the appropriate type based on the model.
      * Prisma uses different ID types for different models (string for UUID, number for Int).
      */
-    private convertIdType(id: string, model: string): string | number {
+    private convertIdType(id: string, model: ResourceModel): string | number {
       // Models with Int ID
-      const intIdModels = ['post', 'comment', 'postReview', 'commentLike', 'postLike', 'postFile'];
+      const intIdModels: ResourceModel[] = ['post', 'comment', 'postReview', 'commentLike', 'postLike', 'postFile'];
 
-      if (intIdModels.includes(model.toLowerCase())) {
+      if (intIdModels.includes(model)) {
         const numId = parseInt(id, 10);
         if (isNaN(numId)) {
           throw new AppNotFoundException(`Invalid ${model} ID format`);

@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { type IFileStorage } from '../interfaces';
-import { FileStorageInfo, FileUploadResponse } from '../types';
+import { FileUploadRequest, FileUploadResponse } from '../types';
 import { CloudinaryClient } from './clients';
 import { AppBadRequestException } from '../../../shared/errors/app-errors';
 import { FileProvider } from '@prisma/client';
+import { resolveFileStorageInfo } from '../helpers/storage-config.helper';
 
 @Injectable()
 export class FilesService implements IFileStorage {
@@ -11,12 +12,15 @@ export class FilesService implements IFileStorage {
 
   async upload(
     files: { buffer: Buffer; originalname: string; mimetype: string; size: number }[],
-    data: FileStorageInfo,
+    data: FileUploadRequest,
   ): Promise<FileUploadResponse> {
     if (!files.length) throw new AppBadRequestException('No files provided');
-    switch (data.storage) {
+
+    const resolvedStorage = resolveFileStorageInfo(data);
+
+    switch (resolvedStorage.storage) {
       case FileProvider.CLOUDINARY:
-        return this.cloudinary.upload(files, data);
+        return this.cloudinary.upload(files, resolvedStorage);
       default:
         throw new AppBadRequestException('Unsupported storage');
     }

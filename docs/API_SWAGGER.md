@@ -24,6 +24,17 @@ Note: Refresh flow uses an httpOnly cookie and is not fully testable from pure t
 - `admin-users`, `admin-posts`, `admin-comments`, `admin-files`
 - `health`, `redis`, `metrics`
 
+## Files upload contract
+
+- Upload routes are target-based: `POST /files/:target/images` and `POST /files/:target/documents`.
+- Supported targets: `post`, `chat`, `profile`.
+- Clients no longer send storage provider or Cloudinary folder/path.
+- Server resolves mapping internally:
+	- `post -> CLOUDINARY + posts`
+	- `chat -> CLOUDINARY + chat`
+	- `profile -> CLOUDINARY + profile`
+- `resourceId` is required for `post` and `chat`, optional for `profile`.
+
 ## Keeping docs actually
 
 When you add or change a route:

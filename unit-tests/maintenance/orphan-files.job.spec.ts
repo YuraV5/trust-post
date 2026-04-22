@@ -52,8 +52,8 @@ describe('OrphanFilesJob', () => {
   });
 
   it('deletes orphan chat files when they are missing in message_files table', async () => {
-    const existingChatKey = 'trust-post-service/user-1/chats/chat-1/exists';
-    const orphanChatKey = 'trust-post-service/user-1/chats/chat-1/orphan';
+    const existingChatKey = 'trust-post-service/user-1/chat/chat-1/exists';
+    const orphanChatKey = 'trust-post-service/user-1/chat/chat-1/orphan';
 
     (cloudinaryMock.findOrphanCandidates as jest.Mock).mockResolvedValue({
       resources: [
@@ -78,7 +78,7 @@ describe('OrphanFilesJob', () => {
 
   it('does not crash the scheduler when chat file lookup fails', async () => {
     (cloudinaryMock.findOrphanCandidates as jest.Mock).mockResolvedValue({
-      resources: [{ public_id: 'trust-post-service/user-1/chats/chat-1/file', created_at: '2026-04-01T10:00:00.000Z' }],
+      resources: [{ public_id: 'trust-post-service/user-1/chat/chat-1/file', created_at: '2026-04-01T10:00:00.000Z' }],
       nextCursor: undefined,
     });
 

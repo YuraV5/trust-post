@@ -13,7 +13,7 @@ import {
 } from '../types';
 import { MessageRepo } from '../repos';
 import { FilesService } from '../../files/services';
-import { FileFolder } from '../../files/types';
+import { FileUploadTarget } from '../../files/types';
 import { RedisService } from '../../cache/services';
 import { SocketService } from '../../socket/socket.service';
 
@@ -96,8 +96,7 @@ export class MessageService implements IMessageService {
         const uploadResult = await this.filesService.upload(files, {
           resourceId: chatId,
           userId: senderId,
-          fileFolder: FileFolder.CHATS,
-          storage: FileProvider.CLOUDINARY,
+          target: FileUploadTarget.CHAT,
         });
 
         uploadedFiles = uploadResult.data.map((file) => ({

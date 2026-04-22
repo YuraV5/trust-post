@@ -1,21 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, Min } from 'class-validator';
-import { FileFolder } from '../types';
-import { FileProvider } from '@prisma/client';
+import { IsInt, IsOptional, Min, ValidateIf } from 'class-validator';
 
-export class UploadDocumentsDto {
-  @ApiProperty({ description: 'ID of the resource the file is associated with' })
+export class UploadFilesDto {
+  @ApiPropertyOptional({ description: 'ID of the resource the file is associated with. Required for post and chat uploads.' })
   @Type(() => Number)
+  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined && value !== null && value !== '')
   @IsInt()
   @Min(1)
-  resourceId: number;
-
-  @ApiProperty({ description: 'Folder/category for the file (e.g., profile-pictures, post-images)' })
-  @IsEnum(FileFolder)
-  fileFolder: FileFolder;
-
-  @ApiProperty({ description: 'Storage type to use for the file' })
-  @IsEnum(FileProvider)
-  storage: FileProvider;
+  resourceId?: number;
 }

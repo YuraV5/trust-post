@@ -5,10 +5,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { CloudinaryClient } from '../../files/services/clients/cloudinary-client.service';
-import { FileFolder } from '../../files/types';
 
 @Injectable()
 export class OrphanFilesJob {
+  private static readonly POST_PATH_SEGMENT = '/posts/';
+  private static readonly CHAT_PATH_SEGMENT = '/chat/';
+
   private static readonly JOB_NAME = 'orphan-files-cleanup';
 
   constructor(
@@ -42,7 +44,9 @@ export class OrphanFilesJob {
         const orphansToDelete: string[] = [];
 
         // 1. Filter and process Post files
-        const postFileKeys = candidates.map((c) => c.public_id).filter((key) => key.includes(`/${FileFolder.POSTS}/`));
+        const postFileKeys = candidates
+          .map((c) => c.public_id)
+          .filter((key) => key.includes(OrphanFilesJob.POST_PATH_SEGMENT));
 
         if (postFileKeys.length > 0) {
           const existingRecords = await this.prisma.postFile.findMany({
@@ -54,7 +58,9 @@ export class OrphanFilesJob {
         }
 
         // 2. Filter and process Chat files
-        const chatFileKeys = candidates.map((c) => c.public_id).filter((key) => key.includes(`/${FileFolder.CHATS}/`));
+        const chatFileKeys = candidates
+          .map((c) => c.public_id)
+          .filter((key) => key.includes(OrphanFilesJob.CHAT_PATH_SEGMENT));
 
         if (chatFileKeys.length > 0) {
           const existingChatRecords = await this.prisma.chatFile.findMany({

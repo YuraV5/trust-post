@@ -15,6 +15,8 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody } 
 import { PostFilesService } from '../services';
 import { LinkPostFilesDto } from '../dtos';
 import { type AuthenticatedUser } from '../../../../common/interfaces';
+import { resolveFileUploadConfig } from '../../../files/helpers/storage-config.helper';
+import { FileUploadTarget } from '../../../files/types';
 import { CurrentUser } from '../../../../common/decorators';
 import { OwnershipGuard } from '../../../../common/guards';
 import { PostFile } from '@prisma/client';
@@ -56,10 +58,12 @@ export class PostFilesController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: LinkPostFilesDto,
   ): Promise<{ message: string }> {
+    const { storage } = resolveFileUploadConfig(FileUploadTarget.POST);
     const data = body.files.map((file) => ({
       ...file,
       postId,
       uploadedById: user.userId,
+      provider: storage,
     }));
     return this.postFilesService.uploadFilesToPost(data);
   }

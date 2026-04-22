@@ -193,10 +193,6 @@ export class PostFilesService {
         return false;
       }
 
-      if (file.provider !== FileProvider.CLOUDINARY) {
-        return false;
-      }
-
       const normalizedStorageKey = file.storageKey.replace(/\\/g, '/');
       return normalizedStorageKey.includes(expectedPathFragment);
     });

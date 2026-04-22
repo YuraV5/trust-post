@@ -202,13 +202,14 @@ export class CloudinaryClient implements ICloudinaryClient {
       },
     );
 
+    this.logger.debug('Cloudinary upload successful', { file: file.originalname });
+
     return {
       url: uploadResult.secure_url,
       storageKey: uploadResult.public_id,
       size: uploadResult.bytes,
       originalName: file.originalname,
       mimeType: file.mimetype,
-      provider: FileProvider.CLOUDINARY,
       metadata: {
         width: uploadResult.width || 0,
         height: uploadResult.height || 0,

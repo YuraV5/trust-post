@@ -69,7 +69,7 @@ describe('FilesService', () => {
 
   describe('delete', () => {
     it('does nothing when keys array is empty', async () => {
-      await service.delete([], FileProvider.CLOUDINARY);
+      await service.delete([]);
 
       expect(mockCloudinaryClient.delete).not.toHaveBeenCalled();
     });
@@ -77,13 +77,9 @@ describe('FilesService', () => {
     it('delegates deletion to CloudinaryClient for CLOUDINARY storage', async () => {
       mockCloudinaryClient.delete.mockResolvedValue(undefined);
 
-      await service.delete(['key-1', 'key-2'], FileProvider.CLOUDINARY);
+      await service.delete(['key-1', 'key-2']);
 
       expect(mockCloudinaryClient.delete).toHaveBeenCalledWith(['key-1', 'key-2']);
-    });
-
-    it('throws for unsupported storage provider', async () => {
-      await expect(service.delete(['key-1'], 'S3' as FileProvider)).rejects.toThrow('Unsupported storage');
     });
   });
 });

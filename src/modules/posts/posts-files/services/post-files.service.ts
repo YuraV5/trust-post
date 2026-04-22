@@ -5,7 +5,7 @@ import { ResponseMessage } from '../../../../common/types';
 import { NewFileRecordData } from '../types';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
-import { FileProvider, PostFile } from '@prisma/client';
+import { PostFile } from '@prisma/client';
 
 @Injectable()
 export class PostFilesService {
@@ -70,7 +70,7 @@ export class PostFilesService {
     if (files.length === 1) {
       const file = files[0];
       try {
-        await this.fileService.delete([file.storageKey], file.provider);
+        await this.fileService.delete([file.storageKey]);
         successfullyDeletedKeys.push(file.storageKey);
         this.logger.debug(`Deleted 1 file from ${file.provider} for post ${postId}`);
       } catch (error: unknown) {
@@ -84,27 +84,19 @@ export class PostFilesService {
         deletionErrors.push(errorMessage);
       }
     } else {
-      const groupedFiles = this.groupFilesByProvider(files);
-      const providers = Object.keys(groupedFiles) as FileProvider[];
-
-      for (const provider of providers) {
-        const keys = groupedFiles[provider];
-        if (!keys || !keys.length) continue;
-
-        try {
-          await this.fileService.delete(keys, provider);
-          successfullyDeletedKeys.push(...keys);
-          this.logger.debug(`Deleted ${keys.length} files from ${provider} for post ${postId}`);
-        } catch (error: unknown) {
-          const errorMessage = `Failed to delete files from ${provider}: ${this.getErrorMessage(error)}`;
-          this.logger.error(errorMessage, {
-            error: error instanceof Error ? error : String(error),
-            postId,
-            provider,
-            keys,
-          });
-          deletionErrors.push(errorMessage);
-        }
+      const keys = files.map((file) => file.storageKey);
+      try {
+        await this.fileService.delete(keys);
+        successfullyDeletedKeys.push(...keys);
+        this.logger.debug(`Deleted ${keys.length} files for post ${postId}`);
+      } catch (error: unknown) {
+        const errorMessage = `Failed to delete files: ${this.getErrorMessage(error)}`;
+        this.logger.error(errorMessage, {
+          error: error instanceof Error ? error : String(error),
+          postId,
+          keys,
+        });
+        deletionErrors.push(errorMessage);
       }
     }
 
@@ -138,7 +130,7 @@ export class PostFilesService {
     }
 
     try {
-      await this.fileService.delete([file.storageKey], file.provider);
+      await this.fileService.delete([file.storageKey]);
       this.logger.debug(`Deleted file ${file.storageKey} from ${file.provider}`);
     } catch (error: unknown) {
       this.logger.error(`Failed to delete file from ${file.provider}: ${this.getErrorMessage(error)}`, {
@@ -196,24 +188,6 @@ export class PostFilesService {
       const normalizedStorageKey = file.storageKey.replace(/\\/g, '/');
       return normalizedStorageKey.includes(expectedPathFragment);
     });
-  }
-
-  private groupFilesByProvider(
-    files: { storageKey: string; provider: FileProvider }[],
-  ): Partial<Record<FileProvider, string[]>> {
-    const grouped: Partial<Record<FileProvider, string[]>> = {};
-
-    for (const file of files) {
-      if (!Object.values(FileProvider).includes(file.provider)) {
-        this.logger.warn(`Skipping unknown file provider "${file.provider}"`);
-        continue;
-      }
-
-      if (!grouped[file.provider]) grouped[file.provider] = [];
-      grouped[file.provider]!.push(file.storageKey);
-    }
-
-    return grouped;
   }
 
   private normalizeMainImageValues(

@@ -17,10 +17,7 @@ import { type AuthenticatedUser } from '../../../common/interfaces';
 import { FileUploadResponse, FileUploadTarget } from '../types';
 import { UploadFilesDto } from '../dtos';
 import { FilesService } from '../services';
-import {
-  BadRequestErrorResponse,
-  UnauthorizedErrorResponse,
-} from '../../../common/swagger/responses';
+import { BadRequestErrorResponse, UnauthorizedErrorResponse } from '../../../common/swagger/responses';
 import { FileUploadResponseDto } from '../dtos/doc.swagger';
 
 @ApiTags('files')

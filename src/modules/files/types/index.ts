@@ -39,7 +39,6 @@ export type FileUploadResult = {
   size: number;
   originalName: string;
   mimeType: string;
-  provider: FileProvider;
   metadata: {
     width: number;
     height: number;
@@ -58,4 +57,3 @@ export type NewFileData = {
   userId: string;
   resourceId: string; // postId or chatId depending on type
 };
-

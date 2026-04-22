@@ -14,6 +14,7 @@ import {
 import { MessageRepo } from '../repos';
 import { FilesService } from '../../files/services';
 import { FileUploadTarget } from '../../files/types';
+import { resolveFileUploadConfig } from '../../files/helpers/storage-config.helper';
 import { RedisService } from '../../cache/services';
 import { SocketService } from '../../socket/socket.service';
 
@@ -81,6 +82,8 @@ export class MessageService implements IMessageService {
       throw new AppForbiddenException('You are not a member of this chat');
     }
 
+    const { storage: chatStorage } = resolveFileUploadConfig(FileUploadTarget.CHAT);
+
     let uploadedFiles: Array<{
       url: string;
       storageKey: string;
@@ -105,7 +108,7 @@ export class MessageService implements IMessageService {
           size: file.size,
           originalName: file.originalName,
           mimeType: file.mimeType,
-          provider: file.provider,
+          provider: chatStorage,
           fileType: this.resolveFileType(file.mimeType),
         }));
       } catch (error) {
@@ -157,28 +160,18 @@ export class MessageService implements IMessageService {
     } catch (error) {
       // Files were already uploaded to Cloudinary before the DB write failed.
       // We must delete them now, otherwise they become orphans in storage.
-      // Files are grouped by provider in case we ever support multiple backends.
       if (uploadedFiles.length > 0) {
-        const keysByProvider = new Map<FileProvider, string[]>();
+        const keys = uploadedFiles.map((file) => file.storageKey);
 
-        for (const file of uploadedFiles) {
-          const existing = keysByProvider.get(file.provider) ?? [];
-          existing.push(file.storageKey);
-          keysByProvider.set(file.provider, existing);
-        }
-
-        for (const [provider, keys] of keysByProvider.entries()) {
-          try {
-            await this.filesService.delete(keys, provider);
-          } catch (cleanupError) {
-            this.logger.error('Failed to cleanup files after message creation error', {
-              chatId,
-              senderId,
-              provider,
-              keys,
-              error: cleanupError instanceof Error ? cleanupError : String(cleanupError),
-            });
-          }
+        try {
+          await this.filesService.delete(keys);
+        } catch (cleanupError) {
+          this.logger.error('Failed to cleanup files after message creation error', {
+            chatId,
+            senderId,
+            keys,
+            error: cleanupError instanceof Error ? cleanupError : String(cleanupError),
+          });
         }
       }
 

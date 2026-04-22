@@ -1,6 +1,11 @@
 import { FileProvider } from '@prisma/client';
 import { AppBadRequestException } from '../../../shared/errors/app-errors';
-import { FileUploadTarget, type FileUploadConfig, type FileUploadRequest, type ResolvedFileStorageInfo } from '../types';
+import {
+  FileUploadTarget,
+  type FileUploadConfig,
+  type FileUploadRequest,
+  type ResolvedFileStorageInfo,
+} from '../types';
 
 const STORAGE_BY_TARGET: Record<FileUploadTarget, FileUploadConfig> = {
   [FileUploadTarget.POST]: {
@@ -32,7 +37,8 @@ export function resolveFileUploadConfig(target: FileUploadTarget): FileUploadCon
 
 export function resolveFileStorageInfo(data: FileUploadRequest): ResolvedFileStorageInfo {
   const config = resolveFileUploadConfig(data.target);
-  const normalizedResourceId = data.resourceId === undefined || data.resourceId === null ? undefined : String(data.resourceId);
+  const normalizedResourceId =
+    data.resourceId === undefined || data.resourceId === null ? undefined : String(data.resourceId);
 
   if (config.requiresResourceId && !normalizedResourceId) {
     throw new AppBadRequestException(`resourceId is required for ${data.target} uploads`);

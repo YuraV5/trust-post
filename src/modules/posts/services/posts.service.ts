@@ -277,11 +277,7 @@ export class PostsService implements IPostsService {
 
   private async invalidateLikeRelatedCache(postId: number, userId: string): Promise<void> {
     const exactKey = `cache:posts:post:${postId}`;
-    const wildcardPatterns = [
-      `cache:posts:user:${userId}:*`,
-      `cache:posts:public:*`,
-      `cache:posts:staff:*`,
-    ];
+    const wildcardPatterns = [`cache:posts:user:${userId}:*`, `cache:posts:public:*`, `cache:posts:staff:*`];
 
     try {
       await this.redisService.del(exactKey);

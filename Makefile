@@ -3,47 +3,6 @@ DOCKER_COMPOSE := docker compose --env-file $(ENV_FILE)
 LOCAL_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml
 LOCAL_MONITORING_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml -f docker-compose.monitoring.dev.yml
 
-.PHONY: help start stop dev-up dev-down dev-logs app-dev monitor-up monitor-down monitor-logs prod-up prod-down prod-logs build lint test test-e2e seed-users seed-posts seed-comments seed-full prisma-generate prisma-migrate prisma-reset
-
-# Show the main commands.
-help:
-	@echo "Trust Post command list"
-	@echo ""
-	@echo "Quick start:"
-	@echo "  make start             Start full dev stack in Docker (app + db + redis, with hot reload)"
-	@echo "  make stop              Stop the dev Docker stack"
-	@echo ""
-	@echo "Local development:"
-	@echo "  make dev-up            Start local Postgres and Redis"
-	@echo "  make dev-down          Stop local Postgres and Redis"
-	@echo "  make dev-logs          Show logs for local Postgres and Redis"
-	@echo "  make app-dev           Run Nest app locally in watch mode"
-	@echo ""
-	@echo "Local monitoring for host app:"
-	@echo "  make monitor-up        Start Prometheus, Grafana, Loki and exporters for local app"
-	@echo "  make monitor-down      Stop local monitoring stack"
-	@echo "  make monitor-logs      Show monitoring stack logs"
-	@echo ""
-	@echo "Full container stack:"
-	@echo "  make prod-up           Start app, db, redis and monitoring in Docker"
-	@echo "  make prod-down         Stop full Docker stack"
-	@echo "  make prod-logs         Show logs for the full Docker stack"
-	@echo ""
-	@echo "Project utilities:"
-	@echo "  make build             Build Nest app"
-	@echo "  make lint              Run ESLint"
-	@echo "  make test              Run unit tests"
-	@echo "  make test-e2e          Run e2e tests"
-	@echo "  make prisma-generate   Generate Prisma client"
-	@echo "  make prisma-migrate    Run prisma migrate dev"
-	@echo "  make prisma-reset      Reset local database"
-	@echo "  make seed-users        Seed users"
-	@echo "  make seed-posts        Seed posts"
-	@echo "  make seed-comments     Seed comments"
-	@echo "  make seed-full         Seed full demo data"
-	@echo ""
-	@echo "Optional: set custom env file, example: make dev-up ENV_FILE=.env.example"
-
 # Pull the latest image from DockerHub and start app + db + redis + monitoring.
 start:
 	@if [ ! -f $(ENV_FILE) ]; then \

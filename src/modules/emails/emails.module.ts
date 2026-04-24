@@ -7,6 +7,7 @@ import { EmailQueueService } from './email-queue.service';
 import { QueuesModule } from '../queues/queues.module';
 import { EmailsProviderModule } from './emails-provider/emails-provider.module';
 import { REDIS_DB } from '../../configs/redis/redis-db';
+import { APP_MODE } from '../../common/consts';
 
 @Module({
   imports: [
@@ -20,6 +21,8 @@ import { REDIS_DB } from '../../configs/redis/redis-db';
         connection: {
           host: config.get<string>('redis.host', 'localhost'),
           port: config.get<number>('redis.port', 6379),
+          password:
+            config.get<string>('nodeEnv') === APP_MODE.PRODUCTION ? config.get<string>('redis.password') : undefined,
           db: REDIS_DB.EMAIL,
         },
       }),

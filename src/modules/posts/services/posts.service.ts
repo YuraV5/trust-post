@@ -43,7 +43,7 @@ export class PostsService implements IPostsService {
 
   async getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<Post>> {
     const normalized = this.normalizeUserPostsQuery(query);
-    const cacheKey = this.buildCacheKey('user-posts', { userId, query: normalized });
+    const cacheKey = this.buildCacheKey('user', userId, normalized);
 
     const cached = await this.readCache<PaginatedResult<Post>>(cacheKey);
     if (cached) {
@@ -57,7 +57,7 @@ export class PostsService implements IPostsService {
 
   async getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<Post>> {
     const normalized = this.normalizePublicQuery(query);
-    const cacheKey = this.buildCacheKey('public-posts', normalized);
+    const cacheKey = this.buildCacheKey('public', normalized);
 
     const cached = await this.readCache<PaginatedResult<Post>>(cacheKey);
     if (cached) {
@@ -71,7 +71,7 @@ export class PostsService implements IPostsService {
 
   async getAllStaffPosts(query: PostsStaffQueryDto): Promise<PaginatedResult<Post>> {
     const normalized = this.normalizeStaffQuery(query);
-    const cacheKey = this.buildCacheKey('staff-posts', normalized);
+    const cacheKey = this.buildCacheKey('staff', normalized);
 
     const cached = await this.readCache<PaginatedResult<Post>>(cacheKey);
     if (cached) {
@@ -84,7 +84,7 @@ export class PostsService implements IPostsService {
   }
 
   async findById(id: number): Promise<Post> {
-    const cacheKey = this.buildCacheKey('post-by-id', { id });
+    const cacheKey = this.buildCacheKey('post', id);
     const cached = await this.readCache<Post>(cacheKey);
 
     if (cached) {
@@ -240,8 +240,11 @@ export class PostsService implements IPostsService {
     };
   }
 
-  private buildCacheKey(scope: string, payload: unknown): string {
-    return `cache:posts:${scope}:${JSON.stringify(payload)}`;
+  private buildCacheKey(scope: string, ...parts: Array<string | number | object>): string {
+    const suffix = parts
+      .map((p) => (typeof p === 'string' || typeof p === 'number' ? String(p) : JSON.stringify(p)))
+      .join(':');
+    return `cache:posts:${scope}${suffix ? `:${suffix}` : ''}`;
   }
 
   private async readCache<T>(key: string): Promise<T | null> {
@@ -273,14 +276,20 @@ export class PostsService implements IPostsService {
   }
 
   private async invalidateLikeRelatedCache(postId: number, userId: string): Promise<void> {
-    const patterns = [
-      `cache:posts:post-by-id:*"id":${postId}*`,
-      `cache:posts:public-posts:*`,
-      `cache:posts:user-posts:*"userId":"${userId}"*`,
-      `cache:posts:staff-posts:*`,
-    ];
+    const exactKey = `cache:posts:post:${postId}`;
+    const wildcardPatterns = [`cache:posts:user:${userId}:*`, `cache:posts:public:*`, `cache:posts:staff:*`];
 
-    for (const pattern of patterns) {
+    try {
+      await this.redisService.del(exactKey);
+    } catch (error) {
+      this.logger.warn('Posts cache invalidation failed after like toggle', {
+        key: exactKey,
+        postId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    for (const pattern of wildcardPatterns) {
       try {
         await this.redisService.delByPattern(pattern);
       } catch (error) {

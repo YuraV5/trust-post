@@ -52,7 +52,11 @@ export class PostsCacheService {
 
   async invalidateLikeRelatedCache(postId: number, userId: string): Promise<void> {
     const exactKey = this.buildKey('post', postId);
-    const wildcardPatterns = [this.buildKey('user', userId, '*'), this.buildKey('public', '*'), this.buildKey('staff', '*')];
+    const wildcardPatterns = [
+      this.buildKey('user', userId, '*'),
+      this.buildKey('public', '*'),
+      this.buildKey('staff', '*'),
+    ];
 
     try {
       await this.redisService.del(exactKey);

@@ -63,7 +63,11 @@ export class CommentsService implements ICommentsService {
     viewerId?: string,
   ): Promise<PaginatedResult<Comment>> {
     const normalized = this.normalizeQuery(query);
-    const cached = await this.commentsCacheService.getByPostQuery<PaginatedResult<Comment>>(postId, normalized, viewerId);
+    const cached = await this.commentsCacheService.getByPostQuery<PaginatedResult<Comment>>(
+      postId,
+      normalized,
+      viewerId,
+    );
     if (cached) {
       return cached;
     }

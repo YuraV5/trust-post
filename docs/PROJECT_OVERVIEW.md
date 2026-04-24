@@ -145,6 +145,27 @@ Each queue has a paired **DLQ** (`<queue>.dlq`). Terminally failed jobs are move
 | Unit | Jest 30 + ts-jest | 18 services, full mock injection |
 | E2E | Jest + Supertest + Testcontainers | Real PostgreSQL + Redis spun up per run |
 
+---
+
+## Documentation
+
+| Document | Purpose |
+|---|---|
+| [ENDPOINTS.md](ENDPOINTS.md) | Complete reference of all 75 API endpoints with auth, methods, and parameters |
+| [API_SWAGGER.md](API_SWAGGER.md) | API usage patterns, authentication flow, file uploads, OAuth, error responses |
+| [CHAT.md](CHAT.md) | Chat system architecture, database schema, REST and WebSocket API |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | High-level system design and runtime flow |
+| [DECISIONS.md](DECISIONS.md) | Technical choices and trade-offs |
+| [GETTING_STARTED.md](GETTING_STARTED.md) | Quick onboarding (10 minutes) |
+| [TESTING_SHORT.md](TESTING_SHORT.md) | Running tests and quality checks |
+| [trust-posts-postman-collection.json](trust-posts-postman-collection.json) | Postman collection with example requests for all endpoints |
+
+**Live API Docs:**
+- Swagger UI: `http://localhost:3001/docs`
+- OpenAPI JSON: `http://localhost:3001/api-json`
+- Health Check: `http://localhost:3001/health`
+- Prometheus Metrics: `http://localhost:3001/metrics`
+
 E2E tests cover: auth flows, session management, posts lifecycle, comments, payments, admin operations.
 
 Run:

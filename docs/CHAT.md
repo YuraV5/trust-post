@@ -87,6 +87,7 @@ src/modules/
 | `GET`    | `/chats/:chatId`                | Get single chat with members                     |
 | `POST`   | `/chats/:chatId/join`           | Join a group chat                                |
 | `POST`   | `/chats/:chatId/leave`          | Leave a chat                                     |
+| `POST`   | `/chats/:chatId/members/by-email` | Add verified user to chat by email             |
 | `DELETE` | `/chats/:chatId`                | Remove self from chat                            |
 | `POST`   | `/chats/:chatId/read`           | Mark all messages as read                        |
 | `GET`    | `/chats/:chatId/messages`       | Cursor-based paginated message history           |

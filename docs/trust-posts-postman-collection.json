@@ -38,6 +38,24 @@
       "type": "default"
     },
     {
+      "key": "userId",
+      "value": "",
+      "type": "default",
+      "description": "User UUID for admin operations"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "default",
+      "description": "Session ID from auth/sessions/me response"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "default",
+      "description": "Payment ID from payments responses"
+    },
+    {
       "key": "chatId",
       "value": "",
       "type": "default"
@@ -56,6 +74,41 @@
       "key": "postId",
       "value": "1",
       "type": "default"
+    },
+    {
+      "key": "fileId",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "verificationUUID",
+      "value": "",
+      "type": "default",
+      "description": "Email verification token from verification email"
+    },
+    {
+      "key": "passwordResetToken",
+      "value": "",
+      "type": "default",
+      "description": "Password reset token from reset email"
+    },
+    {
+      "key": "activationToken",
+      "value": "",
+      "type": "default",
+      "description": "Account activation token"
+    },
+    {
+      "key": "oauthCode",
+      "value": "",
+      "type": "default",
+      "description": "OAuth authorization code from provider"
+    },
+    {
+      "key": "oauthState",
+      "value": "",
+      "type": "default",
+      "description": "OAuth state parameter for CSRF protection"
     }
   ],
   "event": [
@@ -375,7 +428,7 @@
           "response": []
         },
         {
-          "name": "oauth / google",
+          "name": "oauth / redirect (dynamic provider)",
           "request": {
             "auth": {
               "type": "noauth"
@@ -398,7 +451,42 @@
                 "google"
               ]
             },
-            "description": "Open in a browser — redirects to Google consent screen. x-device-id header is required."
+            "description": "Open in a browser. Replace 'google' with any supported OAuth provider (google, github, etc). x-device-id header is required. Optional query params: redirectTo, deviceId."
+          },
+          "response": []
+        },
+        {
+          "name": "oauth / callback",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/google/callback?code={{oauthCode}}&state={{oauthState}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "google",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "{{oauthCode}}",
+                  "description": "Authorization code from OAuth provider"
+                },
+                {
+                  "key": "state",
+                  "value": "{{oauthState}}",
+                  "description": "State parameter for CSRF protection"
+                }
+              ]
+            },
+            "description": "OAuth callback endpoint. Replace 'google' with provider name. Automatically called by OAuth provider. Redirects to frontend with auth token."
           },
           "response": []
         },
@@ -1380,6 +1468,36 @@
             "description": "Creates or returns the existing chat linked to a post."
           },
           "response": []
+        },
+        {
+          "name": "add member by email",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user.example@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chats/{{chatId}}/members/by-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chats",
+                "{{chatId}}",
+                "members",
+                "by-email"
+              ]
+            },
+            "description": "Add a verified user to a group or post chat by their email address. Requester must be a chat member."
+          },
+          "response": []
         }
       ]
     },
@@ -1743,6 +1861,34 @@
     {
       "name": "admin",
       "item": [
+        {
+          "name": "retry failed comments moderation",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/retry-comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "retry-comments"
+              ]
+            },
+            "description": "Requires ADMIN role. Retries failed comments moderation jobs. Body can be empty."
+          },
+          "response": []
+        },
         {
           "name": "users",
           "item": [

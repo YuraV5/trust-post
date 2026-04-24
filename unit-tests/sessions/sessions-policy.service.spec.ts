@@ -37,4 +37,39 @@ describe('SessionsPolicy', () => {
 
     expect(repoMock.deleteByIds).not.toHaveBeenCalled();
   });
+
+  it('does not delete when session count is exactly at the limit (5)', async () => {
+    const now = Date.now();
+    repoMock.findByUserId.mockResolvedValue(
+      Array.from({ length: 5 }).map((_, idx) => ({
+        id: `session-${idx + 1}`,
+        deviceId: `device-${idx + 1}`,
+        createdAt: new Date(now - idx * 1000),
+        lastUsedAt: new Date(now - idx * 1000),
+      })),
+    );
+
+    await service.prepareForLogin('user-1', 'new-device');
+
+    expect(repoMock.deleteByIds).not.toHaveBeenCalled();
+  });
+
+  it('never deletes the current device even when it is the oldest', async () => {
+    const now = Date.now();
+    // 6 sessions: current device is the oldest
+    repoMock.findByUserId.mockResolvedValue(
+      Array.from({ length: 6 }).map((_, idx) => ({
+        id: `session-${idx + 1}`,
+        deviceId: idx === 0 ? 'current-device' : `device-${idx + 1}`,
+        createdAt: new Date(now - (6 - idx) * 1000), // session-1 is oldest
+        lastUsedAt: new Date(now - (6 - idx) * 1000),
+      })),
+    );
+
+    await service.prepareForLogin('user-1', 'current-device');
+
+    const deletedIds: string[] = (repoMock.deleteByIds.mock.calls[0] as [string[]])[0];
+    expect(deletedIds).not.toContain('session-1'); // current device must be preserved
+    expect(deletedIds).toHaveLength(1);
+  });
 });

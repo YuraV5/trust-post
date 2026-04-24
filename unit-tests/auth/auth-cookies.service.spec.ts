@@ -29,6 +29,24 @@ describe('AuthCookiesService', () => {
     );
   });
 
+  it('sets refresh cookie with secure=true and sameSite=strict in production mode', () => {
+    const configMock = { get: jest.fn().mockReturnValue('production') };
+    const service = new AuthCookiesService(configMock as any);
+
+    service.setRefresh(responseMock as any, 'prod-token');
+
+    expect(responseMock.cookie).toHaveBeenCalledWith(
+      JwtToken.REFRESH,
+      'prod-token',
+      expect.objectContaining({
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: '/',
+      }),
+    );
+  });
+
   it('clears refresh cookie', () => {
     const configMock = { get: jest.fn().mockReturnValue('development') };
     const service = new AuthCookiesService(configMock as any);

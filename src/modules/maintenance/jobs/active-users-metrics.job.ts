@@ -7,7 +7,7 @@ import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 
 @Injectable()
 export class ActiveUsersMetricsJob implements OnModuleInit {
-  private static readonly JOB_NAME = 'active-users-metrics';
+  private static readonly JOB_NAME = 'active-sessions-metrics';
 
   constructor(
     private readonly prisma: PrismaService,
@@ -21,7 +21,7 @@ export class ActiveUsersMetricsJob implements OnModuleInit {
   }
 
   // Refresh active users gauge every minute using active (not expired) sessions.
-  @Cron('*/1 * * * *')
+  @Cron('0 * * * *')
   async syncActiveUsersGauge(): Promise<void> {
     try {
       const activeUsers = await this.prisma.session.findMany({

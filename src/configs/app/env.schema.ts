@@ -34,6 +34,9 @@ export const configValidation = Joi.object({
   THROTTLE_PAYMENT_WEBHOOK_LIMIT: Joi.number().integer().min(1).default(30),
   THROTTLE_PAYMENT_WEBHOOK_TTL_MS: Joi.number().integer().min(1000).default(60000),
   THROTTLE_PAYMENT_WEBHOOK_BLOCK_TTL_MS: Joi.number().integer().min(1000).default(300000),
+  CACHE_POSTS_LIST_TTL_SECONDS: Joi.number().integer().min(1).default(30),
+  CACHE_POST_BY_ID_TTL_SECONDS: Joi.number().integer().min(1).default(30),
+  CACHE_COMMENTS_LIST_TTL_SECONDS: Joi.number().integer().min(1).default(30),
   MESSAGES_CLEANUP_BATCH_LIMIT: Joi.number().integer().min(1).default(200),
 
   DB_USER: Joi.string().required(),

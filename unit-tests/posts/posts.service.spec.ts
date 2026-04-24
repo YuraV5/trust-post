@@ -5,15 +5,20 @@ import { StubAppLogger } from '../__mock__';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
 import { PostsLikeRepo, PostsRepo } from '../../src/modules/posts/repos';
 import { PostsQueueService } from '../../src/modules/posts/queue';
-import { RedisService } from '../../src/modules/cache/services';
-import { mockRedisService } from '../__mock__';
-import { mockPostsRepo, mockPostsLikeRepo, mockPostsQueueService } from './__mock__';
+import { PostsCacheService } from '../../src/modules/posts/services';
+import { QueueRetryHandlerService } from '../../src/modules/queues/services';
+import { mockPostsRepo, mockPostsLikeRepo, mockPostsQueueService, mockPostsCacheService, mockQueueRetryHandler } from './__mock__';
 
 describe('PostsService', () => {
   let service: PostsService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockQueueRetryHandler.runOrThrow.mockImplementation((action: () => Promise<void>) => action());
+    mockPostsCacheService.getUserPosts.mockResolvedValue(null);
+    mockPostsCacheService.getPublicPosts.mockResolvedValue(null);
+    mockPostsCacheService.getStaffPosts.mockResolvedValue(null);
+    mockPostsCacheService.getPostById.mockResolvedValue(null);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -21,7 +26,8 @@ describe('PostsService', () => {
         { provide: PostsRepo, useValue: mockPostsRepo },
         { provide: PostsLikeRepo, useValue: mockPostsLikeRepo },
         { provide: PostsQueueService, useValue: mockPostsQueueService },
-        { provide: RedisService, useValue: mockRedisService },
+        { provide: PostsCacheService, useValue: mockPostsCacheService },
+        { provide: QueueRetryHandlerService, useValue: mockQueueRetryHandler },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();
@@ -51,26 +57,17 @@ describe('PostsService', () => {
       expect(mockPostsQueueService.assignReviewerToPost).toHaveBeenCalledWith(7);
     });
 
-    it('logs queue failure but still returns created post', async () => {
+    it('throws when queue assignment fails after retries', async () => {
       const createdPost = { id: 11, title: 'Emergency fund' };
-      const queueError = new Error('queue unavailable');
       mockPostsRepo.create.mockResolvedValue(createdPost);
-      mockPostsQueueService.assignReviewerToPost.mockRejectedValue(queueError);
+      mockQueueRetryHandler.runOrThrow.mockRejectedValue(new Error('queue unavailable'));
 
-      const result = await service.create('user-2', {
-        title: 'Emergency fund',
-        content: 'B'.repeat(60),
-      } as never);
-
-      expect(result).toEqual(createdPost);
-      expect(StubAppLogger.error).toHaveBeenCalledWith(
-        'Failed to enqueue reviewer assignment after post creation',
-        expect.objectContaining({
-          authorId: 'user-2',
-          postId: 11,
-          error: queueError,
-        }),
-      );
+      await expect(
+        service.create('user-2', {
+          title: 'Emergency fund',
+          content: 'B'.repeat(60),
+        } as never),
+      ).rejects.toThrow('queue unavailable');
     });
   });
 
@@ -155,6 +152,7 @@ describe('PostsService', () => {
       mockPostsRepo.getPostById.mockResolvedValue(post);
 
       await expect(service.findById(5)).resolves.toEqual(post);
+      expect(mockPostsCacheService.setPostById).toHaveBeenCalledWith(5, post);
     });
 
     it('throws when post does not exist', async () => {
@@ -183,21 +181,13 @@ describe('PostsService', () => {
       expect(mockPostsQueueService.assignReviewerToPost).toHaveBeenNthCalledWith(2, 2);
     });
 
-    it('logs failed queue jobs without failing successful update', async () => {
-      const queueError = new Error('queue failed for post 2');
+    it('fails update when queue assignment fails after retries', async () => {
       mockPostsRepo.update.mockResolvedValue({ count: 2 });
-      mockPostsQueueService.assignReviewerToPost.mockResolvedValueOnce(undefined).mockRejectedValueOnce(queueError);
+      mockQueueRetryHandler.runOrThrow
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('queue unavailable'));
 
-      const result = await service.update([1, 2], { content: 'C'.repeat(80) });
-
-      expect(result).toEqual({ message: 'Post updated successfully' });
-      expect(StubAppLogger.error).toHaveBeenCalledWith(
-        'Failed to enqueue reviewer assignment',
-        expect.objectContaining({
-          postId: 2,
-          error: queueError,
-        }),
-      );
+      await expect(service.update([1, 2], { content: 'C'.repeat(80) })).rejects.toThrow('queue unavailable');
     });
 
     it('throws when repo did not update any posts', async () => {
@@ -243,6 +233,7 @@ describe('PostsService', () => {
 
       expect(result).toEqual({ message: 'Like removed', liked: false });
       expect(mockPostsLikeRepo.deleteLike).toHaveBeenCalledWith(3, 'user-1');
+      expect(mockPostsCacheService.invalidateLikeRelatedCache).toHaveBeenCalledWith(3, 'user-1');
       expect(mockPostsLikeRepo.createLike).not.toHaveBeenCalled();
     });
 
@@ -255,6 +246,7 @@ describe('PostsService', () => {
 
       expect(result).toEqual({ message: 'Like added', liked: true });
       expect(mockPostsLikeRepo.createLike).toHaveBeenCalledWith(4, 'user-2');
+      expect(mockPostsCacheService.invalidateLikeRelatedCache).toHaveBeenCalledWith(4, 'user-2');
       expect(mockPostsLikeRepo.deleteLike).not.toHaveBeenCalled();
     });
 

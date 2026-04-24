@@ -19,3 +19,19 @@ export const mockPostsLikeRepo = {
 export const mockPostsQueueService = {
   assignReviewerToPost: jest.fn(),
 };
+
+export const mockPostsCacheService = {
+  getUserPosts: jest.fn(),
+  setUserPosts: jest.fn(),
+  getPublicPosts: jest.fn(),
+  setPublicPosts: jest.fn(),
+  getStaffPosts: jest.fn(),
+  setStaffPosts: jest.fn(),
+  getPostById: jest.fn(),
+  setPostById: jest.fn(),
+  invalidateLikeRelatedCache: jest.fn(),
+};
+
+export const mockQueueRetryHandler = {
+  runOrThrow: jest.fn((action: () => Promise<void>) => action()),
+};

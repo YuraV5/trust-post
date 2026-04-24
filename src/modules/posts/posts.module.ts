@@ -8,11 +8,12 @@ import { BullModule } from '@nestjs/bullmq';
 import { POSTS_QUEUE } from './consts';
 import { REDIS_DB } from '../../configs/redis/redis-db';
 import { PostsQueueProcessor, PostsQueueService } from './queue';
-import { PostsReviewService } from './services';
+import { PostsCacheService, PostsReviewService } from './services';
 import { EmailsModule } from '../emails/emails.module';
 import { CommentsModule } from './comments/comments.module';
 import { PostsFilesModule } from './posts-files/posts-files.module';
 import { MetricsModule } from '../../infrastructure/metrics/metrics.module';
+import { QueueRetryHandlerService } from '../queues/services';
 
 @Module({
   imports: [
@@ -41,8 +42,10 @@ import { MetricsModule } from '../../infrastructure/metrics/metrics.module';
     PostsRepo,
     PostsReviewRepo,
     PostsLikeRepo,
+    PostsCacheService,
     PostsQueueService,
     PostsQueueProcessor,
+    QueueRetryHandlerService,
   ],
   exports: [PostsService, PostsReviewService, PostsQueueService],
 })

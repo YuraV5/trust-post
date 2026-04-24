@@ -14,7 +14,6 @@ import { CommentsModule } from './comments/comments.module';
 import { PostsFilesModule } from './posts-files/posts-files.module';
 import { MetricsModule } from '../../infrastructure/metrics/metrics.module';
 import { QueueRetryHandlerService } from '../queues/services';
-import { APP_MODE } from '../../common/consts';
 
 @Module({
   imports: [
@@ -26,8 +25,7 @@ import { APP_MODE } from '../../common/consts';
         connection: {
           host: config.get<string>('redis.host', 'localhost'),
           port: config.get<number>('redis.port', 6379),
-          password:
-            config.get<string>('nodeEnv') === APP_MODE.PRODUCTION ? config.get<string>('redis.password') : undefined,
+          password: config.get<string>('redis.password') || process.env.REDIS_PASSWORD || undefined,
           db: REDIS_DB.POSTS,
         },
       }),

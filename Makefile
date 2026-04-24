@@ -1,60 +1,60 @@
 ENV_FILE ?= .env
 DOCKER_COMPOSE := docker compose --env-file $(ENV_FILE)
-LOCAL_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml
-LOCAL_MONITORING_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml -f docker-compose.monitoring.dev.yml
+DEV_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml
+PROD_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.yml --profile monitoring
 
-# Pull the latest image from DockerHub and start app + db + redis + monitoring.
-start:
+# Ensure environment file exists.
+ensure-env:
 	@if [ ! -f $(ENV_FILE) ]; then \
 		echo "No $(ENV_FILE) found — copying .env.example"; \
 		cp .env.example $(ENV_FILE); \
 	fi
-	$(DOCKER_COMPOSE) --profile monitoring pull app
-	$(DOCKER_COMPOSE) --profile monitoring up -d
 
-# Stop the full stack.
-stop:
-	$(DOCKER_COMPOSE) --profile monitoring down
+# One-command production-like local startup: pull latest app image and run full stack.
+prod: ensure-env
+	$(PROD_COMPOSE) pull app
+	$(PROD_COMPOSE) up -d
+
+# Backward-compatible alias.
+start: prod
+
+# Stop the full containerized stack.
+prod-down:
+	$(PROD_COMPOSE) down
+
+# Backward-compatible alias.
+stop: prod-down
 
 # Start only local infrastructure for development.
 dev-up:
-	$(LOCAL_COMPOSE) up -d
+	$(DEV_COMPOSE) up -d
 
 # Stop local infrastructure and remove containers.
 dev-down:
-	$(LOCAL_COMPOSE) down
+	$(DEV_COMPOSE) down
 
 # Follow local infrastructure logs.
 dev-logs:
-	$(LOCAL_COMPOSE) logs -f db redis
+	$(DEV_COMPOSE) logs -f db redis
 
 # Run the app locally with hot reload.
 app-dev:
 	npm run dev
 
-# Start monitoring containers that scrape the locally running app.
-monitor-up:
-	$(LOCAL_MONITORING_COMPOSE) up -d
-
-# Stop only the monitoring containers for local development.
-monitor-down:
-	$(LOCAL_MONITORING_COMPOSE) down
-
-# Follow logs for Prometheus, Grafana, Loki and exporters.
-monitor-logs:
-	$(LOCAL_MONITORING_COMPOSE) logs -f prometheus grafana loki promtail postgres-exporter redis-exporter node-exporter
-
-# Start the full containerized stack, including the app.
-prod-up:
-	$(DOCKER_COMPOSE) --profile monitoring up -d
-
-# Stop the full containerized stack.
-prod-down:
-	$(DOCKER_COMPOSE) down
-
 # Follow logs for the full containerized stack.
 prod-logs:
-	$(DOCKER_COMPOSE) logs -f app db redis prometheus grafana loki promtail alertmanager
+	$(PROD_COMPOSE) logs -f app db redis prometheus grafana loki promtail alertmanager
+
+# Apply production-safe Prisma migrations in the app container.
+prod-migrate:
+	$(PROD_COMPOSE) exec -T app npm run mgr:deploy
+
+# Seed production-like local data in the app container.
+prod-seed:
+	$(PROD_COMPOSE) exec -T app npm run seed:full
+
+# Full bootstrap for production-like local env: start, migrate, seed.
+prod-bootstrap: prod prod-migrate prod-seed
 
 # Build the Nest application.
 build:

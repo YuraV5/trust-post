@@ -37,14 +37,23 @@ WayForPay payments, AI comment moderation (Gemini), and a full observability sta
 ```bash
 cp .env.example .env
 # Edit .env: set JWT secrets, DB password, Redis password, Cloudinary keys, etc.
-make start
+make prod
 ```
 
 This pulls the latest image from DockerHub and starts the app, PostgreSQL, Redis,
 and the full monitoring stack in one command.
 
+After startup, apply migrations and seed data inside the app container:
+
 ```bash
-make stop   # stop all containers
+make prod-migrate
+make prod-seed
+# or all-in-one bootstrap:
+make prod-bootstrap
+```
+
+```bash
+make prod-down   # stop all containers
 ```
 
 **Service URLs after startup:**
@@ -87,13 +96,6 @@ npm run dev
 ```
 
 App runs at `http://localhost:3001`.
-
-**Optional: start the monitoring stack** (scrapes the host app):
-
-```bash
-make monitor-up    # start Grafana, Prometheus, Loki
-make monitor-down  # stop monitoring stack
-```
 
 **Logs** are written to the console. When `LOGGER_FILE_ENABLED=true` they are also saved to:
 

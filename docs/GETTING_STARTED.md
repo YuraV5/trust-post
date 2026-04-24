@@ -46,5 +46,4 @@ npm run dev
 
 ```bash
 npm run docker:dev:down
-npm run docker:monitor:dev:down
 ```

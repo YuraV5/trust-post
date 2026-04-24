@@ -200,8 +200,3 @@ npm run dev          # start app with hot reload (localhost:3001)
 
 Swagger UI: `http://localhost:3001/docs`  
 Metrics: `http://localhost:3001/metrics`
-
-Optional monitoring stack:
-```bash
-make monitor-up      # Grafana :3000, Prometheus :9090, Loki :3100
-```

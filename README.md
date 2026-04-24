@@ -6,7 +6,9 @@ WayForPay payments, AI comment moderation (Gemini), and a full observability sta
 (Prometheus + Grafana + Loki).
 
 > API docs available at `http://localhost:3001/docs` once the app is running.  
-> For a full module breakdown see [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).
+> For a full module breakdown see [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md).  
+> For complete API endpoint reference see [docs/ENDPOINTS.md](docs/ENDPOINTS.md).  
+> For API usage patterns see [docs/API_SWAGGER.md](docs/API_SWAGGER.md).
 
 ---
 

@@ -8,7 +8,7 @@ import {
   AppConfigException,
   AppInternalServerException,
 } from '../../../../shared/errors/app-errors';
-import { FileFolder, FileUploadResult, FileStorageInfo, FileUploadResponse } from '../../types';
+import { FileUploadResult, FileUploadResponse, ResolvedFileStorageInfo } from '../../types';
 import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { ICloudinaryClient } from '../../interfaces/cloudinary';
@@ -50,7 +50,7 @@ export class CloudinaryClient implements ICloudinaryClient {
 
   async upload(
     files: { buffer: Buffer; originalname: string; mimetype: string; size: number }[],
-    data: FileStorageInfo,
+    data: ResolvedFileStorageInfo,
     concurrency = CONCURRENCY_LIMIT,
   ): Promise<FileUploadResponse> {
     const uploaded: FileUploadResult[] = [];
@@ -181,7 +181,7 @@ export class CloudinaryClient implements ICloudinaryClient {
 
   private async uploadSingle(
     file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
-    data: FileStorageInfo,
+    data: ResolvedFileStorageInfo,
   ): Promise<FileUploadResult> {
     await this.applyRateLimit();
 
@@ -189,7 +189,7 @@ export class CloudinaryClient implements ICloudinaryClient {
       async () => {
         const stream = Readable.from(file.buffer);
         return this.uploadStream(stream, {
-          folder: this.constructFilePath(data.fileFolder, data.userId, String(data.resourceId)),
+          folder: this.constructFilePath(data.pathSegment, data.userId, data.resourceId),
           public_id: `${Date.now()}_${randomUUID()}`,
           resource_type: 'auto',
         });
@@ -202,13 +202,14 @@ export class CloudinaryClient implements ICloudinaryClient {
       },
     );
 
+    this.logger.debug('Cloudinary upload successful', { file: file.originalname });
+
     return {
       url: uploadResult.secure_url,
       storageKey: uploadResult.public_id,
       size: uploadResult.bytes,
       originalName: file.originalname,
       mimeType: file.mimetype,
-      provider: FileProvider.CLOUDINARY,
       metadata: {
         width: uploadResult.width || 0,
         height: uploadResult.height || 0,
@@ -217,11 +218,10 @@ export class CloudinaryClient implements ICloudinaryClient {
     };
   }
 
-  private constructFilePath(type: FileFolder, userId: string, resourceId?: string): string {
+  private constructFilePath(pathSegment: string, userId: string, resourceId?: string): string {
     const appName = this.config.get<string>('serviceName') || 'trust-post';
-    const base = `${appName}/${userId}/${type}`;
-    if (type === FileFolder.AVATAR) return base;
-    if (!resourceId) throw new AppBadRequestException(`${type} requires resourceId`);
+    const base = `${appName}/${userId}/${pathSegment}`;
+    if (!resourceId) return base;
     return `${base}/${resourceId}`;
   }
 

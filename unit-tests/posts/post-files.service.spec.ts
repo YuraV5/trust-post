@@ -110,7 +110,7 @@ describe('PostFilesService', () => {
 
       const result = await service.deleteFilesByPostId(1);
 
-      expect(filesServiceMock.delete).toHaveBeenCalledWith([file.storageKey], file.provider);
+      expect(filesServiceMock.delete).toHaveBeenCalledWith([file.storageKey]);
       expect(result.message).toContain('Successfully deleted 1 files');
     });
 

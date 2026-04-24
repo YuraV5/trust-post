@@ -1,15 +1,33 @@
 import { FileProvider } from '@prisma/client';
 
-export type FileStorageInfo = {
-  resourceId: number | string;
+export enum FileUploadTarget {
+  PROFILE = 'profile',
+  POST = 'post',
+  CHAT = 'chat',
+}
+
+export type FileUploadRequest = {
+  resourceId?: number | string;
   userId: string;
-  fileFolder: FileFolder;
+  target: FileUploadTarget;
+};
+
+export type FileUploadConfig = {
   storage: FileProvider;
+  pathSegment: string;
+  requiresResourceId: boolean;
+};
+
+export type ResolvedFileStorageInfo = FileUploadRequest & {
+  resourceId?: string;
+  storage: FileProvider;
+  pathSegment: string;
+  requiresResourceId: boolean;
 };
 
 export type FileUploadOptions = {
   filename: string;
-  type: FileFolder;
+  type: string;
   userId: string;
   resourceId: string;
   storage: FileProvider;
@@ -21,7 +39,6 @@ export type FileUploadResult = {
   size: number;
   originalName: string;
   mimeType: string;
-  provider: FileProvider;
   metadata: {
     width: number;
     height: number;
@@ -40,9 +57,3 @@ export type NewFileData = {
   userId: string;
   resourceId: string; // postId or chatId depending on type
 };
-
-export enum FileFolder {
-  AVATAR = 'avatar',
-  POSTS = 'posts',
-  CHATS = 'chats',
-}

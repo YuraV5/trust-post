@@ -10,9 +10,7 @@ import {
   IsNumber,
   Min,
   IsObject,
-  IsEnum,
 } from 'class-validator';
-import { FileProvider } from '@prisma/client';
 
 export class FileMetadataDto {
   @ApiProperty({ description: 'Image width in pixels', required: false })
@@ -49,10 +47,6 @@ export class LinkFileRecordDto {
   @ApiProperty({ description: 'MIME type' })
   @IsString()
   mimeType: string;
-
-  @ApiProperty({ description: 'Storage provider (CLOUDINARY, etc.)' })
-  @IsEnum(FileProvider)
-  provider: FileProvider;
 
   @ApiProperty({ description: 'File metadata (dimensions, format)' })
   @IsObject()

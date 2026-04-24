@@ -1108,7 +1108,7 @@
                     "link"
                   ]
                 },
-                "description": "Owner only. Use after uploading via POST /files/images."
+                "description": "Owner only. Use after uploading via POST /files/post/images. Storage and Cloudinary path are resolved on the server."
               },
               "response": []
             },
@@ -1541,31 +1541,22 @@
                   "key": "resourceId",
                   "value": "1",
                   "type": "text",
-                  "description": "Post ID this image belongs to"
-                },
-                {
-                  "key": "fileFolder",
-                  "value": "posts",
-                  "type": "text"
-                },
-                {
-                  "key": "storage",
-                  "value": "CLOUDINARY",
-                  "type": "text"
+                  "description": "Required for post/chat uploads. Omit for profile uploads."
                 }
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/files/images",
+              "raw": "{{baseUrl}}/files/post/images",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "files",
+                "post",
                 "images"
               ]
             },
-            "description": "Returns Cloudinary URL and storageKey. Use storageKey to link files to a post via POST /posts/:id/files/link."
+            "description": "Returns uploaded file metadata. Supported targets: post, chat, profile. Server resolves storage and Cloudinary path internally."
           },
           "response": []
         },
@@ -1587,57 +1578,21 @@
                   "key": "resourceId",
                   "value": "1",
                   "type": "text"
-                },
-                {
-                  "key": "fileFolder",
-                  "value": "posts",
-                  "type": "text"
-                },
-                {
-                  "key": "storage",
-                  "value": "CLOUDINARY",
-                  "type": "text"
                 }
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/files/documents",
+              "raw": "{{baseUrl}}/files/post/documents",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "files",
+                "post",
                 "documents"
               ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "delete files by keys",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"storage\": \"CLOUDINARY\",\n  \"keys\": [\n    \"trust-post/user-id/posts/1/image1\",\n    \"trust-post/user-id/posts/1/image2\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
             },
-            "url": {
-              "raw": "{{baseUrl}}/files/delete",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "files",
-                "delete"
-              ]
-            },
-            "description": "Ownership verified — only user-owned files can be deleted."
+            "description": "Use `post`, `chat`, or `profile` in the URL target segment. Do not send storage or file path from the client."
           },
           "response": []
         }

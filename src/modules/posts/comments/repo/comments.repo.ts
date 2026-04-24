@@ -48,22 +48,22 @@ export class CommentsRepo implements ICommentsRepo {
 
     const where: Prisma.CommentWhereInput = viewerId
       ? {
-        postId,
-        OR: [
-          { status: CommentStatus.APPROVED },
-          {
-            authorId: viewerId,
-            status: {
-              in: [CommentStatus.PENDING, CommentStatus.PROCESSING],
-              notIn: [CommentStatus.FAILED, CommentStatus.REJECTED, CommentStatus.DELETED],
+          postId,
+          OR: [
+            { status: CommentStatus.APPROVED },
+            {
+              authorId: viewerId,
+              status: {
+                in: [CommentStatus.PENDING, CommentStatus.PROCESSING],
+                notIn: [CommentStatus.FAILED, CommentStatus.REJECTED, CommentStatus.DELETED],
+              },
             },
-          },
-        ],
-      }
+          ],
+        }
       : {
-        postId,
-        status: CommentStatus.APPROVED,
-      };
+          postId,
+          status: CommentStatus.APPROVED,
+        };
 
     const orderBy: Prisma.CommentOrderByWithRelationInput = {
       [sortBy]: sortOrder,
@@ -75,7 +75,7 @@ export class CommentsRepo implements ICommentsRepo {
         skip,
         take: limit,
         orderBy,
-        include: { author: { select: { name: true } } }
+        include: { author: { select: { name: true } } },
       }),
       this.db.comment.count({ where }),
     ]);

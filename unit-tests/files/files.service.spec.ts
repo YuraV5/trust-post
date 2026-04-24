@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FileProvider } from '@prisma/client';
 import { FilesService } from '../../src/modules/files/services/files.service';
 import { CloudinaryClient } from '../../src/modules/files/services/clients';
-import { FileFolder, FileStorageInfo } from '../../src/modules/files/types';
+import { FileUploadTarget } from '../../src/modules/files/types';
 
 describe('FilesService', () => {
   let service: FilesService;
@@ -30,8 +30,7 @@ describe('FilesService', () => {
     const storageInfo = {
       resourceId: 123,
       userId: 'user-1',
-      storage: FileProvider.CLOUDINARY,
-      fileFolder: FileFolder.POSTS,
+      target: FileUploadTarget.POST,
     };
 
     it('throws when no files are provided', async () => {
@@ -45,27 +44,32 @@ describe('FilesService', () => {
 
       const result = await service.upload(files, storageInfo);
 
-      expect(mockCloudinaryClient.upload).toHaveBeenCalledWith(files, storageInfo);
+      expect(mockCloudinaryClient.upload).toHaveBeenCalledWith(files, {
+        resourceId: '123',
+        userId: 'user-1',
+        target: FileUploadTarget.POST,
+        storage: FileProvider.CLOUDINARY,
+        pathSegment: 'posts',
+        requiresResourceId: true,
+      });
       expect(result).toEqual(uploadResult);
     });
 
-    it('throws for unsupported storage provider', async () => {
+    it('throws when resourceId is missing for post uploads', async () => {
       const files = [{ buffer: Buffer.from('data'), originalname: 'img.png', mimetype: 'image/png', size: 100 }];
 
       await expect(
         service.upload(files, {
-          resourceId: 123,
           userId: 'user-1',
-          storage: 'S3' as FileProvider,
-          fileFolder: FileFolder.POSTS,
+          target: FileUploadTarget.POST,
         }),
-      ).rejects.toThrow('Unsupported storage');
+      ).rejects.toThrow('resourceId is required for post uploads');
     });
   });
 
   describe('delete', () => {
     it('does nothing when keys array is empty', async () => {
-      await service.delete([], FileProvider.CLOUDINARY);
+      await service.delete([]);
 
       expect(mockCloudinaryClient.delete).not.toHaveBeenCalled();
     });
@@ -73,13 +77,9 @@ describe('FilesService', () => {
     it('delegates deletion to CloudinaryClient for CLOUDINARY storage', async () => {
       mockCloudinaryClient.delete.mockResolvedValue(undefined);
 
-      await service.delete(['key-1', 'key-2'], FileProvider.CLOUDINARY);
+      await service.delete(['key-1', 'key-2']);
 
       expect(mockCloudinaryClient.delete).toHaveBeenCalledWith(['key-1', 'key-2']);
-    });
-
-    it('throws for unsupported storage provider', async () => {
-      await expect(service.delete(['key-1'], 'S3' as FileProvider)).rejects.toThrow('Unsupported storage');
     });
   });
 });

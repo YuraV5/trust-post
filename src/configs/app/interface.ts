@@ -30,6 +30,12 @@ export interface IAppConfig {
     paymentWebhookBlockTtlMs: number;
   };
 
+  cache: {
+    postsListTtlSeconds: number;
+    postByIdTtlSeconds: number;
+    commentsListTtlSeconds: number;
+  };
+
   redis: {
     host: string;
     port: number;

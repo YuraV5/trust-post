@@ -39,6 +39,12 @@ export default (): IAppConfig => ({
     paymentWebhookBlockTtlMs: parseInt(process.env.THROTTLE_PAYMENT_WEBHOOK_BLOCK_TTL_MS!, 10) || 300000,
   },
 
+  cache: {
+    postsListTtlSeconds: parseInt(process.env.CACHE_POSTS_LIST_TTL_SECONDS!, 10) || 30,
+    postByIdTtlSeconds: parseInt(process.env.CACHE_POST_BY_ID_TTL_SECONDS!, 10) || 30,
+    commentsListTtlSeconds: parseInt(process.env.CACHE_COMMENTS_LIST_TTL_SECONDS!, 10) || 30,
+  },
+
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     password: process.env.REDIS_PASSWORD || undefined,

@@ -10,6 +10,9 @@ import { COMMENTS_MODERATION_QUEUE } from './consts';
 import { CommentsModerationQueueProcessor, CommentsModerationQueueService } from './queue';
 import { CommentsModerationService } from './moderation/comments-moderation.service';
 import { SecurityModule } from '../../security/security.module';
+import { QueueRetryHandlerService } from '../../queues/services';
+import { CommentsCacheService } from './services/comments-cache.service';
+import { CommentsModerationRetryHandler } from './services/comments-moderation-retry.handler';
 
 @Module({
   imports: [
@@ -31,11 +34,14 @@ import { SecurityModule } from '../../security/security.module';
   controllers: [CommentsController],
   providers: [
     CommentsService,
+    CommentsCacheService,
+    CommentsModerationRetryHandler,
     CommentsRepo,
     CommentLikeRepo,
     CommentsModerationQueueService,
     CommentsModerationQueueProcessor,
     CommentsModerationService,
+    QueueRetryHandlerService,
   ],
   exports: [CommentsService, CommentsModerationQueueService],
 })

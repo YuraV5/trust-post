@@ -11,81 +11,74 @@ import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from
 import { PostsQueueService } from '../queue';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
-import { RedisService } from '../../cache/services';
+import { PostsCacheService } from './posts-cache.service';
+import { QueueRetryHandlerService } from '../../queues/services';
 
 @Injectable()
 export class PostsService implements IPostsService {
   private readonly MAX_LIMIT = 100;
-  private readonly POSTS_LIST_CACHE_TTL_SECONDS = 30;
-  private readonly POST_BY_ID_CACHE_TTL_SECONDS = 30;
 
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly postsRepo: PostsRepo,
     private readonly postLikeRepo: PostsLikeRepo,
     private readonly postQueue: PostsQueueService,
-    private readonly redisService: RedisService,
+    private readonly postsCacheService: PostsCacheService,
+    private readonly queueRetryHandler: QueueRetryHandlerService,
   ) {}
 
   async create(authorId: string, data: CreatePost): Promise<Post> {
     const post = await this.postsRepo.create(authorId, data);
-    try {
-      await this.postQueue.assignReviewerToPost(post.id);
-    } catch (error) {
-      this.logger.error('Failed to enqueue reviewer assignment after post creation', {
+
+    await this.queueRetryHandler.runOrThrow(() => this.postQueue.assignReviewerToPost(post.id), {
+      operation: 'posts-create-reviewer-assignment',
+      metadata: {
         authorId,
         postId: post.id,
-        error: error as Error,
-      });
-    }
+      },
+    });
+
     return post;
   }
 
   async getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<Post>> {
     const normalized = this.normalizeUserPostsQuery(query);
-    const cacheKey = this.buildCacheKey('user', userId, normalized);
-
-    const cached = await this.readCache<PaginatedResult<Post>>(cacheKey);
+    const cached = await this.postsCacheService.getUserPosts<PaginatedResult<Post>>(userId, normalized);
     if (cached) {
       return cached;
     }
 
     const result = await this.postsRepo.findByAuthorIdPaginated(userId, normalized);
-    await this.writeCache(cacheKey, result, this.POSTS_LIST_CACHE_TTL_SECONDS);
+    await this.postsCacheService.setUserPosts(userId, normalized, result);
     return result;
   }
 
   async getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<Post>> {
     const normalized = this.normalizePublicQuery(query);
-    const cacheKey = this.buildCacheKey('public', normalized);
-
-    const cached = await this.readCache<PaginatedResult<Post>>(cacheKey);
+    const cached = await this.postsCacheService.getPublicPosts<PaginatedResult<Post>>(normalized);
     if (cached) {
       return cached;
     }
 
     const result = await this.postsRepo.findManyPublic(normalized);
-    await this.writeCache(cacheKey, result, this.POSTS_LIST_CACHE_TTL_SECONDS);
+    await this.postsCacheService.setPublicPosts(normalized, result);
     return result;
   }
 
   async getAllStaffPosts(query: PostsStaffQueryDto): Promise<PaginatedResult<Post>> {
     const normalized = this.normalizeStaffQuery(query);
-    const cacheKey = this.buildCacheKey('staff', normalized);
-
-    const cached = await this.readCache<PaginatedResult<Post>>(cacheKey);
+    const cached = await this.postsCacheService.getStaffPosts<PaginatedResult<Post>>(normalized);
     if (cached) {
       return cached;
     }
 
     const result = await this.postsRepo.findManyStaff(normalized);
-    await this.writeCache(cacheKey, result, this.POSTS_LIST_CACHE_TTL_SECONDS);
+    await this.postsCacheService.setStaffPosts(normalized, result);
     return result;
   }
 
   async findById(id: number): Promise<Post> {
-    const cacheKey = this.buildCacheKey('post', id);
-    const cached = await this.readCache<Post>(cacheKey);
+    const cached = await this.postsCacheService.getPostById<Post>(id);
 
     if (cached) {
       return cached;
@@ -96,7 +89,7 @@ export class PostsService implements IPostsService {
       throw new AppNotFoundException('No posts found');
     }
 
-    await this.writeCache(cacheKey, post, this.POST_BY_ID_CACHE_TTL_SECONDS);
+    await this.postsCacheService.setPostById(id, post);
     return post;
   }
 
@@ -130,18 +123,16 @@ export class PostsService implements IPostsService {
       throw new AppNotFoundException('No posts were updated');
     }
 
-    // Fire-and-log queue operations safely
-    const queueResults = await Promise.allSettled(postIds.map((postId) => this.postQueue.assignReviewerToPost(postId)));
-
-    // Log failed queue jobs but do not fail request
-    queueResults.forEach((res, index) => {
-      if (res.status === 'rejected') {
-        this.logger.error('Failed to enqueue reviewer assignment', {
-          postId: postIds[index],
-          error: res.reason,
-        });
-      }
-    });
+    await Promise.all(
+      postIds.map((postId) =>
+        this.queueRetryHandler.runOrThrow(() => this.postQueue.assignReviewerToPost(postId), {
+          operation: 'posts-update-reviewer-assignment',
+          metadata: {
+            postId,
+          },
+        }),
+      ),
+    );
 
     return { message: 'Post updated successfully' };
   }
@@ -171,12 +162,12 @@ export class PostsService implements IPostsService {
 
     if (like) {
       await this.postLikeRepo.deleteLike(postId, userId);
-      await this.invalidateLikeRelatedCache(postId, userId);
+      await this.postsCacheService.invalidateLikeRelatedCache(postId, userId);
       return { message: 'Like removed', liked: false };
     }
 
     await this.postLikeRepo.createLike(postId, userId);
-    await this.invalidateLikeRelatedCache(postId, userId);
+    await this.postsCacheService.invalidateLikeRelatedCache(postId, userId);
     return { message: 'Like added', liked: true };
   }
 
@@ -240,66 +231,4 @@ export class PostsService implements IPostsService {
     };
   }
 
-  private buildCacheKey(scope: string, ...parts: Array<string | number | object>): string {
-    const suffix = parts
-      .map((p) => (typeof p === 'string' || typeof p === 'number' ? String(p) : JSON.stringify(p)))
-      .join(':');
-    return `cache:posts:${scope}${suffix ? `:${suffix}` : ''}`;
-  }
-
-  private async readCache<T>(key: string): Promise<T | null> {
-    try {
-      const cached = await this.redisService.get(key);
-      if (!cached) {
-        return null;
-      }
-
-      return JSON.parse(cached) as T;
-    } catch (error) {
-      this.logger.error('Posts cache read failed', {
-        key,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    }
-  }
-
-  private async writeCache(key: string, value: unknown, ttlSeconds: number): Promise<void> {
-    try {
-      await this.redisService.set(key, JSON.stringify(value), ttlSeconds);
-    } catch (error) {
-      this.logger.error('Posts cache write failed', {
-        key,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  private async invalidateLikeRelatedCache(postId: number, userId: string): Promise<void> {
-    const exactKey = `cache:posts:post:${postId}`;
-    const wildcardPatterns = [`cache:posts:user:${userId}:*`, `cache:posts:public:*`, `cache:posts:staff:*`];
-
-    try {
-      await this.redisService.del(exactKey);
-    } catch (error) {
-      this.logger.warn('Posts cache invalidation failed after like toggle', {
-        key: exactKey,
-        postId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-
-    for (const pattern of wildcardPatterns) {
-      try {
-        await this.redisService.delByPattern(pattern);
-      } catch (error) {
-        this.logger.warn('Posts cache invalidation failed after like toggle', {
-          pattern,
-          postId,
-          userId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-  }
 }

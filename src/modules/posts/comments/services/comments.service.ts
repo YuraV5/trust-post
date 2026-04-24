@@ -16,23 +16,22 @@ import { ICommentsService } from '../interfaces';
 import { CommentsQueryDto } from '../dtos';
 import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../../shared/logger/interfaces/interface';
-import { CommentsModerationQueueService } from '../queue';
 import { TokensService } from '../../../security/services';
-import { RedisService } from '../../../cache/services';
+import { CommentsCacheService } from './comments-cache.service';
+import { CommentsModerationRetryHandler } from './comments-moderation-retry.handler';
 
 @Injectable()
 export class CommentsService implements ICommentsService {
   private readonly MAX_LIMIT = 100;
   private readonly RETRY_BATCH_SIZE = 25;
-  private readonly COMMENTS_LIST_CACHE_TTL_SECONDS = 30;
 
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly commentsRepo: CommentsRepo,
     private readonly commentLikesRepo: CommentLikeRepo,
-    private readonly moderationQueue: CommentsModerationQueueService,
+    private readonly moderationRetryHandler: CommentsModerationRetryHandler,
     private readonly tokensService: TokensService,
-    private readonly redisService: RedisService,
+    private readonly commentsCacheService: CommentsCacheService,
   ) {}
 
   async create(postId: number, authorId: string, data: CreateCommentInput): Promise<ResponseMessage> {
@@ -41,25 +40,17 @@ export class CommentsService implements ICommentsService {
       content: data.content,
     });
 
-    this.moderationQueue
-      .enqueue({ commentId: comment.id, postId, content: comment.content })
-      .then(() => this.commentsRepo.setModerationProcessing(comment.id))
-      .catch(async (error) => {
-        try {
-          await this.commentsRepo.markModerationServiceUnavailable(comment.id, 'queue enqueue failed');
-        } catch (markError) {
-          this.logger.error('Failed to mark comment as failed after enqueue error', {
-            commentId: comment.id,
-            postId,
-            error: markError as Error,
-          });
-        }
-        this.logger.error('Failed to enqueue comment moderation job after creation', {
-          commentId: comment.id,
-          postId,
-          error: error as Error,
-        });
-      });
+    await this.moderationRetryHandler.enqueueOrThrow(
+      {
+        id: comment.id,
+        postId,
+        content: comment.content,
+      },
+      {
+        action: 'create',
+        setProcessing: true,
+      },
+    );
 
     this.logger.info(`Comment created by user ${authorId} on post ${postId}`, { commentId: comment.id });
 
@@ -72,19 +63,13 @@ export class CommentsService implements ICommentsService {
     viewerId?: string,
   ): Promise<PaginatedResult<Comment>> {
     const normalized = this.normalizeQuery(query);
-    const cacheKey = this.buildCacheKey('comments-by-post', {
-      postId,
-      viewerId: viewerId ?? null,
-      query: normalized,
-    });
-
-    const cached = await this.readCache<PaginatedResult<Comment>>(cacheKey);
+    const cached = await this.commentsCacheService.getByPostQuery<PaginatedResult<Comment>>(postId, normalized, viewerId);
     if (cached) {
       return cached;
     }
 
     const result = await this.commentsRepo.findByPostIdPaginated(postId, normalized, viewerId);
-    await this.writeCache(cacheKey, result, this.COMMENTS_LIST_CACHE_TTL_SECONDS);
+    await this.commentsCacheService.setByPostQuery(postId, normalized, result, viewerId);
     return result;
   }
 
@@ -100,26 +85,19 @@ export class CommentsService implements ICommentsService {
 
     const updatedComment = await this.commentsRepo.update(id, data);
     this.logger.info(`Comment ${id} updated`);
+
     if (updatedComment?.id) {
-      this.moderationQueue
-        .enqueue({ commentId: updatedComment.id, postId: updatedComment.postId, content: updatedComment.content })
-        .then(() => this.commentsRepo.setModerationProcessing(updatedComment.id))
-        .catch(async (error) => {
-          try {
-            await this.commentsRepo.markModerationServiceUnavailable(updatedComment.id, 'queue enqueue failed');
-          } catch (markError) {
-            this.logger.error('Failed to mark comment as failed after enqueue error', {
-              commentId: updatedComment.id,
-              postId: updatedComment.postId,
-              error: markError as Error,
-            });
-          }
-          this.logger.error('Failed to enqueue comment moderation job after update', {
-            commentId: updatedComment.id,
-            postId: updatedComment.postId,
-            error: error as Error,
-          });
-        });
+      await this.moderationRetryHandler.enqueueOrThrow(
+        {
+          id: updatedComment.id,
+          postId: updatedComment.postId,
+          content: updatedComment.content,
+        },
+        {
+          action: 'update',
+          setProcessing: true,
+        },
+      );
     }
 
     return { message: 'Comment updated successfully' };
@@ -176,30 +154,18 @@ export class CommentsService implements ICommentsService {
           continue;
         }
 
-        this.moderationQueue
-          .enqueue({
-            commentId: comment.id,
+        await this.moderationRetryHandler.enqueueOrThrow(
+          {
+            id: comment.id,
             postId: comment.postId,
             content: comment.content,
-          })
-          .catch(async (error) => {
-            try {
-              await this.commentsRepo.markModerationServiceUnavailable(comment.id, 'queue enqueue failed');
-            } catch (markError) {
-              this.logger.error('Failed to rollback comment to failed after retry enqueue error', {
-                adminId,
-                commentId: comment.id,
-                postId: comment.postId,
-                error: markError as Error,
-              });
-            }
-            this.logger.error('Failed to enqueue comment moderation retry job', {
-              adminId,
-              commentId: comment.id,
-              postId: comment.postId,
-              error: error as Error,
-            });
-          });
+          },
+          {
+            action: 'retry',
+            adminId,
+            setProcessing: false,
+          },
+        );
 
         queuedCount += 1;
       }
@@ -274,37 +240,5 @@ export class CommentsService implements ICommentsService {
     }
 
     return chunks;
-  }
-
-  private buildCacheKey(scope: string, payload: unknown): string {
-    return `cache:comments:${scope}:${JSON.stringify(payload)}`;
-  }
-
-  private async readCache<T>(key: string): Promise<T | null> {
-    try {
-      const cached = await this.redisService.get(key);
-      if (!cached) {
-        return null;
-      }
-
-      return JSON.parse(cached) as T;
-    } catch (error) {
-      this.logger.error('Comments cache read failed', {
-        key,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    }
-  }
-
-  private async writeCache(key: string, value: unknown, ttlSeconds: number): Promise<void> {
-    try {
-      await this.redisService.set(key, JSON.stringify(value), ttlSeconds);
-    } catch (error) {
-      this.logger.error('Comments cache write failed', {
-        key,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
   }
 }

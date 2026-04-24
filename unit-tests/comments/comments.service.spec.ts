@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommentsService } from '../../src/modules/posts/comments/services/comments.service';
 import { CommentsRepo, CommentLikeRepo } from '../../src/modules/posts/comments/repo';
-import { CommentsModerationQueueService } from '../../src/modules/posts/comments/queue';
 import { TokensService } from '../../src/modules/security/services';
-import { RedisService } from '../../src/modules/cache/services';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
-import { StubAppLogger, mockRedisService } from '../__mock__';
+import { StubAppLogger } from '../__mock__';
+import { CommentsCacheService } from '../../src/modules/posts/comments/services/comments-cache.service';
+import { CommentsModerationRetryHandler } from '../../src/modules/posts/comments/services/comments-moderation-retry.handler';
 
 describe('CommentsService', () => {
   let service: CommentsService;
@@ -29,30 +29,31 @@ describe('CommentsService', () => {
     createLike: jest.fn(),
   };
 
-  const mockModerationQueue = {
-    enqueue: jest.fn(),
+  const mockModerationRetryHandler = {
+    enqueueOrThrow: jest.fn(),
+  };
+
+  const mockCommentsCacheService = {
+    getByPostQuery: jest.fn(),
+    setByPostQuery: jest.fn(),
   };
 
   const mockTokensService = {
     verifyAccess: jest.fn(),
   };
 
-  const flushAsyncTasks = async (): Promise<void> => {
-    await Promise.resolve();
-    await Promise.resolve();
-  };
-
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockCommentsCacheService.getByPostQuery.mockResolvedValue(null);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommentsService,
         { provide: CommentsRepo, useValue: mockCommentsRepo },
         { provide: CommentLikeRepo, useValue: mockCommentLikeRepo },
-        { provide: CommentsModerationQueueService, useValue: mockModerationQueue },
+        { provide: CommentsModerationRetryHandler, useValue: mockModerationRetryHandler },
+        { provide: CommentsCacheService, useValue: mockCommentsCacheService },
         { provide: TokensService, useValue: mockTokensService },
-        { provide: RedisService, useValue: mockRedisService },
         { provide: APP_LOGGER, useValue: StubAppLogger },
       ],
     }).compile();
@@ -71,48 +72,35 @@ describe('CommentsService', () => {
         postId: 5,
         content: 'First comment',
       });
-      mockModerationQueue.enqueue.mockResolvedValue(undefined);
-      mockCommentsRepo.setModerationProcessing.mockResolvedValue(undefined);
+      mockModerationRetryHandler.enqueueOrThrow.mockResolvedValue(undefined);
 
       const result = await service.create(5, 'user-1', { content: 'First comment' });
-      await flushAsyncTasks();
 
       expect(result).toEqual({ message: 'Comment created successfully' });
       expect(mockCommentsRepo.create).toHaveBeenCalledWith('user-1', {
         postId: 5,
         content: 'First comment',
       });
-      expect(mockModerationQueue.enqueue).toHaveBeenCalledWith({
-        commentId: 21,
+      expect(mockModerationRetryHandler.enqueueOrThrow).toHaveBeenCalledWith({
+        id: 21,
         postId: 5,
         content: 'First comment',
+      }, {
+        action: 'create',
+        setProcessing: true,
       });
-      expect(mockCommentsRepo.setModerationProcessing).toHaveBeenCalledWith(21);
       expect(StubAppLogger.info).toHaveBeenCalledWith('Comment created by user user-1 on post 5', { commentId: 21 });
     });
 
-    it('marks comment as failed when queue enqueue fails', async () => {
-      const queueError = new Error('queue down');
+    it('throws when moderation enqueue fails during creation', async () => {
       mockCommentsRepo.create.mockResolvedValue({
         id: 22,
         postId: 5,
         content: 'Queued later',
       });
-      mockModerationQueue.enqueue.mockRejectedValue(queueError);
-      mockCommentsRepo.markModerationServiceUnavailable.mockResolvedValue(undefined);
+      mockModerationRetryHandler.enqueueOrThrow.mockRejectedValue(new Error('queue down'));
 
-      await service.create(5, 'user-2', { content: 'Queued later' });
-      await flushAsyncTasks();
-
-      expect(mockCommentsRepo.markModerationServiceUnavailable).toHaveBeenCalledWith(22, 'queue enqueue failed');
-      expect(StubAppLogger.error).toHaveBeenCalledWith(
-        'Failed to enqueue comment moderation job after creation',
-        expect.objectContaining({
-          commentId: 22,
-          postId: 5,
-          error: queueError,
-        }),
-      );
+      await expect(service.create(5, 'user-2', { content: 'Queued later' })).rejects.toThrow('queue down');
     });
   });
 
@@ -164,42 +152,29 @@ describe('CommentsService', () => {
     it('updates a comment and re-enqueues moderation', async () => {
       mockCommentsRepo.getById.mockResolvedValue({ id: 9, postId: 4, content: 'Old comment' });
       mockCommentsRepo.update.mockResolvedValue({ id: 9, postId: 4, content: 'Updated comment' });
-      mockModerationQueue.enqueue.mockResolvedValue(undefined);
-      mockCommentsRepo.setModerationProcessing.mockResolvedValue(undefined);
+      mockModerationRetryHandler.enqueueOrThrow.mockResolvedValue(undefined);
 
       const result = await service.update(9, { content: 'Updated comment' });
-      await flushAsyncTasks();
 
       expect(result).toEqual({ message: 'Comment updated successfully' });
       expect(mockCommentsRepo.update).toHaveBeenCalledWith(9, { content: 'Updated comment' });
-      expect(mockModerationQueue.enqueue).toHaveBeenCalledWith({
-        commentId: 9,
+      expect(mockModerationRetryHandler.enqueueOrThrow).toHaveBeenCalledWith({
+        id: 9,
         postId: 4,
         content: 'Updated comment',
+      }, {
+        action: 'update',
+        setProcessing: true,
       });
-      expect(mockCommentsRepo.setModerationProcessing).toHaveBeenCalledWith(9);
       expect(StubAppLogger.info).toHaveBeenCalledWith('Comment 9 updated');
     });
 
-    it('marks updated comment as failed when re-enqueue fails', async () => {
-      const queueError = new Error('queue offline');
+    it('throws when moderation enqueue fails during update', async () => {
       mockCommentsRepo.getById.mockResolvedValue({ id: 10, postId: 3, content: 'Before' });
       mockCommentsRepo.update.mockResolvedValue({ id: 10, postId: 3, content: 'After' });
-      mockModerationQueue.enqueue.mockRejectedValue(queueError);
-      mockCommentsRepo.markModerationServiceUnavailable.mockResolvedValue(undefined);
+      mockModerationRetryHandler.enqueueOrThrow.mockRejectedValue(new Error('queue offline'));
 
-      await service.update(10, { content: 'After' });
-      await flushAsyncTasks();
-
-      expect(mockCommentsRepo.markModerationServiceUnavailable).toHaveBeenCalledWith(10, 'queue enqueue failed');
-      expect(StubAppLogger.error).toHaveBeenCalledWith(
-        'Failed to enqueue comment moderation job after update',
-        expect.objectContaining({
-          commentId: 10,
-          postId: 3,
-          error: queueError,
-        }),
-      );
+      await expect(service.update(10, { content: 'After' })).rejects.toThrow('queue offline');
     });
   });
 
@@ -252,10 +227,9 @@ describe('CommentsService', () => {
         { id: 2, postId: 10, content: 'B' },
       ]);
       mockCommentsRepo.setModerationProcessingIfFailed.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-      mockModerationQueue.enqueue.mockResolvedValue(undefined);
+      mockModerationRetryHandler.enqueueOrThrow.mockResolvedValue(undefined);
 
       const result = await service.retryFailedModerationByAdmin({ postId: 10, limit: 500 }, 'admin-1');
-      await flushAsyncTasks();
 
       expect(result).toEqual({ queuedCount: 1 });
       expect(mockCommentsRepo.findFailedForRetry).toHaveBeenCalledWith({
@@ -265,11 +239,15 @@ describe('CommentsService', () => {
       });
       expect(mockCommentsRepo.setModerationProcessingIfFailed).toHaveBeenNthCalledWith(1, 1);
       expect(mockCommentsRepo.setModerationProcessingIfFailed).toHaveBeenNthCalledWith(2, 2);
-      expect(mockModerationQueue.enqueue).toHaveBeenCalledTimes(1);
-      expect(mockModerationQueue.enqueue).toHaveBeenCalledWith({
-        commentId: 1,
+      expect(mockModerationRetryHandler.enqueueOrThrow).toHaveBeenCalledTimes(1);
+      expect(mockModerationRetryHandler.enqueueOrThrow).toHaveBeenCalledWith({
+        id: 1,
         postId: 10,
         content: 'A',
+      }, {
+        action: 'retry',
+        adminId: 'admin-1',
+        setProcessing: false,
       });
       expect(StubAppLogger.info).toHaveBeenCalledWith(
         'Admin started retry for failed comments moderation',
@@ -286,25 +264,13 @@ describe('CommentsService', () => {
       );
     });
 
-    it('rolls comment back to failed when retry enqueue fails', async () => {
-      const queueError = new Error('retry queue failed');
+    it('fails retry operation when queue is unavailable', async () => {
       mockCommentsRepo.findFailedForRetry.mockResolvedValue([{ id: 3, postId: 12, content: 'Retry me' }]);
       mockCommentsRepo.setModerationProcessingIfFailed.mockResolvedValue(true);
-      mockModerationQueue.enqueue.mockRejectedValue(queueError);
-      mockCommentsRepo.markModerationServiceUnavailable.mockResolvedValue(undefined);
+      mockModerationRetryHandler.enqueueOrThrow.mockRejectedValue(new Error('retry queue failed'));
 
-      await service.retryFailedModerationByAdmin({ authorId: 'user-9', limit: 5 }, 'admin-2');
-      await flushAsyncTasks();
-
-      expect(mockCommentsRepo.markModerationServiceUnavailable).toHaveBeenCalledWith(3, 'queue enqueue failed');
-      expect(StubAppLogger.error).toHaveBeenCalledWith(
-        'Failed to enqueue comment moderation retry job',
-        expect.objectContaining({
-          adminId: 'admin-2',
-          commentId: 3,
-          postId: 12,
-          error: queueError,
-        }),
+      await expect(service.retryFailedModerationByAdmin({ authorId: 'user-9', limit: 5 }, 'admin-2')).rejects.toThrow(
+        'retry queue failed',
       );
     });
   });

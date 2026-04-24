@@ -19,27 +19,27 @@ export class PostsCacheService {
   }
 
   async getUserPosts<T>(userId: string, query: unknown): Promise<T | null> {
-    return this.read<T>(this.buildKey('user', userId, query));
+    return this.read<T>(this.buildKey('user', userId, query as object));
   }
 
   async setUserPosts(userId: string, query: unknown, value: unknown): Promise<void> {
-    await this.write(this.buildKey('user', userId, query), value, this.postsListTtlSeconds);
+    await this.write(this.buildKey('user', userId, query as object), value, this.postsListTtlSeconds);
   }
 
   async getPublicPosts<T>(query: unknown): Promise<T | null> {
-    return this.read<T>(this.buildKey('public', query));
+    return this.read<T>(this.buildKey('public', query as object));
   }
 
   async setPublicPosts(query: unknown, value: unknown): Promise<void> {
-    await this.write(this.buildKey('public', query), value, this.postsListTtlSeconds);
+    await this.write(this.buildKey('public', query as object), value, this.postsListTtlSeconds);
   }
 
   async getStaffPosts<T>(query: unknown): Promise<T | null> {
-    return this.read<T>(this.buildKey('staff', query));
+    return this.read<T>(this.buildKey('staff', query as object));
   }
 
   async setStaffPosts(query: unknown, value: unknown): Promise<void> {
-    await this.write(this.buildKey('staff', query), value, this.postsListTtlSeconds);
+    await this.write(this.buildKey('staff', query as object), value, this.postsListTtlSeconds);
   }
 
   async getPostById<T>(postId: number): Promise<T | null> {

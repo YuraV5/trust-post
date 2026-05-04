@@ -60,7 +60,7 @@
       },
       "targets": [
         {
-          "expr": "posts_current_total",
+          "expr": "posts_current_total{job=\"trust-post-app\",instance=\"$instance\"}",
           "legendFormat": "total posts",
           "refId": "A"
         }
@@ -111,7 +111,7 @@
       },
       "targets": [
         {
-          "expr": "posts_pending_moderation_current",
+          "expr": "posts_pending_moderation_current{job=\"trust-post-app\",instance=\"$instance\"}",
           "legendFormat": "pending review",
           "refId": "A"
         }
@@ -162,7 +162,7 @@
       },
       "targets": [
         {
-          "expr": "sum(posts_current_by_status{status=\"APPROVED\"})",
+          "expr": "sum(posts_current_by_status{job=\"trust-post-app\",status=\"APPROVED\",instance=\"$instance\"})",
           "legendFormat": "approved",
           "refId": "A"
         }
@@ -231,7 +231,7 @@
       },
       "targets": [
         {
-          "expr": "posts_current_by_status",
+          "expr": "posts_current_by_status{job=\"trust-post-app\",instance=\"$instance\"}",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -282,7 +282,7 @@
       },
       "targets": [
         {
-          "expr": "posts_current_by_status",
+          "expr": "posts_current_by_status{job=\"trust-post-app\",instance=\"$instance\"}",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -367,7 +367,7 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"trust-post-app\"}",
+          "expr": "up{job=\"trust-post-app\",instance=\"$instance\"}",
           "legendFormat": "app",
           "refId": "A"
         }
@@ -385,7 +385,24 @@
     "business"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "instance",
+        "label": "Instance",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(up{job=\"trust-post-app\"}, instance)",
+        "refresh": 2,
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "current": {
+          "selected": true,
+          "text": "app:3001",
+          "value": "app:3001"
+        }
+      }
+    ]
   },
   "time": {
     "from": "now-6h",

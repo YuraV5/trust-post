@@ -4,8 +4,16 @@ services:
     container_name: trust_post_app
     env_file:
       - .env
+    environment:
+      # Keep container app in production mode so Redis auth is enforced consistently.
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      REDIS_HOST: redis
+      LOGGER_FILE_ENABLED: "true"
     ports:
       - "3001:3001"
+    volumes:
+      - ./logs:/usr/src/app/logs
     depends_on:
       db:
         condition: service_healthy

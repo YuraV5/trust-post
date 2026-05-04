@@ -1,101 +1,81 @@
 ENV_FILE ?= .env
 DOCKER_COMPOSE := docker compose --env-file $(ENV_FILE)
-LOCAL_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml
-LOCAL_MONITORING_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml -f docker-compose.monitoring.dev.yml
+DEV_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml
+PROD_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.yml --profile monitoring
+PROD_LOCAL_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod-local.yml --profile monitoring
 
-.PHONY: help start stop dev-up dev-down dev-logs app-dev monitor-up monitor-down monitor-logs prod-up prod-down prod-logs build lint test test-e2e seed-users seed-posts seed-comments seed-full prisma-generate prisma-migrate prisma-reset
+# Ensure environment file exists.
+ensure-env:
+	@node -e "const fs=require('fs');const env='$(ENV_FILE)';if(!fs.existsSync(env)){console.log('No '+env+' found - copying .env.example');fs.copyFileSync('.env.example',env);}"
 
-# Show the main commands.
-help:
-	@echo "Trust Post command list"
-	@echo ""
-	@echo "Quick start:"
-	@echo "  make start             Start full dev stack in Docker (app + db + redis, with hot reload)"
-	@echo "  make stop              Stop the dev Docker stack"
-	@echo ""
-	@echo "Local development:"
-	@echo "  make dev-up            Start local Postgres and Redis"
-	@echo "  make dev-down          Stop local Postgres and Redis"
-	@echo "  make dev-logs          Show logs for local Postgres and Redis"
-	@echo "  make app-dev           Run Nest app locally in watch mode"
-	@echo ""
-	@echo "Local monitoring for host app:"
-	@echo "  make monitor-up        Start Prometheus, Grafana, Loki and exporters for local app"
-	@echo "  make monitor-down      Stop local monitoring stack"
-	@echo "  make monitor-logs      Show monitoring stack logs"
-	@echo ""
-	@echo "Full container stack:"
-	@echo "  make prod-up           Start app, db, redis and monitoring in Docker"
-	@echo "  make prod-down         Stop full Docker stack"
-	@echo "  make prod-logs         Show logs for the full Docker stack"
-	@echo ""
-	@echo "Project utilities:"
-	@echo "  make build             Build Nest app"
-	@echo "  make lint              Run ESLint"
-	@echo "  make test              Run unit tests"
-	@echo "  make test-e2e          Run e2e tests"
-	@echo "  make prisma-generate   Generate Prisma client"
-	@echo "  make prisma-migrate    Run prisma migrate dev"
-	@echo "  make prisma-reset      Reset local database"
-	@echo "  make seed-users        Seed users"
-	@echo "  make seed-posts        Seed posts"
-	@echo "  make seed-comments     Seed comments"
-	@echo "  make seed-full         Seed full demo data"
-	@echo ""
-	@echo "Optional: set custom env file, example: make dev-up ENV_FILE=.env.example"
+# One-command production-like local startup: pull latest app image and run full stack.
+prod: ensure-env
+	$(PROD_COMPOSE) pull app
+	$(PROD_COMPOSE) up -d
 
-# Pull the latest image from DockerHub and start app + db + redis + monitoring.
-start:
-	@if [ ! -f $(ENV_FILE) ]; then \
-		echo "No $(ENV_FILE) found — copying .env.example"; \
-		cp .env.example $(ENV_FILE); \
-	fi
-	$(DOCKER_COMPOSE) --profile monitoring pull app
-	$(DOCKER_COMPOSE) --profile monitoring up -d
+# Production-like local startup from local image (pre-push smoke test).
+prod-local: ensure-env
+	$(PROD_LOCAL_COMPOSE) up -d --build
 
-# Stop the full stack.
-stop:
-	$(DOCKER_COMPOSE) --profile monitoring down
+# Backward-compatible alias.
+start: prod
+
+# Stop the full containerized stack.
+prod-down:
+	$(PROD_COMPOSE) down
+
+# Stop the local-image production-like stack.
+prod-local-down:
+	$(PROD_LOCAL_COMPOSE) down
+
+# Backward-compatible alias.
+stop: prod-down
 
 # Start only local infrastructure for development.
 dev-up:
-	$(LOCAL_COMPOSE) up -d
+	$(DEV_COMPOSE) up -d
 
 # Stop local infrastructure and remove containers.
 dev-down:
-	$(LOCAL_COMPOSE) down
+	$(DEV_COMPOSE) down
 
 # Follow local infrastructure logs.
 dev-logs:
-	$(LOCAL_COMPOSE) logs -f db redis
+	$(DEV_COMPOSE) logs -f db redis
 
 # Run the app locally with hot reload.
 app-dev:
 	npm run dev
 
-# Start monitoring containers that scrape the locally running app.
-monitor-up:
-	$(LOCAL_MONITORING_COMPOSE) up -d
-
-# Stop only the monitoring containers for local development.
-monitor-down:
-	$(LOCAL_MONITORING_COMPOSE) down
-
-# Follow logs for Prometheus, Grafana, Loki and exporters.
-monitor-logs:
-	$(LOCAL_MONITORING_COMPOSE) logs -f prometheus grafana loki promtail postgres-exporter redis-exporter node-exporter
-
-# Start the full containerized stack, including the app.
-prod-up:
-	$(DOCKER_COMPOSE) --profile monitoring up -d
-
-# Stop the full containerized stack.
-prod-down:
-	$(DOCKER_COMPOSE) down
-
 # Follow logs for the full containerized stack.
 prod-logs:
-	$(DOCKER_COMPOSE) logs -f app db redis prometheus grafana loki promtail alertmanager
+	$(PROD_COMPOSE) logs -f app db redis prometheus grafana loki promtail alertmanager
+
+# Follow logs for local-image production-like stack.
+prod-local-logs:
+	$(PROD_LOCAL_COMPOSE) logs -f app db redis prometheus grafana loki promtail alertmanager
+
+# Apply production-safe Prisma migrations in the app container.
+prod-migrate:
+	$(PROD_COMPOSE) exec -T app npm run mgr:deploy
+
+# Apply migrations in local-image production-like stack.
+prod-local-migrate:
+	$(PROD_LOCAL_COMPOSE) exec -T app npm run mgr:deploy
+
+# Seed production-like local data in the app container.
+prod-seed:
+	$(PROD_COMPOSE) exec -T app npm run seed:full:prod
+
+# Seed local-image production-like stack.
+prod-local-seed:
+	$(PROD_LOCAL_COMPOSE) exec -T app npm run seed:full:prod
+
+# Full bootstrap for production-like local env: start, migrate, seed.
+prod-bootstrap: prod prod-migrate prod-seed
+
+# Full bootstrap for local-image production-like env.
+prod-local-bootstrap: prod-local prod-local-migrate prod-local-seed
 
 # Build the Nest application.
 build:

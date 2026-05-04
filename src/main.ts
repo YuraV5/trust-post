@@ -15,7 +15,7 @@ async function bootstrap() {
   setupGlobalSettings(app, config);
 
   const redisIoAdapter = new RedisIoAdapter(app);
-  await redisIoAdapter.connectToRedis();
+  redisIoAdapter.connectToRedis();
   app.useWebSocketAdapter(redisIoAdapter);
 
   await app.listen(config.get<number>('PORT') || 3001, () => {

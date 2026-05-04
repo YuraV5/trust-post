@@ -20,7 +20,7 @@ export class RedisIoAdapter extends IoAdapter {
     super(app);
   }
 
-  async connectToRedis(): Promise<void> {
+  connectToRedis(): void {
     const config = this.app.get(ConfigService);
 
     const isProd = config.get<string>('nodeEnv') === APP_MODE.PRODUCTION;

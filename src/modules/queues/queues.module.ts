@@ -9,14 +9,18 @@ import { APP_MODE } from '../../common/consts';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        connection: {
-          host: config.get<string>('redis.host', 'localhost'),
-          port: config.get<number>('redis.port', 6379),
-          password:
-            config.get<string>('nodeEnv') === APP_MODE.PRODUCTION ? config.get<string>('redis.password') : undefined,
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        const nodeEnv = config.get<string>('nodeEnv') ?? process.env.NODE_ENV;
+        const isProd = nodeEnv === APP_MODE.PRODUCTION;
+
+        return {
+          connection: {
+            host: config.get<string>('redis.host', 'localhost'),
+            port: config.get<number>('redis.port', 6379),
+            password: isProd ? (config.get<string>('redis.password') ?? process.env.REDIS_PASSWORD) : undefined,
+          },
+        };
+      },
     }),
   ],
   controllers: [],

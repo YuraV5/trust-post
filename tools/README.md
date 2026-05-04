@@ -55,6 +55,18 @@ Run all steps in order:
 npm run seed:full
 ```
 
+### Prod-local Seed (inside container)
+
+For `prod-local` flow, run seed inside the app container runtime:
+
+```bash
+make prod-local-seed ENV_FILE=.env.prod.local
+# or
+npm run docker:prod-local:seed
+```
+
+Note: `npm run seed:full` on host uses `ts-node` and is intended for local dev mode, not container runtime.
+
 ### Usage
 
 1. Run migrations first (if needed):

@@ -201,7 +201,9 @@ npm run dev          # start app with hot reload (localhost:3001)
 Swagger UI: `http://localhost:3001/docs`  
 Metrics: `http://localhost:3001/metrics`
 
-Optional monitoring stack:
+Pre-push production-like validation:
 ```bash
-make monitor-up      # Grafana :3000, Prometheus :9090, Loki :3100
+make prod-local            # build local production-like image and run full stack
+make prod-local-migrate    # apply Prisma deploy migrations in container
+make prod-local-seed       # seed demo data in container
 ```

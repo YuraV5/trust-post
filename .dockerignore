@@ -5,8 +5,19 @@ node_modules
 dist
 build
 
+# Tests and local QA assets (not needed in image build context)
+test
+unit-tests
+coverage
+
+# Documentation and local tooling
+docs
+.github
+.vscode
+
 # Logs
 *.log
+logs
 
 # Environment files
 .env.*
@@ -20,6 +31,6 @@ build
 .git
 .gitignore
 
-# Dockerfile and other Docker-related files
-Dockerfile*
-.dockerignore
+# OS/editor artifacts
+.DS_Store
+Thumbs.db

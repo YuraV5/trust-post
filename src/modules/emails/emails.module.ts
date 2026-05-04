@@ -7,6 +7,7 @@ import { EmailQueueService } from './email-queue.service';
 import { QueuesModule } from '../queues/queues.module';
 import { EmailsProviderModule } from './emails-provider/emails-provider.module';
 import { REDIS_DB } from '../../configs/redis/redis-db';
+import { APP_MODE } from '../../common/consts';
 
 @Module({
   imports: [
@@ -16,13 +17,19 @@ import { REDIS_DB } from '../../configs/redis/redis-db';
       name: EMAIL_NOTIFICATION_QUEUE,
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        connection: {
-          host: config.get<string>('redis.host', 'localhost'),
-          port: config.get<number>('redis.port', 6379),
-          db: REDIS_DB.EMAIL,
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        const nodeEnv = config.get<string>('nodeEnv') ?? process.env.NODE_ENV;
+        const isProd = nodeEnv === APP_MODE.PRODUCTION;
+
+        return {
+          connection: {
+            host: config.get<string>('redis.host', 'localhost'),
+            port: config.get<number>('redis.port', 6379),
+            password: isProd ? (config.get<string>('redis.password') ?? process.env.REDIS_PASSWORD) : undefined,
+            db: REDIS_DB.EMAIL,
+          },
+        };
+      },
     }),
   ],
   providers: [EmailProcessor, EmailQueueService],

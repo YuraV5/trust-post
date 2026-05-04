@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ChatType } from '@prisma/client';
+import { ChatType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   ChatEntity,
@@ -193,15 +193,13 @@ export class ChatRepo implements IChatRepo {
     userId: string,
     includeDeleted: boolean = false,
   ): Promise<ChatMemberEntity | null> {
-    const where: Record<string, unknown> = {
+    const where: Prisma.ChatMemberWhereInput = {
       chatId,
       userId,
+      ...(includeDeleted ? {} : { isDelete: false }),
     };
-    if (!includeDeleted) {
-      where.isDelete = false;
-    }
 
-    return this.db.chatMember.findFirst({ where: where as any });
+    return this.db.chatMember.findFirst({ where });
   }
 
   async addChatMember(chatId: string, userId: string): Promise<void> {
@@ -219,7 +217,7 @@ export class ChatRepo implements IChatRepo {
       update: {
         isDelete: false,
         deletedAt: null,
-      } as any,
+      },
     });
   }
 

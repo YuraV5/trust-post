@@ -151,7 +151,7 @@ Each queue has a paired **DLQ** (`<queue>.dlq`). Terminally failed jobs are move
 
 | Document | Purpose |
 |---|---|
-| [ENDPOINTS.md](ENDPOINTS.md) | Complete reference of all 75 API endpoints with auth, methods, and parameters |
+| [ENDPOINTS.md](ENDPOINTS.md) | Complete reference of all 69 API endpoints with auth, methods, and parameters |
 | [API_SWAGGER.md](API_SWAGGER.md) | API usage patterns, authentication flow, file uploads, OAuth, error responses |
 | [CHAT.md](CHAT.md) | Chat system architecture, database schema, REST and WebSocket API |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | High-level system design and runtime flow |

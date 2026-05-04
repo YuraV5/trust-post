@@ -65,10 +65,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     try {
       const userId = await this.getAuthenticatedUserId(client);
 
-      this.socketService.trackConnection(this.namespace, userId, client.id);
+      // Join a personal room so emitToUser() reaches this socket from any pod.
+      // Socket.IO removes the socket from all rooms automatically on disconnect.
+      await client.join(`user:${userId}`);
 
       this.logger.info('Client connected', { userId, socketId: client.id });
-
       // Tell the connecting client its own userId and socketId so the UI
       // doesn't have to decode the JWT itself.
       client.emit('connected', { userId, socketId: client.id });
@@ -85,8 +86,6 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     const userId = client.userId;
 
     if (userId) {
-      this.socketService.trackDisconnection(this.namespace, userId, client.id);
-
       this.logger.info('Client disconnected', { userId, socketId: client.id });
     }
   }

@@ -20,5 +20,5 @@ npm run build
 ## Notes
 
 - E2E uses `test/jest-e2e.json` and `.env.test`.
-- If tests need infra (db/redis), make sure local docker services are running.
+- E2E tests spin up real PostgreSQL and Redis automatically via **Testcontainers** — no manual `docker-compose` needed.
 - Route constants for e2e are centralized in `test/e2e/constants/routes.ts`.

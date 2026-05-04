@@ -5,4 +5,5 @@ export const REDIS_DB = {
   CACHE: 3,
   COMMENTS: 4,
   THROTTLING: 5,
+  SOCKET: 6,
 };

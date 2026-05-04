@@ -1,0 +1,7 @@
+services:
+  app:
+    # Local image for pre-push validation of production-like stack.
+    image: trust-post:prod-local
+    build:
+      context: .
+      dockerfile: Dockerfile

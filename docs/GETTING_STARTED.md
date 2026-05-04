@@ -47,3 +47,21 @@ npm run dev
 ```bash
 npm run docker:dev:down
 ```
+
+## 8. Prod-local check before Docker Hub push
+
+```bash
+npm run docker:prod-local
+npm run docker:prod-local:migrate
+npm run docker:prod-local:seed
+```
+
+Redis behavior by mode:
+- `production`: password required
+- `development`: password optional
+
+Stop prod-local stack:
+
+```bash
+npm run docker:prod-local:down
+```

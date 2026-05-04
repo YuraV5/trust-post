@@ -25,7 +25,11 @@
     "docker:prod": "docker compose --env-file .env -f docker-compose.yml --profile monitoring pull app && docker compose --env-file .env -f docker-compose.yml --profile monitoring up -d",
     "docker:prod:down": "docker compose --env-file .env -f docker-compose.yml --profile monitoring down",
     "docker:prod:migrate": "docker compose --env-file .env -f docker-compose.yml --profile monitoring exec -T app npm run mgr:deploy",
-    "docker:prod:seed": "docker compose --env-file .env -f docker-compose.yml --profile monitoring exec -T app npm run seed:full",
+    "docker:prod:seed": "docker compose --env-file .env -f docker-compose.yml --profile monitoring exec -T app npm run seed:full:prod",
+    "docker:prod-local": "docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod-local.yml --profile monitoring up -d --build",
+    "docker:prod-local:down": "docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod-local.yml --profile monitoring down",
+    "docker:prod-local:migrate": "docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod-local.yml --profile monitoring exec -T app npm run mgr:deploy",
+    "docker:prod-local:seed": "docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod-local.yml --profile monitoring exec -T app npm run seed:full:prod",
     "mgr:dev": "prisma migrate dev",
     "db:reset": "prisma migrate reset --force",
     "mgr:deploy": "prisma migrate deploy",
@@ -34,6 +38,10 @@
     "seed:posts": "ts-node tools/seeds.ts posts",
     "seed:comments": "ts-node tools/seeds.ts comments",
     "seed:full": "ts-node tools/seeds.ts full",
+    "seed:users:prod": "node dist/tools/seeds.js users",
+    "seed:posts:prod": "node dist/tools/seeds.js posts",
+    "seed:comments:prod": "node dist/tools/seeds.js comments",
+    "seed:full:prod": "node dist/tools/seeds.js full",
     "seed:admin": "npm run seed:users"
   },
   "dependencies": {

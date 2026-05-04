@@ -5,6 +5,7 @@ services:
     env_file:
       - .env
     environment:
+      # Keep container app in production mode so Redis auth is enforced consistently.
       NODE_ENV: production
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       REDIS_HOST: redis

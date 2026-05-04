@@ -10,6 +10,7 @@ RUN npx prisma generate
 
 COPY . .
 RUN npm run build
+RUN npx tsc tools/seeds.ts --outDir dist/tools --module nodenext --moduleResolution nodenext --target ES2023 --esModuleInterop --skipLibCheck
 
 
 # ---------- RUNTIME ----------

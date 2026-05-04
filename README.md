@@ -43,6 +43,10 @@ make prod
 This pulls the latest image from DockerHub and starts the app, PostgreSQL, Redis,
 and the full monitoring stack in one command.
 
+Redis auth behavior:
+- `production` mode: Redis password is required.
+- `development` mode: Redis password is optional.
+
 After startup, apply migrations and seed data inside the app container:
 
 ```bash
@@ -54,6 +58,24 @@ make prod-bootstrap
 
 ```bash
 make prod-down   # stop all containers
+```
+
+### Local Prod-Local (before Docker Hub push)
+
+Use this flow to validate a local production-like image before publishing:
+
+```bash
+make prod-local
+make prod-local-migrate
+make prod-local-seed
+# or all in one command:
+make prod-local-bootstrap
+```
+
+Stop local production-like stack:
+
+```bash
+make prod-local-down
 ```
 
 **Service URLs after startup:**

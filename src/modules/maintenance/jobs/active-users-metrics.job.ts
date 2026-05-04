@@ -20,8 +20,8 @@ export class ActiveUsersMetricsJob implements OnModuleInit {
     await this.syncActiveUsersGauge();
   }
 
-  // Refresh active users gauge every minute using active (not expired) sessions.
-    @Cron('*/1 * * * *')
+  // Refresh active users gauge every hour using active (not expired) sessions.
+  @Cron('0 * * * *')
   async syncActiveUsersGauge(): Promise<void> {
     try {
       const activeUsers = await this.prisma.session.findMany({

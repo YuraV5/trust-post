@@ -9,20 +9,24 @@ import { AgentClientConfigException, AgentEmptyResponseException, AgentRequestFa
 
 @Injectable()
 export class GeminiClient implements IAgentClient {
+  private readonly ai: GoogleGenAI;
+
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly config: ConfigService,
-  ) {}
-
-  async generate(prompt: string, content: string, model: string, opts?: AgentGenerateOptions): Promise<string> {
+  ) {
     const apiKey = this.config.get<string>('gemini.apiKey');
 
     if (!apiKey) {
       throw new AgentClientConfigException('Missing Gemini API key');
     }
 
+    this.ai = new GoogleGenAI({ apiKey });
+  }
+
+  async generate(prompt: string, content: string, model: string, opts?: AgentGenerateOptions): Promise<string> {
     try {
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = this.ai;
 
       const response = await ai.models.generateContent({
         model,

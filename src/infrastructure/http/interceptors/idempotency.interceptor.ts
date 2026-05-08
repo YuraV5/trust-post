@@ -90,15 +90,15 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     // Scope: user + method + route path — ensures UNIQUE(key, route)
     const scopeUser = req.user?.userId ?? 'anonymous';
-    const routePath = req.route?.path ?? req.path;
+    const routePath = this.getRoutePath(req);
     const scope = `${scopeUser}:${req.method}:${routePath}`;
 
     // Stable SHA-256 hash of the normalised request payload
     const requestHash = this.hash(
       this.stableStringify({
-        body: req.body ?? null,
-        params: req.params ?? {},
-        query: req.query ?? {},
+        body: (req.body as unknown) ?? null,
+        params: (req.params as unknown) ?? {},
+        query: (req.query as unknown) ?? {},
       }),
     );
 
@@ -187,12 +187,13 @@ export class IdempotencyInterceptor implements NestInterceptor {
                   }),
                 );
               }),
-              catchError((error) =>
+              catchError((error: unknown) =>
                 from(this.redisService.del(lockKey)).pipe(
                   switchMap(() => {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
                     this.logger.debug('Idempotency request failed: lock released', {
                       operationKey,
-                      error: error instanceof Error ? error.message : String(error),
+                      error: errorMessage,
                     });
                     return throwError(() => error);
                   }),
@@ -202,8 +203,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
           }),
         );
       }),
-      catchError((error) => {
-        this.logger.debug('Idempotency interceptor bypassed after error', { error });
+      catchError((error: unknown) => {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.debug('Idempotency interceptor bypassed after error', { error: errorMessage });
         throw error;
       }),
     );
@@ -215,6 +217,11 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
   private isPaymentRoute(routePath: string): boolean {
     return routePath.toLowerCase().includes('payment');
+  }
+
+  private getRoutePath(req: Request): string {
+    const route = req.route as { path?: unknown } | undefined;
+    return typeof route?.path === 'string' ? route.path : req.path;
   }
 
   /**
@@ -237,8 +244,8 @@ export class IdempotencyInterceptor implements NestInterceptor {
     }
 
     try {
-      const parsed = JSON.parse(value) as CachedResponse;
-      if (!parsed?.requestHash || !parsed?.statusCode) {
+      const parsed = JSON.parse(value) as unknown;
+      if (!this.isCachedResponse(parsed)) {
         return null;
       }
       return parsed;
@@ -267,6 +274,19 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
   private hash(value: string): string {
     return createHash('sha256').update(value).digest('hex');
+  }
+
+  private isCachedResponse(value: unknown): value is CachedResponse {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+
+    const candidate = value as Record<string, unknown>;
+    return (
+      typeof candidate.requestHash === 'string' &&
+      typeof candidate.statusCode === 'number' &&
+      typeof candidate.createdAt === 'string'
+    );
   }
 
   /**

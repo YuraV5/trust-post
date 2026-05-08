@@ -8,6 +8,7 @@ import { APP_MODE } from '@app/common/consts/node-mode';
 
 const PAYMENT_ANONYMOUS_ROUTE = '/api/v1/payments/anonymous';
 const WAYFORPAY_WEBHOOK_ROUTE = '/api/v1/payments/webhook/wayforpay';
+type ThrottlerRequest = { method?: string; url?: string };
 
 @Module({
   imports: [
@@ -22,8 +23,8 @@ const WAYFORPAY_WEBHOOK_ROUTE = '/api/v1/payments/webhook/wayforpay';
 
           if (isDevOrTest) return true;
 
-          const request = context.switchToHttp().getRequest();
-          return request?.url?.startsWith('/health');
+          const request = context.switchToHttp().getRequest<ThrottlerRequest>();
+          return request?.url?.startsWith('/health') ?? false;
         },
         throttlers: [
           {
@@ -45,7 +46,7 @@ const WAYFORPAY_WEBHOOK_ROUTE = '/api/v1/payments/webhook/wayforpay';
             blockDuration: config.get<number>('throttling.paymentAnonymousBlockTtlMs', 300000),
             generateKey: (_context, tracker, name) => `${name}:${tracker}`,
             skipIf: (context) => {
-              const request = context.switchToHttp().getRequest();
+              const request = context.switchToHttp().getRequest<ThrottlerRequest>();
               return request?.method !== 'POST' || request?.url !== PAYMENT_ANONYMOUS_ROUTE;
             },
           },
@@ -56,7 +57,7 @@ const WAYFORPAY_WEBHOOK_ROUTE = '/api/v1/payments/webhook/wayforpay';
             blockDuration: config.get<number>('throttling.paymentWebhookBlockTtlMs', 300000),
             generateKey: (_context, tracker, name) => `${name}:${tracker}`,
             skipIf: (context) => {
-              const request = context.switchToHttp().getRequest();
+              const request = context.switchToHttp().getRequest<ThrottlerRequest>();
               return request?.method !== 'POST' || request?.url !== WAYFORPAY_WEBHOOK_ROUTE;
             },
           },

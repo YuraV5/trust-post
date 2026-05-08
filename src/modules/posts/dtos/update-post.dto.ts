@@ -83,6 +83,6 @@ export class PostStatusLifecycleDto {
   @IsString()
   @MinLength(20)
   @MaxLength(1000)
-  @ValidateIf((o) => o.reviewStatus === PostReviewStatus.REJECTED) // Only require reviewReason if reviewStatus is REJECTED
+  @ValidateIf((o: PostStatusLifecycleDto) => o.reviewStatus === PostReviewStatus.REJECTED) // Only require reviewReason if reviewStatus is REJECTED
   reviewReason?: string;
 }

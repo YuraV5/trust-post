@@ -14,7 +14,6 @@ import { APP_LOGGER } from '../../../../shared/logger/services/app-logger';
 import { ICloudinaryClient } from '../../interfaces/cloudinary';
 import { executeWithRetry } from '../../../../common/utils';
 import { CONCURRENCY_LIMIT, MAX_RETRIES, RATE_LIMIT_DELAY_MS, RETRYABLE_STATUSES, TIMEOUT_MS } from '../../consts';
-import { FileProvider } from '@prisma/client';
 
 type ResourceType = 'auto' | 'image' | 'video' | 'raw';
 
@@ -145,7 +144,7 @@ export class CloudinaryClient implements ICloudinaryClient {
             search = search.next_cursor(nextCursor);
           }
 
-          return search.execute();
+          return search.execute() as Promise<CloudinarySearchResult>;
         },
         { maxRetries: MAX_RETRIES, timeoutMs: TIMEOUT_MS.delete, retryableStatuses: RETRYABLE_STATUSES },
       );

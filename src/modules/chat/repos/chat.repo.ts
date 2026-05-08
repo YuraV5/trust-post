@@ -243,7 +243,7 @@ export class ChatRepo implements IChatRepo {
       data: {
         isDelete: true,
         deletedAt: new Date(),
-      } as any,
+      },
     });
   }
 
@@ -257,7 +257,7 @@ export class ChatRepo implements IChatRepo {
             some: {
               userId,
               isDelete: false,
-            } as any,
+            },
           },
         },
         include: {
@@ -301,7 +301,7 @@ export class ChatRepo implements IChatRepo {
             some: {
               userId,
               isDelete: false,
-            } as any,
+            },
           },
         },
       }),
@@ -317,7 +317,7 @@ export class ChatRepo implements IChatRepo {
         members: {
           where: {
             isDelete: false,
-          } as any,
+          },
           include: {
             user: {
               select: {

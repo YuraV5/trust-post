@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ThrottlerStorage } from '@nestjs/throttler';
 import Redis from 'ioredis';
@@ -274,7 +274,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
     }
 
     while (this.localHits.size > this.fallbackMaxKeys) {
-      const oldestKey = this.localHits.keys().next().value;
+      const oldestKey = this.localHits.keys().next().value as string | undefined;
       if (!oldestKey) {
         break;
       }
@@ -282,7 +282,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage, OnApplicationShu
     }
 
     while (this.localBlocks.size > this.fallbackMaxKeys) {
-      const oldestKey = this.localBlocks.keys().next().value;
+      const oldestKey = this.localBlocks.keys().next().value as string | undefined;
       if (!oldestKey) {
         break;
       }

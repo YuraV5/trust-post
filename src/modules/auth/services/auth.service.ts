@@ -56,7 +56,7 @@ export class AuthService implements IAuthService {
     } catch (error) {
       this.logger.error('Failed to send verification email', {
         context: 'AuthService.register',
-        error: error instanceof Error ? error.message : error,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
 
@@ -162,7 +162,9 @@ export class AuthService implements IAuthService {
         verificationUrl,
       });
     } catch (error) {
-      this.logger.error('Resend verification failed', { error });
+      this.logger.error('Resend verification failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     return { message };
@@ -188,7 +190,9 @@ export class AuthService implements IAuthService {
         passwordResetUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.PASSWORD_RESET, 3600),
       });
     } catch (error) {
-      this.logger.error(`Failed to send password reset email to ${email} for user ${user.id}`, { error });
+      this.logger.error(`Failed to send password reset email to ${email} for user ${user.id}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
     return { message: 'If the email exists and is verified, a password reset link has been sent' };
   }

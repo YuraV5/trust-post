@@ -3,9 +3,15 @@ import { UserRoles } from '@prisma/client';
 import { PrismaService } from '../../modules/prisma/prisma.service';
 import { AppNotFoundException, AppForbiddenException } from '../../shared/errors/app-errors';
 import { AuthenticatedRequest } from '../interfaces';
-import { PrismaClient } from '@prisma/client/extension';
 
 type ResourceModel = 'post' | 'comment' | 'postReview' | 'commentLike' | 'postLike' | 'user' | 'postFile';
+type OwnershipLookupDelegate = {
+  findUnique(args: {
+    where: { id: string | number };
+    select: Record<string, true>;
+  }): Promise<Record<string, unknown> | null>;
+};
+type OwnershipLookupClient = Record<ResourceModel, OwnershipLookupDelegate>;
 
 const OWNER_FIELD_BY_MODEL: Record<ResourceModel, string> = {
   post: 'authorId',
@@ -81,7 +87,8 @@ export function OwnershipGuard(options: OwnershipGuardOptions): Type<CanActivate
       }
 
       // Check if the resource exists and get the owner field
-      const entity = await (this.prisma as PrismaClient)[model].findUnique({
+      const prismaClient = this.prisma as unknown as OwnershipLookupClient;
+      const entity = await prismaClient[model].findUnique({
         where: { id: this.convertIdType(resourceId, model) },
         select: { [resolvedOwnerField]: true },
       });

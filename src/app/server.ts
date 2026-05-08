@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import { setupSwagger } from './setup/swagger';
 
 type RequestWithRawBody = Request & { rawBody?: Buffer };
+type HttpAdapterWithSet = { set: (setting: string, value: boolean) => void };
 
 export function setupGlobalSettings(app: INestApplication, config: ConfigService): void {
   // Keep API routes under /api while exposing /metrics without prefix.
@@ -16,7 +17,7 @@ export function setupGlobalSettings(app: INestApplication, config: ConfigService
   if (config.get<boolean>('trustProxy')) {
     const httpAdapter = app.getHttpAdapter().getInstance();
     if (typeof httpAdapter.set === 'function') {
-      httpAdapter.set('trust proxy', true);
+      (httpAdapter as HttpAdapterWithSet).set('trust proxy', true);
     }
   }
 

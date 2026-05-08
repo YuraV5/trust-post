@@ -39,9 +39,26 @@ export class RedisIoAdapter extends IoAdapter {
     this.adapterConstructor = createAdapter(pubClient, subClient);
   }
 
-  createIOServer(port: number, options?: ServerOptions) {
-    const server = super.createIOServer(port, options);
-    server.adapter(this.adapterConstructor);
-    return server;
+  createIOServer(port: number, options?: ServerOptions): ReturnType<IoAdapter['createIOServer']> {
+    const server: unknown = super.createIOServer(port, options);
+
+    if (isServerWithAdapter(server)) {
+      server.adapter(this.adapterConstructor);
+    }
+
+    return server as ReturnType<IoAdapter['createIOServer']>;
   }
+}
+
+type ServerWithAdapter = {
+  adapter: (adapterConstructor: ReturnType<typeof createAdapter>) => void;
+};
+
+function isServerWithAdapter(value: unknown): value is ServerWithAdapter {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as { adapter?: unknown };
+  return typeof candidate.adapter === 'function';
 }

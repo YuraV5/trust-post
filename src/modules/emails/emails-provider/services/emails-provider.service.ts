@@ -19,24 +19,29 @@ export class EmailsProviderService implements IEmailProvider {
 
   async sendEmail(emailData: EmailData): Promise<boolean> {
     try {
-      const result = await executeWithRetry(() => this.emailClient.send(emailData), {
-        maxRetries: this.MAX_RETRIES,
-        timeoutMs: this.REQUEST_TIMEOUT,
-        exponentialBackoff: true,
-      });
+      const result = await executeWithRetry<boolean>(
+        () => this.emailClient.send(emailData).then((value: unknown) => Boolean(value)),
+        {
+          maxRetries: this.MAX_RETRIES,
+          timeoutMs: this.REQUEST_TIMEOUT,
+          exponentialBackoff: true,
+        },
+      );
 
-      return !!result;
-    } catch (error) {
+      return result;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
       this.logger.error('Email send failed', {
         context: 'EmailsProviderService.sendEmail',
-        error: error instanceof Error ? error.message : error,
+        error: errorMessage,
       });
 
       if (error instanceof RetryError && error.isTimeout) {
         throw new EmailTimeoutError(undefined, [error.message]);
       }
 
-      throw new EmailSendFailedError(undefined, [(error as Error).message]);
+      throw new EmailSendFailedError(undefined, [errorMessage]);
     }
   }
 }

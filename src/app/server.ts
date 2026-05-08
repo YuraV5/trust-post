@@ -15,9 +15,9 @@ export function setupGlobalSettings(app: INestApplication, config: ConfigService
 
   // Trust proxy settings for correct client IP and protocol handling.
   if (config.get<boolean>('trustProxy')) {
-    const httpAdapter = app.getHttpAdapter().getInstance();
-    if (typeof httpAdapter.set === 'function') {
-      (httpAdapter as HttpAdapterWithSet).set('trust proxy', true);
+    const httpAdapter: unknown = app.getHttpAdapter().getInstance();
+    if (isHttpAdapterWithSet(httpAdapter)) {
+      httpAdapter.set('trust proxy', true);
     }
   }
 
@@ -71,4 +71,13 @@ export function setupGlobalSettings(app: INestApplication, config: ConfigService
   }
 
   app.enableShutdownHooks();
+}
+
+function isHttpAdapterWithSet(value: unknown): value is HttpAdapterWithSet {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as { set?: unknown };
+  return typeof candidate.set === 'function';
 }

@@ -96,11 +96,21 @@ function executeWithTimeout<T>(fn: (signal?: AbortSignal) => Promise<T>, timeout
 
 function isRetryableError(error: unknown, config: Required<RetryOptions>): boolean {
   const err = error as Error;
+  const status = getErrorStatus(error);
 
   return (
-    config.retryableStatuses.includes((error as any)?.status) ||
+    (typeof status === 'number' && config.retryableStatuses.includes(status)) ||
     config.retryableMessages.some((msg) => err.message?.toLowerCase().includes(msg))
   );
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== 'object') {
+    return undefined;
+  }
+
+  const candidate = error as { status?: unknown };
+  return typeof candidate.status === 'number' ? candidate.status : undefined;
 }
 
 function isTimeoutError(error: Error): boolean {

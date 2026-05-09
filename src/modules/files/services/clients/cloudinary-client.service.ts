@@ -168,7 +168,7 @@ export class CloudinaryClient implements ICloudinaryClient {
 
     return new Promise((resolve, reject) => {
       const upload = client.uploader.upload_stream(options, (err, res) => {
-        if (err) return reject(err);
+        if (err) return reject(new AppInternalServerException('Cloudinary upload failed', [err.message]));
         if (!res) return reject(new AppConfigException('Cloudinary returned empty response'));
         resolve(res);
       });

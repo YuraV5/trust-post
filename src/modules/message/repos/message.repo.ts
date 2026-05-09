@@ -11,7 +11,6 @@ import {
   MessageRepoListResult,
   MessageWithSenderAndFiles,
 } from '../types';
-import { MessageStatus, MessageType } from '@prisma/client';
 
 @Injectable()
 export class MessageRepo implements IMessageRepo {
@@ -44,8 +43,8 @@ export class MessageRepo implements IMessageRepo {
           chatId,
           senderId,
           content,
-          type: type as MessageType,
-          status: status as MessageStatus,
+          type: type,
+          status: status,
           attachments: files.length
             ? {
                 create: files,
@@ -147,7 +146,7 @@ export class MessageRepo implements IMessageRepo {
     return this.db.message.update({
       where: { id: messageId },
       data: {
-        type: type as MessageType,
+        type: type,
       },
       include: {
         sender: {

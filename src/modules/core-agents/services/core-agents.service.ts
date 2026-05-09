@@ -38,7 +38,7 @@ export class CoreAgentsService implements IAgentFactory {
 
   private resolveActionKey(actionType: AgentActionSelector): AgentActionKey {
     if (actionType in AGENT_ACTION_CONFIG) {
-      return actionType as AgentActionKey;
+      return actionType;
     }
 
     const actionKey = (Object.keys(AGENT_ACTION_TYPE) as AgentActionKey[]).find(

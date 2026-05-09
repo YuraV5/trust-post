@@ -41,7 +41,7 @@ export class OAuthService {
 
   // Public API
   getRedirectUrl(providerName: string, deviceId: string, redirectTo?: string): string {
-    const provider = this.registry.getProvider(providerName.toUpperCase() as AuthProvider);
+    const provider = this.registry.getProvider(providerName.toUpperCase());
 
     const state = this.stateService.sign({
       provider: provider.getProvider(),
@@ -72,7 +72,7 @@ export class OAuthService {
     const statePayload = this.stateService.verify(state);
     this.assertStateProvider(statePayload, providerName);
 
-    const provider = this.registry.getProvider(providerName.toUpperCase() as AuthProvider);
+    const provider = this.registry.getProvider(providerName.toUpperCase());
     const providerInfo = await provider.exchangeCode(code);
     const profile = await provider.getUserProfile(providerInfo.accessToken);
     const { userId, role, isNewUser } = await this.resolveOrCreateUser(provider.getProvider(), profile, providerInfo);

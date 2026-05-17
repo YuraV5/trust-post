@@ -1,5 +1,7 @@
+# Open To Work!!!
+
 # Developer Profile
-# Open To Work
+
 ## Yuriy Vakula 
 
 Backend Engineer with 2.5+ years of experience building production backend systems with Node.js and TypeScript.

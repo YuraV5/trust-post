@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { UserRoles } from '@prisma/client';
 import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 
@@ -14,10 +15,11 @@ export class UpdateUserDto {
   @IsOptional()
   name?: string;
 
-  @ApiProperty({ example: 'http://example.com/photo.jpg', required: false })
+  @ApiProperty({ example: 'http://example.com/photo.jpg', required: false, nullable: true })
+  @Transform(({ value }) => (value === '' ? null : value))
   @IsString()
   @IsOptional()
-  photoUrl?: string;
+  photoUrl?: string | null;
 }
 
 export class UpdateStatusDto {

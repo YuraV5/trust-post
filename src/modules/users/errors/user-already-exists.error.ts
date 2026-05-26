@@ -3,6 +3,6 @@ import { AppErrorCode } from '../../../shared/errors/error-codes';
 
 export class AppUserAlreadyExistsException extends AppError {
   constructor() {
-    super(AppErrorCode.CONFLICT, 409, `User already exists`);
+    super(AppErrorCode.CONFLICT, 409, `Invalid credentials.`);
   }
 }

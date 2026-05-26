@@ -60,7 +60,7 @@ export class AuthService implements IAuthService {
       });
     }
 
-    return { message: 'User registered successfully' };
+    return { message: 'Registration successful. We sent a verification email to your address.' };
   }
 
   async login(inp: UserCredentials): Promise<UserLoginOutput> {
@@ -185,9 +185,16 @@ export class AuthService implements IAuthService {
     }
 
     try {
+      const resetToken = uuidv4();
+      await this.redisService.set(
+        `${REDIS_KEYS.PASSWORD_RESET}:${resetToken}`,
+        JSON.stringify({ userId: user.id, email: user.email }),
+        3600,
+      );
+
       await this.emailQueueService.sendPasswordResetEmail({
         to: email,
-        passwordResetUrl: await this.linkService.generateTemporaryLink(user.id, REDIS_KEYS.PASSWORD_RESET, 3600),
+        passwordResetUrl: `${this.config.get<string>('frontUrl')}/${REDIS_KEYS.PASSWORD_RESET}/${resetToken}`,
       });
     } catch (error) {
       this.logger.error(`Failed to send password reset email to ${email} for user ${user.id}`, {
@@ -202,15 +209,24 @@ export class AuthService implements IAuthService {
       throw new AppBadRequestException('Passwords do not match');
     }
 
-    const userId = await this.redisService.get(`${REDIS_KEYS.PASSWORD_RESET}:${uuid}`);
-    if (!userId) {
+    const tokenPayloadRaw = await this.redisService.get(`${REDIS_KEYS.PASSWORD_RESET}:${uuid}`);
+    if (!tokenPayloadRaw) {
       this.logger.warn(`Password reset failed: invalid or expired token ${uuid}`);
       throw new AppBadRequestException('Invalid or expired password reset link');
     }
 
+    const parsedPayload = this.parsePasswordResetPayload(tokenPayloadRaw);
+    if (!parsedPayload) {
+      this.logger.warn(`Password reset failed: malformed token payload for ${uuid}`);
+      throw new AppBadRequestException('Invalid or expired password reset link');
+    }
+
+    const { userId, email } = parsedPayload;
+
     this.logger.debug('Applying password reset by verified userId from Redis token', {
       context: 'AuthService.setPassword',
       userId,
+      email,
     });
 
     await this.usersService.resetPasswordById(userId, inp.password);
@@ -220,6 +236,27 @@ export class AuthService implements IAuthService {
       context: 'AuthService.setPassword',
       userId,
     });
+  }
+
+  private parsePasswordResetPayload(payload: string): { userId: string; email?: string } | null {
+    try {
+      const parsed = JSON.parse(payload) as { userId?: string; email?: string };
+      if (typeof parsed.userId !== 'string' || parsed.userId.length === 0) {
+        return null;
+      }
+
+      return {
+        userId: parsed.userId,
+        email: typeof parsed.email === 'string' ? parsed.email : undefined,
+      };
+    } catch {
+      // Backward compatibility for already-issued tokens that stored only userId.
+      if (typeof payload === 'string' && payload.length > 0) {
+        return { userId: payload };
+      }
+
+      return null;
+    }
   }
 
   async verifyEmail(uuid: string): Promise<void> {

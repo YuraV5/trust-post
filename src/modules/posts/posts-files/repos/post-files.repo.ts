@@ -98,6 +98,16 @@ export class PostFilesRepo {
     });
   }
 
+  async getTotalFileSizeByPostId(postId: number, tx?: Prisma.TransactionClient): Promise<number> {
+    const client = tx ?? this.db;
+    const aggregation = await client.postFile.aggregate({
+      where: { postId },
+      _sum: { size: true },
+    });
+
+    return aggregation._sum.size ?? 0;
+  }
+
   async hasMainImage(postId: number, tx?: Prisma.TransactionClient): Promise<boolean> {
     const client = tx ?? this.db;
     const existing = await client.postFile.findFirst({

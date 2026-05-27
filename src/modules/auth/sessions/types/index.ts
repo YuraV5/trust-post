@@ -10,6 +10,7 @@ export type UserSession = {
 
 export type SessionMapping = {
   id: string;
+  deviceId: string;
   userAgent: string;
   lastUsedAt: Date | null;
   createdAt: Date;

@@ -30,6 +30,16 @@ export class PostsRepo implements IPostsRepo {
         id,
         status: PostStatus.APPROVED,
       },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            photoUrl: true,
+            isEmailVerified: true,
+          },
+        },
+      },
     });
   }
 

@@ -40,7 +40,7 @@ describe('PostsService', () => {
   });
 
   describe('create', () => {
-    it('creates a post and enqueues reviewer assignment', async () => {
+    it('creates a draft post and does not enqueue reviewer assignment', async () => {
       const createdPost = { id: 7, title: 'Help rebuild the shelter' };
       mockPostsRepo.create.mockResolvedValue(createdPost);
       mockPostsQueueService.assignReviewerToPost.mockResolvedValue(undefined);
@@ -50,11 +50,31 @@ describe('PostsService', () => {
         content: 'A'.repeat(60),
         targetAmount: 5000,
         targetDate: '2026-05-01',
+        isDraft: true,
       } as never);
 
       expect(result).toEqual(createdPost);
       expect(mockPostsRepo.create).toHaveBeenCalledWith('user-1', expect.any(Object));
-      expect(mockPostsQueueService.assignReviewerToPost).toHaveBeenCalledWith(7);
+      expect(mockPostsQueueService.assignReviewerToPost).not.toHaveBeenCalled();
+      expect(mockPostsCacheService.invalidatePostMutationCache).toHaveBeenCalledWith([7]);
+    });
+
+    it('creates a post and enqueues reviewer assignment when not draft', async () => {
+      const createdPost = { id: 12, title: 'Urgent fundraiser' };
+      mockPostsRepo.create.mockResolvedValue(createdPost);
+      mockPostsQueueService.assignReviewerToPost.mockResolvedValue(undefined);
+
+      const result = await service.create('user-1', {
+        title: 'Urgent fundraiser',
+        content: 'A'.repeat(80),
+        targetAmount: 3200,
+        targetDate: '2026-06-11',
+        isDraft: false,
+      } as never);
+
+      expect(result).toEqual(createdPost);
+      expect(mockPostsQueueService.assignReviewerToPost).toHaveBeenCalledWith(12);
+      expect(mockPostsCacheService.invalidatePostMutationCache).toHaveBeenCalledWith([12]);
     });
 
     it('throws when queue assignment fails after retries', async () => {
@@ -66,6 +86,7 @@ describe('PostsService', () => {
         service.create('user-2', {
           title: 'Emergency fund',
           content: 'B'.repeat(60),
+          isDraft: false,
         } as never),
       ).rejects.toThrow('queue unavailable');
     });
@@ -179,6 +200,7 @@ describe('PostsService', () => {
       expect(mockPostsRepo.update).toHaveBeenCalledWith([1, 2], { title: 'Updated title' });
       expect(mockPostsQueueService.assignReviewerToPost).toHaveBeenNthCalledWith(1, 1);
       expect(mockPostsQueueService.assignReviewerToPost).toHaveBeenNthCalledWith(2, 2);
+      expect(mockPostsCacheService.invalidatePostMutationCache).toHaveBeenCalledWith([1, 2]);
     });
 
     it('fails update when queue assignment fails after retries', async () => {
@@ -203,6 +225,7 @@ describe('PostsService', () => {
 
       await expect(service.delete([5], 'duplicate')).resolves.toEqual({ message: 'Post deleted successfully' });
       expect(mockPostsRepo.delete).toHaveBeenCalledWith([5], 'duplicate');
+      expect(mockPostsCacheService.invalidatePostMutationCache).toHaveBeenCalledWith([5]);
     });
 
     it('throws when repo did not delete any posts', async () => {
@@ -219,6 +242,7 @@ describe('PostsService', () => {
       const result = await service.deleteManyByAdmin([10, 11], 'admin-1');
 
       expect(result).toEqual({ message: 'Posts deleted successfully' });
+      expect(mockPostsCacheService.invalidatePostMutationCache).toHaveBeenCalledWith([10, 11]);
       expect(StubAppLogger.info).toHaveBeenCalledWith('Admin id: admin-1 deleted posts 10, 11');
     });
   });

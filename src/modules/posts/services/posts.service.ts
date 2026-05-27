@@ -30,13 +30,17 @@ export class PostsService implements IPostsService {
   async create(authorId: string, data: CreatePost): Promise<Post> {
     const post = await this.postsRepo.create(authorId, data);
 
-    await this.queueRetryHandler.runOrThrow(() => this.postQueue.assignReviewerToPost(post.id), {
-      operation: 'posts-create-reviewer-assignment',
-      metadata: {
-        authorId,
-        postId: post.id,
-      },
-    });
+    if (data.isDraft === false) {
+      await this.queueRetryHandler.runOrThrow(() => this.postQueue.assignReviewerToPost(post.id), {
+        operation: 'posts-create-reviewer-assignment',
+        metadata: {
+          authorId,
+          postId: post.id,
+        },
+      });
+    }
+
+    await this.postsCacheService.invalidatePostMutationCache([post.id]);
 
     return post;
   }
@@ -109,6 +113,9 @@ export class PostsService implements IPostsService {
     if (!result) {
       throw new AppNotFoundException('No posts were updated');
     }
+
+    await this.postsCacheService.invalidatePostMutationCache([postId]);
+
     return { message: 'Post status updated successfully' };
   }
 
@@ -134,6 +141,8 @@ export class PostsService implements IPostsService {
       ),
     );
 
+    await this.postsCacheService.invalidatePostMutationCache(postIds);
+
     return { message: 'Post updated successfully' };
   }
 
@@ -142,6 +151,9 @@ export class PostsService implements IPostsService {
     if (result.count === 0) {
       throw new AppNotFoundException('No posts were deleted');
     }
+
+    await this.postsCacheService.invalidatePostMutationCache(postIds);
+
     return { message: 'Post deleted successfully' };
   }
 
@@ -150,6 +162,8 @@ export class PostsService implements IPostsService {
     if (result.count === 0) {
       throw new AppNotFoundException('No posts were deleted');
     }
+
+    await this.postsCacheService.invalidatePostMutationCache(postIds);
 
     this.logger.info(`Admin id: ${adminId} deleted posts ${postIds.join(', ')}`);
     return { message: 'Posts deleted successfully' };

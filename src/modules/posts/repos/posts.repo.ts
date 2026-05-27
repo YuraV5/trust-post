@@ -17,6 +17,7 @@ export class PostsRepo implements IPostsRepo {
         content: inp.content,
         targetAmount: inp.targetAmount,
         targetDate: inp.targetDate,
+        status: inp.isDraft === false ? PostStatus.PENDING_REVIEW : PostStatus.DRAFT,
         authorId: authorId,
         referencePaymentId: `ref_${randomUUID()}`,
       },

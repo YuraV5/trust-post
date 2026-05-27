@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsString, MinLength, MaxLength, IsNumber, Min, MinDate } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsNumber, Min, MinDate, IsBoolean, IsOptional } from 'class-validator';
 
 export class CreatePostDto {
   @ApiProperty({ example: 'My First Post', description: 'The title of the post' })
@@ -27,4 +27,13 @@ export class CreatePostDto {
   @MinDate(new Date(), { message: 'Target date must be in the future' })
   @Type(() => Date)
   targetDate: Date;
+
+  @ApiProperty({
+    example: true,
+    required: false,
+    description: 'Whether to keep post as draft on create. If false, post is sent to pending review.',
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'isDraft must be a boolean value' })
+  isDraft?: boolean;
 }

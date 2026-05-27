@@ -5,6 +5,7 @@ export type CreatePost = {
   content: string;
   targetAmount: number;
   targetDate: Date;
+  isDraft?: boolean;
 };
 
 export type UpdatePost = {

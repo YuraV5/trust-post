@@ -78,3 +78,32 @@ export type StaffModerationPost = Prisma.PostGetPayload<{
     };
   };
 }>;
+
+export type StaffModerationHistoryPost = {
+  id: number;
+  title: string;
+  createdAt: Date;
+  author: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+};
+
+export type StaffModerationHistoryEvent = {
+  reviewId: number;
+  reviewStatus: PostReviewStatus;
+  postStatus: PostStatus;
+  reason: string | null;
+  changedAt: Date;
+  moderator: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+};
+
+export type StaffModerationHistory = {
+  post: StaffModerationHistoryPost;
+  history: StaffModerationHistoryEvent[];
+};

@@ -1,4 +1,4 @@
-import { PostReview, PostReviewStatus, PostStatus } from '@prisma/client';
+import { PostReviewStatus, PostStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../../users/services';
 import { PostsRepo } from '../repos';
@@ -7,7 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { AppBadRequestException, AppForbiddenException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
-import { PostLifecycleStatus } from '../types/common';
+import { PostLifecycleStatus, StaffModerationHistory } from '../types/common';
 import { ResponseMessage } from '../../../common/types';
 import { EmailQueueService } from '../../emails/email-queue.service';
 import { MetricsService } from '../../../infrastructure/metrics/metrics.service';
@@ -147,12 +147,89 @@ export class PostsReviewService {
 
     return { message: 'Post review and lifecycle status updated successfully' };
   }
-  async getPostStatusHistory(postId: number): Promise<PostReview[]> {
-    const history = await this.postsReviewRepo.findByPostId(postId);
-    if (!history || history.length === 0) {
-      throw new AppNotFoundException('Post review history not found');
+  async getPostStatusHistory(postId: number): Promise<StaffModerationHistory> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+        status: true,
+        statusReason: true,
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        postReviews: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          include: {
+            reviewedBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!post) {
+      throw new AppNotFoundException('Post not found');
     }
-    return history;
+
+    const history = post.postReviews.map((review, index) => {
+      const isLatestReview = index === 0;
+      const postStatus =
+        review.status === PostReviewStatus.PENDING
+          ? PostStatus.PENDING_REVIEW
+          : review.status === PostReviewStatus.APPROVED
+            ? PostStatus.APPROVED
+            : isLatestReview && (post.status === PostStatus.BLOCKED || post.status === PostStatus.REJECTED)
+              ? post.status
+              : PostStatus.REJECTED;
+      const reason =
+        review.status === PostReviewStatus.APPROVED
+          ? null
+          : review.reviewReason ?? (isLatestReview ? (post.statusReason ?? null) : null);
+
+      return {
+        reviewId: review.id,
+        reviewStatus: review.status,
+        postStatus,
+        reason,
+        changedAt: review.createdAt,
+        moderator: review.reviewedBy
+          ? {
+              id: review.reviewedBy.id,
+              name: review.reviewedBy.name,
+              email: review.reviewedBy.email,
+            }
+          : null,
+      };
+    });
+
+    return {
+      post: {
+        id: post.id,
+        title: post.title,
+        createdAt: post.createdAt,
+        author: post.author
+          ? {
+              id: post.author.id,
+              name: post.author.name,
+              email: post.author.email,
+            }
+          : null,
+      },
+      history,
+    };
   }
 
   async purgePostReviewDataByAdmin(postIds: number[], adminId: string): Promise<ResponseMessage> {

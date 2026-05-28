@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { PostStatus } from '@prisma/client';
+import { PostReviewStatus, PostStatus } from '@prisma/client';
 
 /**
  * Swagger response schemas for the Posts module.
@@ -136,4 +136,68 @@ export class PaginatedCommentsResponseDto {
 
   @ApiProperty({ example: 10, description: 'Items per page' })
   limit: number;
+}
+
+export class ModerationHistoryAuthorDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'User ID' })
+  id: string;
+
+  @ApiProperty({ example: 'Jane Smith', description: 'User name' })
+  name: string;
+
+  @ApiProperty({ example: 'jane@example.com', description: 'User email' })
+  email: string;
+}
+
+export class ModerationHistoryPostDto {
+  @ApiProperty({ example: 123, description: 'Post ID' })
+  id: number;
+
+  @ApiProperty({ example: 'Help for shelter repairs', description: 'Post title' })
+  title: string;
+
+  @ApiProperty({ example: '2026-02-02T09:20:00.000Z', description: 'Post creation date' })
+  createdAt: Date;
+
+  @ApiProperty({ type: ModerationHistoryAuthorDto, nullable: true, description: 'Post author summary' })
+  author: ModerationHistoryAuthorDto | null;
+}
+
+export class ModerationHistoryModeratorDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Moderator ID' })
+  id: string;
+
+  @ApiProperty({ example: 'Moderator Name', description: 'Moderator display name' })
+  name: string;
+
+  @ApiProperty({ example: 'moderator@example.com', description: 'Moderator email' })
+  email: string;
+}
+
+export class ModerationHistoryEventDto {
+  @ApiProperty({ example: 501, description: 'Post review row ID' })
+  reviewId: number;
+
+  @ApiProperty({ enum: PostReviewStatus, example: PostReviewStatus.REJECTED, description: 'Review status at this step' })
+  reviewStatus: PostReviewStatus;
+
+  @ApiProperty({ enum: PostStatus, example: PostStatus.BLOCKED, description: 'Resulting post status at this step' })
+  postStatus: PostStatus;
+
+  @ApiProperty({ nullable: true, example: 'Contains prohibited content', description: 'Moderation reason if present' })
+  reason: string | null;
+
+  @ApiProperty({ example: '2026-02-03T12:40:00.000Z', description: 'Date of this status transition' })
+  changedAt: Date;
+
+  @ApiProperty({ type: ModerationHistoryModeratorDto, nullable: true, description: 'Moderator who made this decision' })
+  moderator: ModerationHistoryModeratorDto | null;
+}
+
+export class PostModerationHistoryResponseDto {
+  @ApiProperty({ type: ModerationHistoryPostDto, description: 'Post summary' })
+  post: ModerationHistoryPostDto;
+
+  @ApiProperty({ type: [ModerationHistoryEventDto], description: 'Moderation timeline (newest first)' })
+  history: ModerationHistoryEventDto[];
 }

@@ -8,15 +8,15 @@ import { CurrentUser, Roles } from '../../../common/decorators';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { PostsStaffQueryDto, PostStatusLifecycleDto } from '../dtos';
 import { RolesGuard } from '../../../common/guards';
-import { PostReview, UserRoles } from '@prisma/client';
+import { UserRoles } from '@prisma/client';
 import { PaginatedResult } from '../types';
-import { StaffModerationPost } from '../types/common';
+import { StaffModerationHistory, StaffModerationPost } from '../types/common';
 import {
   MessageResponseDto,
   UnauthorizedErrorResponse,
   NotFoundErrorResponse,
 } from '../../../common/swagger/responses';
-import { PaginatedPostsResponseDto } from '../dtos/doc.swagger';
+import { PaginatedPostsResponseDto, PostModerationHistoryResponseDto } from '../dtos/doc.swagger';
 
 @ApiTags('posts-moderation')
 @ApiBearerAuth('JWT-auth')
@@ -89,7 +89,7 @@ export class StaffPostsController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Post status history retrieved',
-    isArray: true,
+    type: PostModerationHistoryResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -101,7 +101,7 @@ export class StaffPostsController {
     description: 'Post not found',
     type: NotFoundErrorResponse,
   })
-  async getPostStatusHistory(@Param() params: NumericIdParamDto): Promise<PostReview[]> {
+  async getPostStatusHistory(@Param() params: NumericIdParamDto): Promise<StaffModerationHistory> {
     return await this.postsReviewService.getPostStatusHistory(params.id);
   }
 }

@@ -37,12 +37,7 @@
     "seed:users": "ts-node tools/seeds.ts users",
     "seed:posts": "ts-node tools/seeds.ts posts",
     "seed:comments": "ts-node tools/seeds.ts comments",
-    "seed:full": "ts-node tools/seeds.ts full",
-    "seed:users:prod": "node dist/tools/seeds.js users",
-    "seed:posts:prod": "node dist/tools/seeds.js posts",
-    "seed:comments:prod": "node dist/tools/seeds.js comments",
-    "seed:full:prod": "node dist/tools/seeds.js full",
-    "seed:admin": "npm run seed:users"
+    "seed:full": "ts-node tools/seeds.ts full"
   },
   "dependencies": {
     "@google/genai": "^1.46.0",

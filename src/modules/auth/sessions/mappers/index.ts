@@ -5,6 +5,7 @@ import { maskIp } from '../../../../common/utils';
 export const mapSession = (session: Session): SessionMapping => {
   return {
     id: session.id,
+    deviceId: session.deviceId,
     ip: maskIp(session.ip),
     userAgent: session.userAgent ?? 'Unknown User Agent',
     lastUsedAt: session.lastUsedAt,

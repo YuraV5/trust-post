@@ -60,7 +60,10 @@ export class PostStatusLifecycleDto {
     description: 'The reason for the status change, if applicable',
     example: 'Reached funding goal',
   })
-  @IsOptional()
+  @ValidateIf(
+    (o: PostStatusLifecycleDto) => o.postStatus === PostStatus.REJECTED || o.postStatus === PostStatus.BLOCKED,
+  )
+  @IsNotEmpty()
   @IsString()
   @MinLength(20)
   @MaxLength(1000)
@@ -83,6 +86,5 @@ export class PostStatusLifecycleDto {
   @IsString()
   @MinLength(20)
   @MaxLength(1000)
-  @ValidateIf((o: PostStatusLifecycleDto) => o.reviewStatus === PostReviewStatus.REJECTED) // Only require reviewReason if reviewStatus is REJECTED
   reviewReason?: string;
 }

@@ -10,6 +10,7 @@ import { PostFile } from '@prisma/client';
 @Injectable()
 export class PostFilesService {
   private readonly MAX_FILES_PER_POST = 10;
+  private readonly MAX_TOTAL_FILE_SIZE_PER_POST_BYTES = 25 * 1024 * 1024;
 
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
@@ -40,6 +41,24 @@ export class PostFilesService {
         );
         return {
           message: `Cannot upload ${data.length} files. Post has ${existingCount} files. Maximum is ${this.MAX_FILES_PER_POST}. Delete ${exceededBy} file(s) or upload only ${maxCanUpload} file(s).`,
+        };
+      }
+
+      const existingTotalSize = await this.postFilesRepo.getTotalFileSizeByPostId(postId, tx);
+      const incomingTotalSize = data.reduce((sum, file) => sum + file.size, 0);
+      const totalSizeAfterUpload = existingTotalSize + incomingTotalSize;
+
+      if (totalSizeAfterUpload > this.MAX_TOTAL_FILE_SIZE_PER_POST_BYTES) {
+        const maxMb = Math.floor(this.MAX_TOTAL_FILE_SIZE_PER_POST_BYTES / (1024 * 1024));
+        const existingMb = (existingTotalSize / (1024 * 1024)).toFixed(2);
+        const incomingMb = (incomingTotalSize / (1024 * 1024)).toFixed(2);
+
+        this.logger.warn(
+          `Upload rejected: Post ${postId} would exceed ${maxMb}MB total files size. Existing: ${existingMb}MB, incoming: ${incomingMb}MB`,
+        );
+
+        return {
+          message: `Total files size limit exceeded. Maximum ${maxMb}MB per post. Existing: ${existingMb}MB, incoming: ${incomingMb}MB.`,
         };
       }
 
@@ -178,7 +197,7 @@ export class PostFilesService {
     const first = data[0];
     if (!first) return false;
 
-    const expectedPathFragment = `/${first.uploadedById}/posts/${first.postId}/`;
+    const expectedPathFragment = `/${first.uploadedById}/posts/`;
 
     return data.every((file) => {
       if (file.postId !== first.postId || file.uploadedById !== first.uploadedById) {

@@ -53,7 +53,7 @@ OpenAPI documentation is auto-generated from NestJS decorators in controllers.
 - All `/auth/*` endpoints except logout/logout-all
 - `GET /posts` (list public posts)
 - `GET /posts/:id` (view post details)
-- `GET /posts/:id/comments` (view comments)
+- `GET /posts/:postId/comments` (view comments)
 - `GET /redis/health` (health check)
 
 ### Protected Routes (JWT Token Required)
@@ -144,9 +144,9 @@ Automatically handles:
 ### Pagination
 ```
 GET /posts?page=1&limit=20
-GET /posts?page=1&limit=20&search=garden&status=APPROVED
+GET /posts?page=1&limit=20&search=garden&sortBy=createdAt&sortOrder=desc
 
-Response: { data: [...], pagination: { page, limit, total, totalPages } }
+Response: { data: [...], total, page, limit, totalPages }
 ```
 
 ### Cursor-Based Pagination (Messages)
@@ -170,6 +170,24 @@ Same request with same key returns cached result
 GET /staff/posts?page=1&limit=20&sortBy=targetDate&sortOrder=asc&status=PENDING_REVIEW
 GET /posts/1/comments?page=1&limit=20&sort=newest
 ```
+
+---
+
+## Posts Contract Notes (Current)
+
+### Create Post Behavior
+- `POST /posts` accepts optional `isDraft`.
+- `isDraft: true` (or omitted) -> post starts as `DRAFT`.
+- `isDraft: false` -> post starts as `PENDING_REVIEW` and reviewer assignment is queued.
+
+### `GET /posts` Response Shape
+- Public list always returns only approved posts.
+- Each item is DB post fields plus `mainImageUrl` (flat field).
+- Full `author` and `files` objects are not part of list payload.
+
+### `GET /posts/:id` Response Shape
+- Returns post DB fields and `author` summary (`id`, `name`, `photoUrl`, `isEmailVerified`).
+- Attached files are retrieved via `GET /posts/:postId/files`.
 
 ---
 

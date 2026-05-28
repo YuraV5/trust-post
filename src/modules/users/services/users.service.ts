@@ -67,11 +67,17 @@ export class UsersService implements IUserService {
   }
 
   async updateProfile(id: string, inp: UpdateUserInput): Promise<ResponseMessage> {
-    if (!hasUpdatableFields(inp)) {
+    const normalizedInput: UpdateUserInput = {
+      ...inp,
+      name: inp?.name?.toLowerCase(),
+      photoUrl: inp?.photoUrl === '' ? null : inp?.photoUrl,
+    };
+
+    if (!hasUpdatableFields(normalizedInput)) {
       throw new AppBadRequestException('No fields to update');
     }
-    const name = inp?.name?.toLowerCase();
-    await this.repo.update(id, { ...inp, name });
+
+    await this.repo.update(id, normalizedInput);
     return { message: `Updated successfully` };
   }
 

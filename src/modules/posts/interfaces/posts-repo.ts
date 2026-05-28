@@ -4,6 +4,9 @@ import {
   PaginatedResult,
   PostCount,
   PostId,
+  PublicPostWithMainImage,
+  PublicPostDetails,
+  StaffModerationPost,
   StaffPostUpdate,
   PostStatusUpdate,
   NormalizedUserQuery,
@@ -13,12 +16,15 @@ import {
 
 export interface IPostsRepo {
   create(authorId: string, inp: CreatePost): Promise<PostId>;
-  getPostById(id: number): Promise<Post | null>;
+  getPostById(id: number): Promise<PublicPostDetails | null>;
   getPostByIdForAuthor(id: number, authorId: string): Promise<Post | null>;
   findByAuthorId(authorId: string): Promise<Post[]>;
-  findByAuthorIdPaginated(authorId: string, query: NormalizedUserQuery): Promise<PaginatedResult<Post>>;
-  findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<Post>>;
-  findManyStaff(query: NormalizedStaffQuery): Promise<PaginatedResult<Post>>;
+  findByAuthorIdPaginated(
+    authorId: string,
+    query: NormalizedUserQuery,
+  ): Promise<PaginatedResult<PublicPostWithMainImage>>;
+  findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<PublicPostWithMainImage>>;
+  findManyStaff(query: NormalizedStaffQuery): Promise<PaginatedResult<StaffModerationPost>>;
   update(ids: number[], data: StaffPostUpdate): Promise<PostCount>;
   delete(ids: number[], statusReason?: string): Promise<PostCount>;
   deleteByAdmin(ids: number[], tx?: Prisma.TransactionClient): Promise<PostCount>;

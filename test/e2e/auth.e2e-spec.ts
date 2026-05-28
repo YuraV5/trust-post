@@ -35,7 +35,7 @@ describe('Auth (e2e)', () => {
 
       const res = await request(app.getHttpServer()).post('/api/v1/auth/register').send(testUser).expect(201);
 
-      expect(res.body).toEqual({ message: 'User registered successfully' });
+      expect(res.body).toEqual({ message: 'Registration successful. We sent a verification email to your address.' });
     });
 
     it('should return 409 when email is already taken', async () => {

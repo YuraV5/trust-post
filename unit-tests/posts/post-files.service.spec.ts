@@ -6,6 +6,7 @@ describe('PostFilesService', () => {
   const postFilesRepoMock = {
     withPostLock: jest.fn((postId: number, cb: (tx: unknown) => Promise<unknown>) => cb({})),
     countFilesByPostId: jest.fn(),
+    getTotalFileSizeByPostId: jest.fn(),
     hasMainImage: jest.fn(),
     normalizeMainImageValues: jest.fn(),
     insertMultipleFiles: jest.fn(),
@@ -36,6 +37,7 @@ describe('PostFilesService', () => {
     postFilesRepoMock.withPostLock.mockImplementation(
       (_postId: number, cb: (tx: unknown) => Promise<unknown>) => cb({}),
     );
+    postFilesRepoMock.getTotalFileSizeByPostId.mockResolvedValue(0);
     service = new PostFilesService(StubAppLogger, postFilesRepoMock as any, filesServiceMock as any);
   });
 
@@ -72,6 +74,7 @@ describe('PostFilesService', () => {
 
     it('inserts files and returns success message on happy path', async () => {
       postFilesRepoMock.countFilesByPostId.mockResolvedValue(0);
+      postFilesRepoMock.getTotalFileSizeByPostId.mockResolvedValue(0);
       postFilesRepoMock.hasMainImage.mockResolvedValue(false);
       postFilesRepoMock.insertMultipleFiles.mockResolvedValue({ count: 1 });
 
@@ -83,6 +86,7 @@ describe('PostFilesService', () => {
 
     it('returns duplicate message when no files were actually inserted', async () => {
       postFilesRepoMock.countFilesByPostId.mockResolvedValue(0);
+      postFilesRepoMock.getTotalFileSizeByPostId.mockResolvedValue(0);
       postFilesRepoMock.hasMainImage.mockResolvedValue(false);
       postFilesRepoMock.insertMultipleFiles.mockResolvedValue({ count: 0 });
 

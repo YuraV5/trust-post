@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsString, MinLength, MaxLength, IsNumber, Min, MinDate } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsNumber, Min, MinDate, IsBoolean, IsOptional } from 'class-validator';
 
 export class CreatePostDto {
   @ApiProperty({ example: 'My First Post', description: 'The title of the post' })
@@ -20,11 +20,20 @@ export class CreatePostDto {
 
   @ApiProperty({ example: 1000, description: 'The target amount for the post' })
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Target amount must be a valid number' })
-  @Min(0, { message: 'Target amount must be at least 0' })
+  @Min(0.01, { message: 'Target amount must be greater than 0' })
   targetAmount: number;
 
   @ApiProperty({ example: '2025-10-12', description: 'The target date for the post in YYYY-MM-DD format' })
   @MinDate(new Date(), { message: 'Target date must be in the future' })
   @Type(() => Date)
   targetDate: Date;
+
+  @ApiProperty({
+    example: true,
+    required: false,
+    description: 'Whether to keep post as draft on create. If false, post is sent to pending review.',
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'isDraft must be a boolean value' })
+  isDraft?: boolean;
 }

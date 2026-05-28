@@ -1,8 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PostsLikeRepo, PostsRepo } from '../repos';
 import { ResponseMessage } from '../../../common/types';
-import { CreatePost, StaffPostUpdate, PaginatedResult, SortBy, EditUserPostStatus } from '../types';
-import { Post } from '@prisma/client';
+import {
+  CreatePost,
+  StaffModerationPost,
+  StaffPostUpdate,
+  PaginatedResult,
+  SortBy,
+  EditUserPostStatus,
+  PublicPostDetails,
+  PublicPostWithMainImage,
+} from '../types';
+import { Post, PostStatus, UserRoles } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { hasUpdatableFields } from '../../../common/utils';
 import { IPostsService } from '../interfaces';
@@ -13,6 +22,7 @@ import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { PostsCacheService } from './posts-cache.service';
 import { QueueRetryHandlerService } from '../../queues/services';
+import { AuthenticatedUser } from '../../../common/interfaces';
 
 @Injectable()
 export class PostsService implements IPostsService {
@@ -30,20 +40,27 @@ export class PostsService implements IPostsService {
   async create(authorId: string, data: CreatePost): Promise<Post> {
     const post = await this.postsRepo.create(authorId, data);
 
-    await this.queueRetryHandler.runOrThrow(() => this.postQueue.assignReviewerToPost(post.id), {
-      operation: 'posts-create-reviewer-assignment',
-      metadata: {
-        authorId,
-        postId: post.id,
-      },
-    });
+    if (data.isDraft === false) {
+      await this.queueRetryHandler.runOrThrow(() => this.postQueue.assignReviewerToPost(post.id), {
+        operation: 'posts-create-reviewer-assignment',
+        metadata: {
+          authorId,
+          postId: post.id,
+        },
+      });
+    }
+
+    await this.postsCacheService.invalidatePostMutationCache([post.id]);
 
     return post;
   }
 
-  async getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<Post>> {
+  async getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const normalized = this.normalizeUserPostsQuery(query);
-    const cached = await this.postsCacheService.getUserPosts<PaginatedResult<Post>>(userId, normalized);
+    const cached = await this.postsCacheService.getUserPosts<PaginatedResult<PublicPostWithMainImage>>(
+      userId,
+      normalized,
+    );
     if (cached) {
       return cached;
     }
@@ -53,9 +70,9 @@ export class PostsService implements IPostsService {
     return result;
   }
 
-  async getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<Post>> {
+  async getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const normalized = this.normalizePublicQuery(query);
-    const cached = await this.postsCacheService.getPublicPosts<PaginatedResult<Post>>(normalized);
+    const cached = await this.postsCacheService.getPublicPosts<PaginatedResult<PublicPostWithMainImage>>(normalized);
     if (cached) {
       return cached;
     }
@@ -65,9 +82,12 @@ export class PostsService implements IPostsService {
     return result;
   }
 
-  async getAllStaffPosts(query: PostsStaffQueryDto): Promise<PaginatedResult<Post>> {
-    const normalized = this.normalizeStaffQuery(query);
-    const cached = await this.postsCacheService.getStaffPosts<PaginatedResult<Post>>(normalized);
+  async getAllStaffPosts(
+    query: PostsStaffQueryDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<PaginatedResult<StaffModerationPost>> {
+    const normalized = this.normalizeStaffQuery(query, currentUser);
+    const cached = await this.postsCacheService.getStaffPosts<PaginatedResult<StaffModerationPost>>(normalized);
     if (cached) {
       return cached;
     }
@@ -77,8 +97,8 @@ export class PostsService implements IPostsService {
     return result;
   }
 
-  async findById(id: number): Promise<Post> {
-    const cached = await this.postsCacheService.getPostById<Post>(id);
+  async findById(id: number): Promise<PublicPostDetails> {
+    const cached = await this.postsCacheService.getPostById<PublicPostDetails>(id);
 
     if (cached) {
       return cached;
@@ -109,6 +129,9 @@ export class PostsService implements IPostsService {
     if (!result) {
       throw new AppNotFoundException('No posts were updated');
     }
+
+    await this.postsCacheService.invalidatePostMutationCache([postId]);
+
     return { message: 'Post status updated successfully' };
   }
 
@@ -134,6 +157,8 @@ export class PostsService implements IPostsService {
       ),
     );
 
+    await this.postsCacheService.invalidatePostMutationCache(postIds);
+
     return { message: 'Post updated successfully' };
   }
 
@@ -142,6 +167,9 @@ export class PostsService implements IPostsService {
     if (result.count === 0) {
       throw new AppNotFoundException('No posts were deleted');
     }
+
+    await this.postsCacheService.invalidatePostMutationCache(postIds);
+
     return { message: 'Post deleted successfully' };
   }
 
@@ -150,6 +178,8 @@ export class PostsService implements IPostsService {
     if (result.count === 0) {
       throw new AppNotFoundException('No posts were deleted');
     }
+
+    await this.postsCacheService.invalidatePostMutationCache(postIds);
 
     this.logger.info(`Admin id: ${adminId} deleted posts ${postIds.join(', ')}`);
     return { message: 'Posts deleted successfully' };
@@ -209,7 +239,7 @@ export class PostsService implements IPostsService {
     };
   }
 
-  private normalizeStaffQuery(query: PostsStaffQueryDto): NormalizedStaffQuery {
+  private normalizeStaffQuery(query: PostsStaffQueryDto, currentUser: AuthenticatedUser): NormalizedStaffQuery {
     const VALID_SORT_FIELDS = ['createdAt', 'targetDate', 'targetAmount', 'currentAmount'];
 
     const limit = Math.min(Math.max(query.limit || 10, 1), this.MAX_LIMIT);
@@ -225,7 +255,8 @@ export class PostsService implements IPostsService {
       targetAmount: query.targetAmount,
       currentAmount: query.currentAmount,
       authorId: query.authorId,
-      status: query.status,
+      status: query.status ?? PostStatus.PENDING_REVIEW,
+      reviewerId: currentUser.role === UserRoles.MODERATOR ? currentUser.userId : undefined,
       sortBy,
       sortOrder,
     };

@@ -30,6 +30,7 @@ export const mockPostsCacheService = {
   getPostById: jest.fn(),
   setPostById: jest.fn(),
   invalidateLikeRelatedCache: jest.fn(),
+  invalidatePostMutationCache: jest.fn(),
 };
 
 export const mockQueueRetryHandler = {

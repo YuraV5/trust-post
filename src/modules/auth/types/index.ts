@@ -27,7 +27,6 @@ export type UserLoginOutput = AuthResponse & {
 };
 
 export type SetPassword = {
-  email: string;
   password: string;
   confirmPassword: string;
 };

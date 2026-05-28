@@ -168,20 +168,22 @@ export class AuthController {
   @Get('verify-email/:uuid')
   @PublicRoute()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify email with UUID token (redirects to frontend)' })
+  @ApiOperation({ summary: 'Verify email with UUID token' })
   @ApiParam({ name: 'uuid', type: String, description: 'Email verification token' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Email verified, redirects to frontend login page',
+    description: 'Email verified successfully',
+    type: MessageResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Invalid or expired verification token',
     type: BadRequestErrorResponse,
   })
-  async verifyEmail(@Param() params: VerifyEmailParamsDto, @Res({ passthrough: true }) res: Response): Promise<void> {
+  async verifyEmail(@Param() params: VerifyEmailParamsDto): Promise<ResponseMessage> {
     await this.authService.verifyEmail(params.uuid);
-    res.status(HttpStatus.FOUND).redirect(`${this.config.get('FRONTEND_URL')}/login#verified`);
+
+    return { message: 'Email verified successfully' };
   }
 
   @Post('resend/verification')
@@ -237,25 +239,23 @@ export class AuthController {
   @Post('set-password/:uuid')
   @PublicRoute()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Set new password with reset token (redirects to frontend)' })
+  @ApiOperation({ summary: 'Set new password with reset token' })
   @ApiParam({ name: 'uuid', type: String, description: 'Password reset token' })
   @ApiBody({ type: SetPasswordDto })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Password set successfully, redirects to frontend login page',
+    description: 'Password set successfully',
+    type: MessageResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Invalid token, expired token, or weak password',
     type: BadRequestErrorResponse,
   })
-  async newPassword(
-    @Param() params: VerifyEmailParamsDto,
-    @Body() body: SetPasswordDto,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<void> {
+  async newPassword(@Param() params: VerifyEmailParamsDto, @Body() body: SetPasswordDto): Promise<ResponseMessage> {
     await this.authService.setPassword(params.uuid, body);
-    res.status(HttpStatus.OK).redirect(`${this.config.get('FRONTEND_URL')}/login#passwordReset`);
+
+    return { message: 'Password reset successfully. You can now log in.' };
   }
 
   @Post('activate-account/:uuid')

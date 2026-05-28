@@ -5,6 +5,7 @@ import {
   CreatePost,
   PaginatedResult,
   PostCount,
+  PublicPostDetails,
   PublicPostWithMainImage,
   StaffModerationPost,
   StaffPostUpdate,
@@ -60,7 +61,7 @@ export class PostsRepo implements IPostsRepo {
     });
   }
 
-  async getPostById(id: number, tx?: Prisma.TransactionClient): Promise<Post | null> {
+  async getPostById(id: number, tx?: Prisma.TransactionClient): Promise<PublicPostDetails | null> {
     const client = tx ?? this.db;
     return await client.post.findUnique({
       where: {

@@ -8,6 +8,7 @@ import {
   PaginatedResult,
   SortBy,
   EditUserPostStatus,
+  PublicPostDetails,
   PublicPostWithMainImage,
 } from '../types';
 import { Post, PostStatus, UserRoles } from '@prisma/client';
@@ -96,8 +97,8 @@ export class PostsService implements IPostsService {
     return result;
   }
 
-  async findById(id: number): Promise<Post> {
-    const cached = await this.postsCacheService.getPostById<Post>(id);
+  async findById(id: number): Promise<PublicPostDetails> {
+    const cached = await this.postsCacheService.getPostById<PublicPostDetails>(id);
 
     if (cached) {
       return cached;

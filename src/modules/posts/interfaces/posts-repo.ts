@@ -5,6 +5,7 @@ import {
   PostCount,
   PostId,
   PublicPostWithMainImage,
+  PublicPostDetails,
   StaffModerationPost,
   StaffPostUpdate,
   PostStatusUpdate,
@@ -15,7 +16,7 @@ import {
 
 export interface IPostsRepo {
   create(authorId: string, inp: CreatePost): Promise<PostId>;
-  getPostById(id: number): Promise<Post | null>;
+  getPostById(id: number): Promise<PublicPostDetails | null>;
   getPostByIdForAuthor(id: number, authorId: string): Promise<Post | null>;
   findByAuthorId(authorId: string): Promise<Post[]>;
   findByAuthorIdPaginated(

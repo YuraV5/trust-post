@@ -20,7 +20,7 @@ import { CreatePostDto } from '../dtos/create-post.dto';
 import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { Post as Publication } from '@prisma/client';
 import { UpdatePostDto, PostsQueryDto, UserPostsQueryDto, ModifyUserPostStatusDto } from '../dtos';
-import { PaginatedResult, PublicPostWithMainImage } from '../types';
+import { PaginatedResult, PublicPostDetails, PublicPostWithMainImage } from '../types';
 import { DeletePostByUserDto } from '../dtos/delete.dto';
 import { OwnershipGuard } from '../../../common/guards';
 import {
@@ -30,7 +30,7 @@ import {
   NotFoundErrorResponse,
   ValidationErrorResponse,
 } from '../../../common/swagger/responses';
-import { PostResponseDto, PaginatedPostsResponseDto } from '../dtos/doc.swagger';
+import { PostBaseResponseDto, PostResponseDto, PaginatedPostsResponseDto } from '../dtos/doc.swagger';
 
 @ApiTags('posts')
 @Controller('posts')
@@ -46,7 +46,7 @@ export class PublicPostsController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'Post created successfully',
-    type: PostResponseDto,
+    type: PostBaseResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -69,7 +69,6 @@ export class PublicPostsController {
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 10)' })
   @ApiQuery({ name: 'search', required: false, type: String, description: 'Search query' })
-  @ApiQuery({ name: 'status', required: false, type: String, description: 'Filter by post status' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Posts retrieved with pagination metadata',
@@ -225,7 +224,7 @@ export class PublicPostsController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'User post retrieved successfully',
-    type: PostResponseDto,
+    type: PostBaseResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -259,7 +258,7 @@ export class PublicPostsController {
     description: 'Post not found',
     type: NotFoundErrorResponse,
   })
-  async getPostById(@Param() params: NumericIdParamDto): Promise<Publication> {
+  async getPostById(@Param() params: NumericIdParamDto): Promise<PublicPostDetails> {
     return await this.postsService.findById(params.id);
   }
 }

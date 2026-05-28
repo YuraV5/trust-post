@@ -16,7 +16,7 @@ import {
   UnauthorizedErrorResponse,
   NotFoundErrorResponse,
 } from '../../../common/swagger/responses';
-import { PaginatedPostsResponseDto, PostModerationHistoryResponseDto } from '../dtos/doc.swagger';
+import { PaginatedStaffPostsResponseDto, PostModerationHistoryResponseDto } from '../dtos/doc.swagger';
 
 @ApiTags('posts-moderation')
 @ApiBearerAuth('JWT-auth')
@@ -67,7 +67,7 @@ export class StaffPostsController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Posts retrieved for moderation with pagination',
-    type: PaginatedPostsResponseDto,
+    type: PaginatedStaffPostsResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,

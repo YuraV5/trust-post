@@ -2,6 +2,7 @@ import { ResponseMessage } from '../../../common/types';
 import {
   CreatePost,
   EditUserPostStatus,
+  PublicPostDetails,
   PublicPostWithMainImage,
   StaffModerationPost,
   StaffPostUpdate,
@@ -19,7 +20,7 @@ export interface IPostsService {
     query: PostsStaffQueryDto,
     currentUser: AuthenticatedUser,
   ): Promise<PaginatedResult<StaffModerationPost>>;
-  findById(id: number): Promise<Post>;
+  findById(id: number): Promise<PublicPostDetails>;
   findByIdForAuthor(id: number, authorId: string): Promise<Post>;
   editUserPostStatus(postId: number, data: EditUserPostStatus): Promise<ResponseMessage>;
   update(postIds: number[], data: StaffPostUpdate): Promise<ResponseMessage>;

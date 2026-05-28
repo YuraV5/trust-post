@@ -54,6 +54,17 @@ export type StaffModeratorSummary = {
   photoUrl: string | null;
 };
 
+export type PublicPostAuthorSummary = {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  isEmailVerified: boolean;
+};
+
+export type PublicPostDetails = Post & {
+  author: PublicPostAuthorSummary | null;
+};
+
 export type StaffPostReviewSummary = {
   id: number;
   postId: number;

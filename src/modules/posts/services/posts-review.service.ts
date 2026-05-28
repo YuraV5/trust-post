@@ -13,6 +13,7 @@ import { EmailQueueService } from '../../emails/email-queue.service';
 import { MetricsService } from '../../../infrastructure/metrics/metrics.service';
 import { AuthenticatedUser } from '../../../common/interfaces';
 import { UserRoles } from '@prisma/client';
+import { PostsCacheService } from './posts-cache.service';
 
 @Injectable()
 export class PostsReviewService {
@@ -24,6 +25,7 @@ export class PostsReviewService {
     private readonly postsRepo: PostsRepo,
     private readonly emailQueue: EmailQueueService,
     private readonly metricsService: MetricsService,
+    private readonly postsCacheService: PostsCacheService,
   ) {}
 
   async assignReviewer(postId: number): Promise<ResponseMessage> {
@@ -81,11 +83,12 @@ export class PostsReviewService {
     }
 
     // --- LOAD REQUIRED DATA ONCE ---
-    const activeReview =
-      currentUser.role === UserRoles.ADMIN
-        ? await this.postsReviewRepo.findActivePendingByPost(postId)
-        : await this.postsReviewRepo.findActivePendingByPostAndReviewer(postId, reviewerId);
+    const activeReview = await this.postsReviewRepo.findLatestActiveByPost(postId);
     if (!activeReview) {
+      throw new AppForbiddenException('You are not assigned to moderate this post or post is not in active moderation');
+    }
+
+    if (currentUser.role !== UserRoles.ADMIN && activeReview.reviewedById !== reviewerId) {
       throw new AppForbiddenException('You are not assigned to moderate this post or post is not in active moderation');
     }
 
@@ -111,6 +114,8 @@ export class PostsReviewService {
 
       await this.postsRepo.updateStatus(postId, { postStatus, statusReason: finalStatusReason }, tx);
     });
+
+    await this.postsCacheService.invalidatePostMutationCache([postId]);
 
     // Count publication only when moderation approves the post.
     if (

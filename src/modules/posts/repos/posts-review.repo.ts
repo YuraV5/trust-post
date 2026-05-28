@@ -76,6 +76,18 @@ export class PostsReviewRepo implements IPostsReviewRepo {
     });
   }
 
+  async findLatestActiveByPost(postId: number): Promise<PostReview | null> {
+    return await this.db.postReview.findFirst({
+      where: {
+        postId,
+        isActive: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async suspendPreviousReview(postId: number, tx?: Prisma.TransactionClient): Promise<{ count: number }> {
     const result = await (tx ?? this.db).postReview.updateMany({
       where: {

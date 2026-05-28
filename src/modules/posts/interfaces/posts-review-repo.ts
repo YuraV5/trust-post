@@ -13,6 +13,7 @@ export interface IPostsReviewRepo {
   findByPostId(postId: number): Promise<PostReview[]>;
   findActivePendingByPost(postId: number): Promise<PostReview | null>;
   findActivePendingByPostAndReviewer(postId: number, reviewerId: string): Promise<PostReview | null>;
+  findLatestActiveByPost(postId: number): Promise<PostReview | null>;
   suspendPreviousReview(postId: number, tx?: Prisma.TransactionClient): Promise<{ count: number }>;
   updateStatus(postId: number, data: PostReviewStatusUpdate, tx?: Prisma.TransactionClient): Promise<void>;
   deleteHistoryByAdmin(postId: number, tx?: Prisma.TransactionClient): Promise<{ count: number }>;

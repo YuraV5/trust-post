@@ -60,7 +60,6 @@ export type StaffModerationPost = Prisma.PostGetPayload<{
     postReviews: {
       where: {
         isActive: true;
-        status: 'PENDING';
       };
       orderBy: {
         createdAt: 'desc';

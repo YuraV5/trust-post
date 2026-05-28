@@ -44,6 +44,10 @@ describe('PostsReviewService', () => {
     recordPostCreated: jest.fn(),
   };
 
+  const postsCacheServiceMock = {
+    invalidatePostMutationCache: jest.fn(),
+  };
+
   let service: PostsReviewService;
 
   beforeEach(() => {
@@ -51,6 +55,7 @@ describe('PostsReviewService', () => {
     prismaMock.transaction.mockImplementation((cb: (tx: unknown) => Promise<unknown>) => cb(txMock));
     prismaMock.$transaction.mockImplementation((cb: (tx: unknown) => Promise<unknown>) => cb(txMock));
     emailQueueMock.enqueuePostRejectedEmail.mockResolvedValue(undefined);
+    postsCacheServiceMock.invalidatePostMutationCache.mockResolvedValue(undefined);
     service = new PostsReviewService(
       StubAppLogger,
       postsReviewRepoMock as any,
@@ -59,6 +64,7 @@ describe('PostsReviewService', () => {
       postsRepoMock as any,
       emailQueueMock as any,
       metricsServiceMock as any,
+      postsCacheServiceMock as any,
     );
   });
 
@@ -163,6 +169,7 @@ describe('PostsReviewService', () => {
 
       const result = await service.modifyPostReviewStatus(1, 'reviewer-1', buildData());
 
+      expect(postsCacheServiceMock.invalidatePostMutationCache).toHaveBeenCalledWith([1]);
       expect(metricsServiceMock.recordPostCreated).toHaveBeenCalledWith('published');
       expect(result).toEqual({ message: 'Post review and lifecycle status updated successfully' });
     });

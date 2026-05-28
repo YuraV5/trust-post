@@ -243,7 +243,7 @@ export class PostsService implements IPostsService {
       targetAmount: query.targetAmount,
       currentAmount: query.currentAmount,
       authorId: query.authorId,
-      status: PostStatus.PENDING_REVIEW,
+      status: query.status ?? PostStatus.PENDING_REVIEW,
       reviewerId: currentUser.role === UserRoles.MODERATOR ? currentUser.userId : undefined,
       sortBy,
       sortOrder,

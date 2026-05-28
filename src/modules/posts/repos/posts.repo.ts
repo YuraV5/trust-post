@@ -6,6 +6,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from '../types';
 
+function resolveStaffReviewStatus(postStatus?: PostStatus): PostReviewStatus {
+  if (postStatus === PostStatus.BLOCKED || postStatus === PostStatus.REJECTED) {
+    return PostReviewStatus.REJECTED;
+  }
+
+  return PostReviewStatus.PENDING;
+}
+
 @Injectable()
 export class PostsRepo implements IPostsRepo {
   constructor(private readonly db: PrismaService) {}
@@ -155,13 +163,14 @@ export class PostsRepo implements IPostsRepo {
   async findManyStaff(query: NormalizedStaffQuery): Promise<PaginatedResult<StaffModerationPost>> {
     const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
+    const reviewStatus = resolveStaffReviewStatus(query.status);
 
     // Build where clause with optional filters
     const where: Prisma.PostWhereInput = {
       postReviews: {
         some: {
           isActive: true,
-          status: PostReviewStatus.PENDING,
+          status: reviewStatus,
         },
       },
     };
@@ -177,7 +186,7 @@ export class PostsRepo implements IPostsRepo {
       where.postReviews = {
         some: {
           isActive: true,
-          status: PostReviewStatus.PENDING,
+          status: reviewStatus,
           reviewedById: query.reviewerId,
         },
       };
@@ -218,7 +227,6 @@ export class PostsRepo implements IPostsRepo {
           postReviews: {
             where: {
               isActive: true,
-              status: PostReviewStatus.PENDING,
             },
             orderBy: {
               createdAt: 'desc',

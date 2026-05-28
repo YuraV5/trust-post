@@ -75,7 +75,7 @@ describe('UsersService', () => {
       mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
 
       await expect(service.create({ ...mockCreateUserInput, email: 'test@example.com' })).rejects.toThrow(
-        'User already exists',
+        'Invalid credentials',
       );
     });
 

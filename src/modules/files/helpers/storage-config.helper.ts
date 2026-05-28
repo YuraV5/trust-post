@@ -11,7 +11,7 @@ const STORAGE_BY_TARGET: Record<FileUploadTarget, FileUploadConfig> = {
   [FileUploadTarget.POST]: {
     storage: FileProvider.CLOUDINARY,
     pathSegment: 'posts',
-    requiresResourceId: true,
+    requiresResourceId: false,
   },
   [FileUploadTarget.CHAT]: {
     storage: FileProvider.CLOUDINARY,

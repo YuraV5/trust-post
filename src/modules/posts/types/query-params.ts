@@ -18,6 +18,7 @@ export type NormalizedPublicQuery = {
 export type NormalizedStaffQuery = NormalizedPublicQuery & {
   authorId?: string;
   status?: PostStatus;
+  reviewerId?: string;
 };
 
 export type NormalizedUserQuery = {

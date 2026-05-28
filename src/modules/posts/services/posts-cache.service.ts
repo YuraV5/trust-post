@@ -82,6 +82,36 @@ export class PostsCacheService {
     }
   }
 
+  async invalidatePostMutationCache(postIds: number[]): Promise<void> {
+    const uniquePostIds = Array.from(new Set(postIds));
+    const exactKeys = uniquePostIds.map((postId) => this.buildKey('post', postId));
+    const wildcardPatterns = [this.buildKey('user', '*'), this.buildKey('public', '*'), this.buildKey('staff', '*')];
+
+    for (const key of exactKeys) {
+      try {
+        await this.redisService.del(key);
+      } catch (error) {
+        this.logger.warn('Posts cache invalidation failed after post mutation', {
+          key,
+          postIds: uniquePostIds,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    for (const pattern of wildcardPatterns) {
+      try {
+        await this.redisService.delByPattern(pattern);
+      } catch (error) {
+        this.logger.warn('Posts cache invalidation failed after post mutation', {
+          pattern,
+          postIds: uniquePostIds,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
   private buildKey(scope: string, ...parts: Array<string | number | object>): string {
     const suffix = parts
       .map((part) => (typeof part === 'string' || typeof part === 'number' ? String(part) : JSON.stringify(part)))

@@ -10,7 +10,7 @@ export type NewUserInput = {
 export type UpdateUserInput = {
   email?: string;
   name?: string;
-  photoUrl?: string;
+  photoUrl?: string | null;
 };
 
 export type UserOutput = {

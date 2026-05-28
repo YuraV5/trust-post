@@ -1,10 +1,11 @@
-import { PostReviewStatus, PostStatus } from '@prisma/client';
+import { Post, PostReviewStatus, PostStatus } from '@prisma/client';
 
 export type CreatePost = {
   title: string;
   content: string;
   targetAmount: number;
   targetDate: Date;
+  isDraft?: boolean;
 };
 
 export type UpdatePost = {
@@ -44,4 +45,72 @@ export type EditUserPostStatus = {
 
 export type AssignReviewerJobData = {
   postId: number;
+};
+
+export type StaffModeratorSummary = {
+  id: string;
+  name: string;
+  email: string;
+  photoUrl: string | null;
+};
+
+export type PublicPostAuthorSummary = {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  isEmailVerified: boolean;
+};
+
+export type PublicPostDetails = Post & {
+  author: PublicPostAuthorSummary | null;
+};
+
+export type StaffPostReviewSummary = {
+  id: number;
+  postId: number;
+  reviewedById: string;
+  status: PostReviewStatus;
+  isActive: boolean;
+  reviewReason: string | null;
+  createdAt: Date;
+  reviewedBy: StaffModeratorSummary | null;
+};
+
+export type StaffModerationPost = Post & {
+  author: StaffModeratorSummary | null;
+  postReviews: StaffPostReviewSummary[];
+  mainImageUrl: string | null;
+};
+
+export type PublicPostWithMainImage = Post & {
+  mainImageUrl: string | null;
+};
+
+export type StaffModerationHistoryPost = {
+  id: number;
+  title: string;
+  createdAt: Date;
+  author: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+};
+
+export type StaffModerationHistoryEvent = {
+  reviewId: number;
+  reviewStatus: PostReviewStatus;
+  postStatus: PostStatus;
+  reason: string | null;
+  changedAt: Date;
+  moderator: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+};
+
+export type StaffModerationHistory = {
+  post: StaffModerationHistoryPost;
+  history: StaffModerationHistoryEvent[];
 };

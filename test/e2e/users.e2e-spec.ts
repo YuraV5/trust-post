@@ -75,6 +75,29 @@ describe('Users (e2e)', () => {
       });
     });
 
+    it('should clear profile photo when photoUrl is an empty string', async () => {
+      const session = await createAuthorizedSession(app, prisma, runId, 'clear-photo');
+
+      await request(app.getHttpServer())
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${session.accessToken}`)
+        .send({ photoUrl: 'https://cdn.example.com/u.png' })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${session.accessToken}`)
+        .send({ photoUrl: '' })
+        .expect(200);
+
+      const me = await request(app.getHttpServer())
+        .get('/api/v1/users/me')
+        .set('Authorization', `Bearer ${session.accessToken}`)
+        .expect(200);
+
+      expect(me.body.photoUrl).toBeNull();
+    });
+
     it('should return 400 when no updatable fields provided', async () => {
       const session = await createAuthorizedSession(app, prisma, runId, 'update-empty');
 

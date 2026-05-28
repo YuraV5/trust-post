@@ -1,14 +1,98 @@
 import { Injectable } from '@nestjs/common';
 import { IPostsRepo } from '../interfaces';
-import { Post, PostStatus, Prisma } from '@prisma/client';
-import { CreatePost, PaginatedResult, PostCount, StaffPostUpdate, PostStatusUpdate } from '../types';
+import { Post, PostReviewStatus, PostStatus, Prisma } from '@prisma/client';
+import {
+  CreatePost,
+  PaginatedResult,
+  PostCount,
+  PublicPostDetails,
+  PublicPostWithMainImage,
+  StaffModerationPost,
+  StaffPostUpdate,
+  PostStatusUpdate,
+} from '../types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from '../types';
 
+function resolveStaffReviewStatus(postStatus?: PostStatus): PostReviewStatus {
+  if (postStatus === PostStatus.BLOCKED || postStatus === PostStatus.REJECTED) {
+    return PostReviewStatus.REJECTED;
+  }
+
+  return PostReviewStatus.PENDING;
+}
+
 @Injectable()
 export class PostsRepo implements IPostsRepo {
   constructor(private readonly db: PrismaService) {}
+
+  private mapPostsWithMainImage(
+    rows: Array<
+      Prisma.PostGetPayload<{
+        include: {
+          files: {
+            where: { mainImage: true };
+            select: { url: true };
+            take: 1;
+            orderBy: { createdAt: 'asc' };
+          };
+        };
+      }>
+    >,
+  ): PublicPostWithMainImage[] {
+    return rows.map(({ files, ...post }) => ({
+      ...post,
+      mainImageUrl: files[0]?.url ?? null,
+    }));
+  }
+
+  private mapStaffPostsWithMainImage(
+    rows: Array<
+      Prisma.PostGetPayload<{
+        include: {
+          files: {
+            where: { mainImage: true };
+            select: { url: true };
+            take: 1;
+            orderBy: { createdAt: 'asc' };
+          };
+          author: {
+            select: {
+              id: true;
+              name: true;
+              email: true;
+              photoUrl: true;
+            };
+          };
+          postReviews: {
+            where: {
+              isActive: true;
+            };
+            orderBy: {
+              createdAt: 'desc';
+            };
+            take: 1;
+            include: {
+              reviewedBy: {
+                select: {
+                  id: true;
+                  name: true;
+                  email: true;
+                  photoUrl: true;
+                };
+              };
+            };
+          };
+        };
+      }>
+    >,
+  ): StaffModerationPost[] {
+    return rows.map(({ files, ...post }) => ({
+      ...post,
+      mainImageUrl: files[0]?.url ?? null,
+    }));
+  }
 
   async create(authorId: string, inp: CreatePost): Promise<Post> {
     return await this.db.post.create({
@@ -17,18 +101,29 @@ export class PostsRepo implements IPostsRepo {
         content: inp.content,
         targetAmount: inp.targetAmount,
         targetDate: inp.targetDate,
+        status: inp.isDraft === false ? PostStatus.PENDING_REVIEW : PostStatus.DRAFT,
         authorId: authorId,
         referencePaymentId: `ref_${randomUUID()}`,
       },
     });
   }
 
-  async getPostById(id: number, tx?: Prisma.TransactionClient): Promise<Post | null> {
+  async getPostById(id: number, tx?: Prisma.TransactionClient): Promise<PublicPostDetails | null> {
     const client = tx ?? this.db;
     return await client.post.findUnique({
       where: {
         id,
         status: PostStatus.APPROVED,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            photoUrl: true,
+            isEmailVerified: true,
+          },
+        },
       },
     });
   }
@@ -50,7 +145,10 @@ export class PostsRepo implements IPostsRepo {
     });
   }
 
-  async findByAuthorIdPaginated(authorId: string, query: NormalizedUserQuery): Promise<PaginatedResult<Post>> {
+  async findByAuthorIdPaginated(
+    authorId: string,
+    query: NormalizedUserQuery,
+  ): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const { page, limit, status, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
 
@@ -69,15 +167,25 @@ export class PostsRepo implements IPostsRepo {
       [sortBy]: sortOrder,
     };
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.db.post.findMany({
         where,
         skip,
         take: limit,
         orderBy,
+        include: {
+          files: {
+            where: { mainImage: true },
+            select: { url: true },
+            take: 1,
+            orderBy: { createdAt: 'asc' },
+          },
+        },
       }),
       this.db.post.count({ where }),
     ]);
+
+    const data = this.mapPostsWithMainImage(rawData);
 
     return {
       data,
@@ -88,7 +196,7 @@ export class PostsRepo implements IPostsRepo {
     };
   }
 
-  async findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<Post>> {
+  async findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
 
@@ -122,15 +230,25 @@ export class PostsRepo implements IPostsRepo {
       [sortBy]: sortOrder,
     };
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.db.post.findMany({
         where,
         skip,
         take: limit,
         orderBy,
+        include: {
+          files: {
+            where: { mainImage: true },
+            select: { url: true },
+            take: 1,
+            orderBy: { createdAt: 'asc' },
+          },
+        },
       }),
       this.db.post.count({ where }),
     ]);
+
+    const data = this.mapPostsWithMainImage(rawData);
 
     return {
       data,
@@ -141,12 +259,20 @@ export class PostsRepo implements IPostsRepo {
     };
   }
 
-  async findManyStaff(query: NormalizedStaffQuery): Promise<PaginatedResult<Post>> {
+  async findManyStaff(query: NormalizedStaffQuery): Promise<PaginatedResult<StaffModerationPost>> {
     const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
+    const reviewStatus = resolveStaffReviewStatus(query.status);
 
     // Build where clause with optional filters
-    const where: Prisma.PostWhereInput = {};
+    const where: Prisma.PostWhereInput = {
+      postReviews: {
+        some: {
+          isActive: true,
+          status: reviewStatus,
+        },
+      },
+    };
 
     // Add optional filters
     if (query.authorId) {
@@ -154,6 +280,15 @@ export class PostsRepo implements IPostsRepo {
     }
     if (query.status) {
       where.status = query.status;
+    }
+    if (query.reviewerId) {
+      where.postReviews = {
+        some: {
+          isActive: true,
+          status: reviewStatus,
+          reviewedById: query.reviewerId,
+        },
+      };
     }
     if (query.createdAt) {
       where.createdAt = new Date(query.createdAt);
@@ -173,15 +308,52 @@ export class PostsRepo implements IPostsRepo {
       [sortBy]: sortOrder,
     };
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.db.post.findMany({
         where,
         skip,
         take: limit,
         orderBy,
+        include: {
+          files: {
+            where: { mainImage: true },
+            select: { url: true },
+            take: 1,
+            orderBy: { createdAt: 'asc' },
+          },
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              photoUrl: true,
+            },
+          },
+          postReviews: {
+            where: {
+              isActive: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 1,
+            include: {
+              reviewedBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  photoUrl: true,
+                },
+              },
+            },
+          },
+        },
       }),
       this.db.post.count({ where }),
     ]);
+
+    const data = this.mapStaffPostsWithMainImage(rawData);
 
     return {
       data,

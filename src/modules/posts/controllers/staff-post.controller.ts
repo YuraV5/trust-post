@@ -8,14 +8,15 @@ import { CurrentUser, Roles } from '../../../common/decorators';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { PostsStaffQueryDto, PostStatusLifecycleDto } from '../dtos';
 import { RolesGuard } from '../../../common/guards';
-import { PostReview, Post as Publication, UserRoles } from '@prisma/client';
+import { UserRoles } from '@prisma/client';
 import { PaginatedResult } from '../types';
+import { StaffModerationHistory, StaffModerationPost } from '../types/common';
 import {
   MessageResponseDto,
   UnauthorizedErrorResponse,
   NotFoundErrorResponse,
 } from '../../../common/swagger/responses';
-import { PaginatedPostsResponseDto } from '../dtos/doc.swagger';
+import { PaginatedStaffPostsResponseDto, PostModerationHistoryResponseDto } from '../dtos/doc.swagger';
 
 @ApiTags('posts-moderation')
 @ApiBearerAuth('JWT-auth')
@@ -30,7 +31,7 @@ export class StaffPostsController {
   @Roles(UserRoles.MODERATOR)
   @Patch('/:id/status')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update post review status (Moderator only)' })
+  @ApiOperation({ summary: 'Update post review status (Moderator and above)' })
   @ApiParam({ name: 'id', type: Number })
   @ApiBody({ type: PostStatusLifecycleDto })
   @ApiResponse({
@@ -53,39 +54,42 @@ export class StaffPostsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() data: PostStatusLifecycleDto,
   ): Promise<ResponseMessage> {
-    return await this.postsReviewService.modifyPostReviewStatus(params.id, user.userId, data);
+    return await this.postsReviewService.modifyPostReviewStatus(params.id, user, data);
   }
 
   @Roles(UserRoles.MODERATOR)
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get posts for moderation (Moderator only)' })
+  @ApiOperation({ summary: 'Get posts for moderation (Moderator and above)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false, type: String })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Posts retrieved for moderation with pagination',
-    type: PaginatedPostsResponseDto,
+    type: PaginatedStaffPostsResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'Missing or invalid access token',
     type: UnauthorizedErrorResponse,
   })
-  async getAllPosts(@Query() query: PostsStaffQueryDto): Promise<PaginatedResult<Publication>> {
-    return await this.postsService.getAllStaffPosts(query);
+  async getAllPosts(
+    @Query() query: PostsStaffQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PaginatedResult<StaffModerationPost>> {
+    return await this.postsService.getAllStaffPosts(query, user);
   }
 
   @Roles(UserRoles.MODERATOR)
   @Get('/:id/history')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get post status history (Moderator only)' })
+  @ApiOperation({ summary: 'Get post status history (Moderator and above)' })
   @ApiParam({ name: 'id', type: Number })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Post status history retrieved',
-    isArray: true,
+    type: PostModerationHistoryResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -97,7 +101,7 @@ export class StaffPostsController {
     description: 'Post not found',
     type: NotFoundErrorResponse,
   })
-  async getPostStatusHistory(@Param() params: NumericIdParamDto): Promise<PostReview[]> {
+  async getPostStatusHistory(@Param() params: NumericIdParamDto): Promise<StaffModerationHistory> {
     return await this.postsReviewService.getPostStatusHistory(params.id);
   }
 }

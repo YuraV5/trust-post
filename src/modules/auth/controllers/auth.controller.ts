@@ -252,10 +252,7 @@ export class AuthController {
     description: 'Invalid token, expired token, or weak password',
     type: BadRequestErrorResponse,
   })
-  async newPassword(
-    @Param() params: VerifyEmailParamsDto,
-    @Body() body: SetPasswordDto,
-  ): Promise<ResponseMessage> {
+  async newPassword(@Param() params: VerifyEmailParamsDto, @Body() body: SetPasswordDto): Promise<ResponseMessage> {
     await this.authService.setPassword(params.uuid, body);
 
     return { message: 'Password reset successfully. You can now log in.' };

@@ -178,7 +178,11 @@ export class ModerationHistoryEventDto {
   @ApiProperty({ example: 501, description: 'Post review row ID' })
   reviewId: number;
 
-  @ApiProperty({ enum: PostReviewStatus, example: PostReviewStatus.REJECTED, description: 'Review status at this step' })
+  @ApiProperty({
+    enum: PostReviewStatus,
+    example: PostReviewStatus.REJECTED,
+    description: 'Review status at this step',
+  })
   reviewStatus: PostReviewStatus;
 
   @ApiProperty({ enum: PostStatus, example: PostStatus.BLOCKED, description: 'Resulting post status at this step' })

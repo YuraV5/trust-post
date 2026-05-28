@@ -110,7 +110,12 @@ export class PostsReviewService {
     await this.prisma.$transaction(async (tx) => {
       await this.postsReviewRepo.suspendPreviousReview(postId, tx);
 
-      await this.postsReviewRepo.addPostReview(postId, reviewerId, { reviewStatus, reviewReason: resolvedReviewReason }, tx);
+      await this.postsReviewRepo.addPostReview(
+        postId,
+        reviewerId,
+        { reviewStatus, reviewReason: resolvedReviewReason },
+        tx,
+      );
 
       await this.postsRepo.updateStatus(postId, { postStatus, statusReason: finalStatusReason }, tx);
     });
@@ -197,7 +202,7 @@ export class PostsReviewService {
       const reason =
         review.status === PostReviewStatus.APPROVED
           ? null
-          : review.reviewReason ?? (isLatestReview ? (post.statusReason ?? null) : null);
+          : (review.reviewReason ?? (isLatestReview ? (post.statusReason ?? null) : null));
 
       return {
         reviewId: review.id,

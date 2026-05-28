@@ -60,7 +60,9 @@ export class PostStatusLifecycleDto {
     description: 'The reason for the status change, if applicable',
     example: 'Reached funding goal',
   })
-  @ValidateIf((o: PostStatusLifecycleDto) => o.postStatus === PostStatus.REJECTED || o.postStatus === PostStatus.BLOCKED)
+  @ValidateIf(
+    (o: PostStatusLifecycleDto) => o.postStatus === PostStatus.REJECTED || o.postStatus === PostStatus.BLOCKED,
+  )
   @IsNotEmpty()
   @IsString()
   @MinLength(20)

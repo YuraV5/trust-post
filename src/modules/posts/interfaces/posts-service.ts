@@ -1,5 +1,11 @@
 import { ResponseMessage } from '../../../common/types';
-import { CreatePost, EditUserPostStatus, PublicPostWithMainImage, StaffModerationPost, StaffPostUpdate } from '../types/common';
+import {
+  CreatePost,
+  EditUserPostStatus,
+  PublicPostWithMainImage,
+  StaffModerationPost,
+  StaffPostUpdate,
+} from '../types/common';
 import { PostsQueryDto, PostsStaffQueryDto, UserPostsQueryDto } from '../dtos';
 import { AuthenticatedUser } from '../../../common/interfaces';
 import { Post } from '@prisma/client';
@@ -9,7 +15,10 @@ export interface IPostsService {
   create(authorId: string, data: CreatePost): Promise<Post>;
   getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>>;
   getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>>;
-  getAllStaffPosts(query: PostsStaffQueryDto, currentUser: AuthenticatedUser): Promise<PaginatedResult<StaffModerationPost>>;
+  getAllStaffPosts(
+    query: PostsStaffQueryDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<PaginatedResult<StaffModerationPost>>;
   findById(id: number): Promise<Post>;
   findByIdForAuthor(id: number, authorId: string): Promise<Post>;
   editUserPostStatus(postId: number, data: EditUserPostStatus): Promise<ResponseMessage>;

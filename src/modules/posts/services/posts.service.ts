@@ -56,7 +56,10 @@ export class PostsService implements IPostsService {
 
   async getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const normalized = this.normalizeUserPostsQuery(query);
-    const cached = await this.postsCacheService.getUserPosts<PaginatedResult<PublicPostWithMainImage>>(userId, normalized);
+    const cached = await this.postsCacheService.getUserPosts<PaginatedResult<PublicPostWithMainImage>>(
+      userId,
+      normalized,
+    );
     if (cached) {
       return cached;
     }

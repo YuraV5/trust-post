@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IPostsRepo } from '../interfaces';
-import { Post, PostStatus, Prisma } from '@prisma/client';
-import { CreatePost, PaginatedResult, PostCount, StaffPostUpdate, PostStatusUpdate } from '../types';
+import { Post, PostReviewStatus, PostStatus, Prisma } from '@prisma/client';
+import { CreatePost, PaginatedResult, PostCount, StaffModerationPost, StaffPostUpdate, PostStatusUpdate } from '../types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from '../types';
@@ -152,12 +152,19 @@ export class PostsRepo implements IPostsRepo {
     };
   }
 
-  async findManyStaff(query: NormalizedStaffQuery): Promise<PaginatedResult<Post>> {
+  async findManyStaff(query: NormalizedStaffQuery): Promise<PaginatedResult<StaffModerationPost>> {
     const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
 
     // Build where clause with optional filters
-    const where: Prisma.PostWhereInput = {};
+    const where: Prisma.PostWhereInput = {
+      postReviews: {
+        some: {
+          isActive: true,
+          status: PostReviewStatus.PENDING,
+        },
+      },
+    };
 
     // Add optional filters
     if (query.authorId) {
@@ -165,6 +172,15 @@ export class PostsRepo implements IPostsRepo {
     }
     if (query.status) {
       where.status = query.status;
+    }
+    if (query.reviewerId) {
+      where.postReviews = {
+        some: {
+          isActive: true,
+          status: PostReviewStatus.PENDING,
+          reviewedById: query.reviewerId,
+        },
+      };
     }
     if (query.createdAt) {
       where.createdAt = new Date(query.createdAt);
@@ -190,6 +206,36 @@ export class PostsRepo implements IPostsRepo {
         skip,
         take: limit,
         orderBy,
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              photoUrl: true,
+            },
+          },
+          postReviews: {
+            where: {
+              isActive: true,
+              status: PostReviewStatus.PENDING,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 1,
+            include: {
+              reviewedBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  photoUrl: true,
+                },
+              },
+            },
+          },
+        },
       }),
       this.db.post.count({ where }),
     ]);

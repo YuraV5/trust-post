@@ -4,13 +4,15 @@ import { UsersService } from '../../users/services';
 import { PostsRepo } from '../repos';
 import { PostsReviewRepo } from './../repos/posts-review.repo';
 import { Inject, Injectable } from '@nestjs/common';
-import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
+import { AppBadRequestException, AppForbiddenException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { PostLifecycleStatus } from '../types/common';
 import { ResponseMessage } from '../../../common/types';
 import { EmailQueueService } from '../../emails/email-queue.service';
 import { MetricsService } from '../../../infrastructure/metrics/metrics.service';
+import { AuthenticatedUser } from '../../../common/interfaces';
+import { UserRoles } from '@prisma/client';
 
 @Injectable()
 export class PostsReviewService {
@@ -51,18 +53,24 @@ export class PostsReviewService {
 
   async modifyPostReviewStatus(
     postId: number,
-    reviewerId: string,
+    currentUser: AuthenticatedUser,
     data: PostLifecycleStatus,
   ): Promise<ResponseMessage> {
+    const reviewerId = currentUser.userId;
     const { reviewStatus, reviewReason, postStatus, statusReason } = data;
+    const resolvedReviewReason = reviewReason ?? statusReason ?? undefined;
 
     // --- VALIDATION ---
+    if (this.allowedPostStatus(postStatus) && !statusReason) {
+      throw new AppBadRequestException('statusReason is required when postStatus is REJECTED or BLOCKED');
+    }
+
     if (reviewStatus === PostReviewStatus.REJECTED) {
       if (!this.allowedPostStatus(postStatus)) {
         throw new AppBadRequestException('When reviewStatus is REJECTED, postStatus must be REJECTED or BLOCKED');
       }
 
-      if (!reviewReason) {
+      if (!resolvedReviewReason) {
         throw new AppBadRequestException('Review reason is required for rejected reviews');
       }
     }
@@ -73,7 +81,17 @@ export class PostsReviewService {
     }
 
     // --- LOAD REQUIRED DATA ONCE ---
-    const post = await this.postsRepo.getPostById(postId);
+    const activeReview =
+      currentUser.role === UserRoles.ADMIN
+        ? await this.postsReviewRepo.findActivePendingByPost(postId)
+        : await this.postsReviewRepo.findActivePendingByPostAndReviewer(postId, reviewerId);
+    if (!activeReview) {
+      throw new AppForbiddenException('You are not assigned to moderate this post or post is not in active moderation');
+    }
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+    });
     if (!post) {
       throw new AppNotFoundException('Post not found');
     }
@@ -83,13 +101,13 @@ export class PostsReviewService {
     }
 
     const finalStatusReason =
-      reviewStatus === PostReviewStatus.APPROVED ? null : (statusReason ?? reviewReason ?? null);
+      reviewStatus === PostReviewStatus.APPROVED ? null : (statusReason ?? resolvedReviewReason ?? null);
 
     // --- TRANSACTION ---
     await this.prisma.$transaction(async (tx) => {
       await this.postsReviewRepo.suspendPreviousReview(postId, tx);
 
-      await this.postsReviewRepo.addPostReview(postId, reviewerId, { reviewStatus, reviewReason }, tx);
+      await this.postsReviewRepo.addPostReview(postId, reviewerId, { reviewStatus, reviewReason: resolvedReviewReason }, tx);
 
       await this.postsRepo.updateStatus(postId, { postStatus, statusReason: finalStatusReason }, tx);
     });
@@ -107,7 +125,7 @@ export class PostsReviewService {
       this.emailQueue
         .enqueuePostRejectedEmail(user.email, {
           postTitle: post.title,
-          reason: reviewReason!,
+          reason: resolvedReviewReason!,
         })
         .catch((error) => {
           this.logger.error('Failed to enqueue post rejected email job', {

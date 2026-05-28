@@ -49,6 +49,33 @@ export class PostsReviewRepo implements IPostsReviewRepo {
     });
   }
 
+  async findActivePendingByPost(postId: number): Promise<PostReview | null> {
+    return await this.db.postReview.findFirst({
+      where: {
+        postId,
+        isActive: true,
+        status: PostReviewStatus.PENDING,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async findActivePendingByPostAndReviewer(postId: number, reviewerId: string): Promise<PostReview | null> {
+    return await this.db.postReview.findFirst({
+      where: {
+        postId,
+        reviewedById: reviewerId,
+        isActive: true,
+        status: PostReviewStatus.PENDING,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async suspendPreviousReview(postId: number, tx?: Prisma.TransactionClient): Promise<{ count: number }> {
     const result = await (tx ?? this.db).postReview.updateMany({
       where: {

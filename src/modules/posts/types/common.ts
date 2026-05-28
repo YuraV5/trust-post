@@ -1,4 +1,4 @@
-import { PostReviewStatus, PostStatus } from '@prisma/client';
+import { PostReviewStatus, PostStatus, Prisma } from '@prisma/client';
 
 export type CreatePost = {
   title: string;
@@ -46,3 +46,36 @@ export type EditUserPostStatus = {
 export type AssignReviewerJobData = {
   postId: number;
 };
+
+export type StaffModerationPost = Prisma.PostGetPayload<{
+  include: {
+    author: {
+      select: {
+        id: true;
+        name: true;
+        email: true;
+        photoUrl: true;
+      };
+    };
+    postReviews: {
+      where: {
+        isActive: true;
+        status: 'PENDING';
+      };
+      orderBy: {
+        createdAt: 'desc';
+      };
+      take: 1;
+      include: {
+        reviewedBy: {
+          select: {
+            id: true;
+            name: true;
+            email: true;
+            photoUrl: true;
+          };
+        };
+      };
+    };
+  };
+}>;

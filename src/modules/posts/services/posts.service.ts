@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PostsLikeRepo, PostsRepo } from '../repos';
 import { ResponseMessage } from '../../../common/types';
-import { CreatePost, StaffPostUpdate, PaginatedResult, SortBy, EditUserPostStatus } from '../types';
-import { Post } from '@prisma/client';
+import { CreatePost, StaffModerationPost, StaffPostUpdate, PaginatedResult, SortBy, EditUserPostStatus } from '../types';
+import { Post, PostStatus, UserRoles } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { hasUpdatableFields } from '../../../common/utils';
 import { IPostsService } from '../interfaces';
@@ -13,6 +13,7 @@ import { APP_LOGGER } from '../../../shared/logger/services/app-logger';
 import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { PostsCacheService } from './posts-cache.service';
 import { QueueRetryHandlerService } from '../../queues/services';
+import { AuthenticatedUser } from '../../../common/interfaces';
 
 @Injectable()
 export class PostsService implements IPostsService {
@@ -69,9 +70,12 @@ export class PostsService implements IPostsService {
     return result;
   }
 
-  async getAllStaffPosts(query: PostsStaffQueryDto): Promise<PaginatedResult<Post>> {
-    const normalized = this.normalizeStaffQuery(query);
-    const cached = await this.postsCacheService.getStaffPosts<PaginatedResult<Post>>(normalized);
+  async getAllStaffPosts(
+    query: PostsStaffQueryDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<PaginatedResult<StaffModerationPost>> {
+    const normalized = this.normalizeStaffQuery(query, currentUser);
+    const cached = await this.postsCacheService.getStaffPosts<PaginatedResult<StaffModerationPost>>(normalized);
     if (cached) {
       return cached;
     }
@@ -223,7 +227,7 @@ export class PostsService implements IPostsService {
     };
   }
 
-  private normalizeStaffQuery(query: PostsStaffQueryDto): NormalizedStaffQuery {
+  private normalizeStaffQuery(query: PostsStaffQueryDto, currentUser: AuthenticatedUser): NormalizedStaffQuery {
     const VALID_SORT_FIELDS = ['createdAt', 'targetDate', 'targetAmount', 'currentAmount'];
 
     const limit = Math.min(Math.max(query.limit || 10, 1), this.MAX_LIMIT);
@@ -239,7 +243,8 @@ export class PostsService implements IPostsService {
       targetAmount: query.targetAmount,
       currentAmount: query.currentAmount,
       authorId: query.authorId,
-      status: query.status,
+      status: PostStatus.PENDING_REVIEW,
+      reviewerId: currentUser.role === UserRoles.MODERATOR ? currentUser.userId : undefined,
       sortBy,
       sortOrder,
     };

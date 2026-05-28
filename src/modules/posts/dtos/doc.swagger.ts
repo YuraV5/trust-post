@@ -208,6 +208,9 @@ export class StaffPostReviewSummaryDto {
 }
 
 export class StaffModerationPostResponseDto extends PostBaseResponseDto {
+  @ApiProperty({ example: 'https://cdn.example.com/post-main.jpg', nullable: true, description: 'Main image URL' })
+  mainImageUrl: string | null;
+
   @ApiProperty({ type: StaffModeratorSummaryDto, nullable: true, description: 'Post author summary' })
   author: StaffModeratorSummaryDto | null;
 

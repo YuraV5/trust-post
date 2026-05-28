@@ -47,6 +47,53 @@ export class PostsRepo implements IPostsRepo {
     }));
   }
 
+  private mapStaffPostsWithMainImage(
+    rows: Array<
+      Prisma.PostGetPayload<{
+        include: {
+          files: {
+            where: { mainImage: true };
+            select: { url: true };
+            take: 1;
+            orderBy: { createdAt: 'asc' };
+          };
+          author: {
+            select: {
+              id: true;
+              name: true;
+              email: true;
+              photoUrl: true;
+            };
+          };
+          postReviews: {
+            where: {
+              isActive: true;
+            };
+            orderBy: {
+              createdAt: 'desc';
+            };
+            take: 1;
+            include: {
+              reviewedBy: {
+                select: {
+                  id: true;
+                  name: true;
+                  email: true;
+                  photoUrl: true;
+                };
+              };
+            };
+          };
+        };
+      }>
+    >,
+  ): StaffModerationPost[] {
+    return rows.map(({ files, ...post }) => ({
+      ...post,
+      mainImageUrl: files[0]?.url ?? null,
+    }));
+  }
+
   async create(authorId: string, inp: CreatePost): Promise<Post> {
     return await this.db.post.create({
       data: {
@@ -261,13 +308,19 @@ export class PostsRepo implements IPostsRepo {
       [sortBy]: sortOrder,
     };
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.db.post.findMany({
         where,
         skip,
         take: limit,
         orderBy,
         include: {
+          files: {
+            where: { mainImage: true },
+            select: { url: true },
+            take: 1,
+            orderBy: { createdAt: 'asc' },
+          },
           author: {
             select: {
               id: true,
@@ -299,6 +352,8 @@ export class PostsRepo implements IPostsRepo {
       }),
       this.db.post.count({ where }),
     ]);
+
+    const data = this.mapStaffPostsWithMainImage(rawData);
 
     return {
       data,

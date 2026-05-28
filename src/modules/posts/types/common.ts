@@ -79,6 +79,7 @@ export type StaffPostReviewSummary = {
 export type StaffModerationPost = Post & {
   author: StaffModeratorSummary | null;
   postReviews: StaffPostReviewSummary[];
+  mainImageUrl: string | null;
 };
 
 export type PublicPostWithMainImage = Post & {

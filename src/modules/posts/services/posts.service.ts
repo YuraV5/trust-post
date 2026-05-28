@@ -1,7 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PostsLikeRepo, PostsRepo } from '../repos';
 import { ResponseMessage } from '../../../common/types';
-import { CreatePost, StaffModerationPost, StaffPostUpdate, PaginatedResult, SortBy, EditUserPostStatus } from '../types';
+import {
+  CreatePost,
+  StaffModerationPost,
+  StaffPostUpdate,
+  PaginatedResult,
+  SortBy,
+  EditUserPostStatus,
+  PublicPostWithMainImage,
+} from '../types';
 import { Post, PostStatus, UserRoles } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException } from '../../../shared/errors/app-errors';
 import { hasUpdatableFields } from '../../../common/utils';
@@ -46,9 +54,9 @@ export class PostsService implements IPostsService {
     return post;
   }
 
-  async getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<Post>> {
+  async getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const normalized = this.normalizeUserPostsQuery(query);
-    const cached = await this.postsCacheService.getUserPosts<PaginatedResult<Post>>(userId, normalized);
+    const cached = await this.postsCacheService.getUserPosts<PaginatedResult<PublicPostWithMainImage>>(userId, normalized);
     if (cached) {
       return cached;
     }
@@ -58,9 +66,9 @@ export class PostsService implements IPostsService {
     return result;
   }
 
-  async getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<Post>> {
+  async getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const normalized = this.normalizePublicQuery(query);
-    const cached = await this.postsCacheService.getPublicPosts<PaginatedResult<Post>>(normalized);
+    const cached = await this.postsCacheService.getPublicPosts<PaginatedResult<PublicPostWithMainImage>>(normalized);
     if (cached) {
       return cached;
     }

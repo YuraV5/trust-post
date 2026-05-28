@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { IPostsRepo } from '../interfaces';
 import { Post, PostReviewStatus, PostStatus, Prisma } from '@prisma/client';
-import { CreatePost, PaginatedResult, PostCount, StaffModerationPost, StaffPostUpdate, PostStatusUpdate } from '../types';
+import {
+  CreatePost,
+  PaginatedResult,
+  PostCount,
+  PublicPostWithMainImage,
+  StaffModerationPost,
+  StaffPostUpdate,
+  PostStatusUpdate,
+} from '../types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from '../types';
@@ -17,6 +25,26 @@ function resolveStaffReviewStatus(postStatus?: PostStatus): PostReviewStatus {
 @Injectable()
 export class PostsRepo implements IPostsRepo {
   constructor(private readonly db: PrismaService) {}
+
+  private mapPostsWithMainImage(
+    rows: Array<
+      Prisma.PostGetPayload<{
+        include: {
+          files: {
+            where: { mainImage: true };
+            select: { url: true };
+            take: 1;
+            orderBy: { createdAt: 'asc' };
+          };
+        };
+      }>
+    >,
+  ): PublicPostWithMainImage[] {
+    return rows.map(({ files, ...post }) => ({
+      ...post,
+      mainImageUrl: files[0]?.url ?? null,
+    }));
+  }
 
   async create(authorId: string, inp: CreatePost): Promise<Post> {
     return await this.db.post.create({
@@ -69,7 +97,10 @@ export class PostsRepo implements IPostsRepo {
     });
   }
 
-  async findByAuthorIdPaginated(authorId: string, query: NormalizedUserQuery): Promise<PaginatedResult<Post>> {
+  async findByAuthorIdPaginated(
+    authorId: string,
+    query: NormalizedUserQuery,
+  ): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const { page, limit, status, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
 
@@ -88,15 +119,25 @@ export class PostsRepo implements IPostsRepo {
       [sortBy]: sortOrder,
     };
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.db.post.findMany({
         where,
         skip,
         take: limit,
         orderBy,
+        include: {
+          files: {
+            where: { mainImage: true },
+            select: { url: true },
+            take: 1,
+            orderBy: { createdAt: 'asc' },
+          },
+        },
       }),
       this.db.post.count({ where }),
     ]);
+
+    const data = this.mapPostsWithMainImage(rawData);
 
     return {
       data,
@@ -107,7 +148,7 @@ export class PostsRepo implements IPostsRepo {
     };
   }
 
-  async findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<Post>> {
+  async findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
 
@@ -141,15 +182,25 @@ export class PostsRepo implements IPostsRepo {
       [sortBy]: sortOrder,
     };
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.db.post.findMany({
         where,
         skip,
         take: limit,
         orderBy,
+        include: {
+          files: {
+            where: { mainImage: true },
+            select: { url: true },
+            take: 1,
+            orderBy: { createdAt: 'asc' },
+          },
+        },
       }),
       this.db.post.count({ where }),
     ]);
+
+    const data = this.mapPostsWithMainImage(rawData);
 
     return {
       data,

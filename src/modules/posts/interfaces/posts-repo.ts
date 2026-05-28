@@ -4,6 +4,7 @@ import {
   PaginatedResult,
   PostCount,
   PostId,
+  PublicPostWithMainImage,
   StaffModerationPost,
   StaffPostUpdate,
   PostStatusUpdate,
@@ -17,8 +18,8 @@ export interface IPostsRepo {
   getPostById(id: number): Promise<Post | null>;
   getPostByIdForAuthor(id: number, authorId: string): Promise<Post | null>;
   findByAuthorId(authorId: string): Promise<Post[]>;
-  findByAuthorIdPaginated(authorId: string, query: NormalizedUserQuery): Promise<PaginatedResult<Post>>;
-  findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<Post>>;
+  findByAuthorIdPaginated(authorId: string, query: NormalizedUserQuery): Promise<PaginatedResult<PublicPostWithMainImage>>;
+  findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<PublicPostWithMainImage>>;
   findManyStaff(query: NormalizedStaffQuery): Promise<PaginatedResult<StaffModerationPost>>;
   update(ids: number[], data: StaffPostUpdate): Promise<PostCount>;
   delete(ids: number[], statusReason?: string): Promise<PostCount>;

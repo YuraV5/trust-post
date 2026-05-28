@@ -182,10 +182,17 @@ async function seedPosts() {
       return;
     }
 
-    // Get moderators for post reviews
+    // Get only active moderators and use only their ids for post reviews
     const moderators = await prisma.user.findMany({
-      where: { role: UserRoles.MODERATOR },
+      where: {
+        role: UserRoles.MODERATOR,
+        isActive: true,
+      },
+      select: {
+        id: true,
+      },
     });
+    const moderatorIds = moderators.map((moderator) => moderator.id);
 
     // Create 2-3 posts per user with different statuses
     const posts: Prisma.PostCreateManyInput[] = [];
@@ -218,7 +225,7 @@ async function seedPosts() {
     });
 
     // Create post reviews
-    if (moderators.length > 0) {
+    if (moderatorIds.length > 0) {
       const allPosts = await prisma.post.findMany({
         where: { status: { in: [PostStatus.PENDING_REVIEW, PostStatus.APPROVED, PostStatus.REJECTED] } },
       });
@@ -228,15 +235,15 @@ async function seedPosts() {
 
       // Each post gets 1-3 reviews from different moderators
       for (const post of allPosts) {
-        const reviewCount = Math.floor(Math.random() * 3) + 1; // 1-3 reviews
-        const usedModerators = new Set<string>();
+        const reviewCount = Math.min(Math.floor(Math.random() * 3) + 1, moderatorIds.length); // 1-3 reviews
+        const usedModeratorIds = new Set<string>();
 
         for (let j = 0; j < reviewCount; j++) {
-          let moderator = moderators[Math.floor(Math.random() * moderators.length)];
-          while (usedModerators.has(moderator.id) && moderators.length > 1) {
-            moderator = moderators[Math.floor(Math.random() * moderators.length)];
+          let reviewerId = moderatorIds[Math.floor(Math.random() * moderatorIds.length)];
+          while (usedModeratorIds.has(reviewerId) && moderatorIds.length > 1) {
+            reviewerId = moderatorIds[Math.floor(Math.random() * moderatorIds.length)];
           }
-          usedModerators.add(moderator.id);
+          usedModeratorIds.add(reviewerId);
 
           const reviewStatuses = [PostReviewStatus.PENDING, PostReviewStatus.APPROVED, PostReviewStatus.REJECTED];
           const reviewStatus = reviewStatuses[Math.floor(Math.random() * reviewStatuses.length)];
@@ -244,7 +251,7 @@ async function seedPosts() {
           await prisma.postReview.create({
             data: {
               postId: post.id,
-              reviewedById: moderator.id,
+              reviewedById: reviewerId,
               status: reviewStatus,
               reviewReason: reviewStatus === PostReviewStatus.REJECTED ? 'Content does not meet guidelines' : undefined,
             },
@@ -253,6 +260,8 @@ async function seedPosts() {
       }
 
       console.log(`   ✅ Post reviews created`);
+    } else {
+      console.log('⚠️  No active moderators found. Post reviews were not created.');
     }
   } catch (error) {
     console.error('❌ Posts seeding error:', error);

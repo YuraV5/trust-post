@@ -20,7 +20,7 @@ export class CreatePostDto {
 
   @ApiProperty({ example: 1000, description: 'The target amount for the post' })
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Target amount must be a valid number' })
-  @Min(0, { message: 'Target amount must be at least 0' })
+  @Min(0.01, { message: 'Target amount must be greater than 0' })
   targetAmount: number;
 
   @ApiProperty({ example: '2025-10-12', description: 'The target date for the post in YYYY-MM-DD format' })

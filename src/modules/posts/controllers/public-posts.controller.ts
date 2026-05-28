@@ -20,7 +20,7 @@ import { CreatePostDto } from '../dtos/create-post.dto';
 import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { Post as Publication } from '@prisma/client';
 import { UpdatePostDto, PostsQueryDto, UserPostsQueryDto, ModifyUserPostStatusDto } from '../dtos';
-import { PaginatedResult } from '../types';
+import { PaginatedResult, PublicPostWithMainImage } from '../types';
 import { DeletePostByUserDto } from '../dtos/delete.dto';
 import { OwnershipGuard } from '../../../common/guards';
 import {
@@ -75,7 +75,7 @@ export class PublicPostsController {
     description: 'Posts retrieved with pagination metadata',
     type: PaginatedPostsResponseDto,
   })
-  async getAllPosts(@Query() query: PostsQueryDto): Promise<PaginatedResult<Publication>> {
+  async getAllPosts(@Query() query: PostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>> {
     return await this.postsService.getAllPublicPosts(query);
   }
 
@@ -98,7 +98,7 @@ export class PublicPostsController {
   async getUserPosts(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: UserPostsQueryDto,
-  ): Promise<PaginatedResult<Publication>> {
+  ): Promise<PaginatedResult<PublicPostWithMainImage>> {
     return await this.postsService.getUserPosts(user.userId, query);
   }
 

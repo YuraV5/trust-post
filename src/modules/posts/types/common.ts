@@ -1,4 +1,4 @@
-import { PostReviewStatus, PostStatus, Prisma } from '@prisma/client';
+import { Post, PostReviewStatus, PostStatus } from '@prisma/client';
 
 export type CreatePost = {
   title: string;
@@ -47,37 +47,32 @@ export type AssignReviewerJobData = {
   postId: number;
 };
 
-export type StaffModerationPost = Prisma.PostGetPayload<{
-  include: {
-    author: {
-      select: {
-        id: true;
-        name: true;
-        email: true;
-        photoUrl: true;
-      };
-    };
-    postReviews: {
-      where: {
-        isActive: true;
-      };
-      orderBy: {
-        createdAt: 'desc';
-      };
-      take: 1;
-      include: {
-        reviewedBy: {
-          select: {
-            id: true;
-            name: true;
-            email: true;
-            photoUrl: true;
-          };
-        };
-      };
-    };
-  };
-}>;
+export type StaffModeratorSummary = {
+  id: string;
+  name: string;
+  email: string;
+  photoUrl: string | null;
+};
+
+export type StaffPostReviewSummary = {
+  id: number;
+  postId: number;
+  reviewedById: string;
+  status: PostReviewStatus;
+  isActive: boolean;
+  reviewReason: string | null;
+  createdAt: Date;
+  reviewedBy: StaffModeratorSummary | null;
+};
+
+export type StaffModerationPost = Post & {
+  author: StaffModeratorSummary | null;
+  postReviews: StaffPostReviewSummary[];
+};
+
+export type PublicPostWithMainImage = Post & {
+  mainImageUrl: string | null;
+};
 
 export type StaffModerationHistoryPost = {
   id: number;

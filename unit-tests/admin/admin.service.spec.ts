@@ -90,7 +90,7 @@ describe('AdminService', () => {
       mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
 
       await expect(service.createUserByAdmin({ email: 'test@example.com', password: 'secret123' }, 'admin-id')).rejects.toThrow(
-        'User already exists',
+        'Invalid credentials',
       );
     });
 

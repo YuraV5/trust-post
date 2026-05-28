@@ -50,20 +50,31 @@ describe('FilesService', () => {
         target: FileUploadTarget.POST,
         storage: FileProvider.CLOUDINARY,
         pathSegment: 'posts',
-        requiresResourceId: true,
+        requiresResourceId: false,
       });
       expect(result).toEqual(uploadResult);
     });
 
-    it('throws when resourceId is missing for post uploads', async () => {
+    it('allows post uploads without resourceId', async () => {
       const files = [{ buffer: Buffer.from('data'), originalname: 'img.png', mimetype: 'image/png', size: 100 }];
+      const uploadResult = { urls: ['https://cdn.example.com/img.png'], keys: ['img.png'] };
+      mockCloudinaryClient.upload.mockResolvedValue(uploadResult);
 
       await expect(
         service.upload(files, {
           userId: 'user-1',
           target: FileUploadTarget.POST,
         }),
-      ).rejects.toThrow('resourceId is required for post uploads');
+      ).resolves.toEqual(uploadResult);
+
+      expect(mockCloudinaryClient.upload).toHaveBeenCalledWith(files, {
+        resourceId: undefined,
+        userId: 'user-1',
+        target: FileUploadTarget.POST,
+        storage: FileProvider.CLOUDINARY,
+        pathSegment: 'posts',
+        requiresResourceId: false,
+      });
     });
   });
 

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PostStatus } from '@prisma/client';
+import { PostStatus, UserRoles } from '@prisma/client';
 import { PostsService } from '../../src/modules/posts/services/posts.service';
 import { StubAppLogger } from '../__mock__';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
@@ -143,14 +143,17 @@ describe('PostsService', () => {
     it('passes normalized moderation query to repo', async () => {
       mockPostsRepo.findManyStaff.mockResolvedValue({ data: [], pagination: { total: 0 } });
 
-      await service.getAllStaffPosts({
-        page: 3,
-        limit: 200,
-        authorId: 'author-1',
-        status: PostStatus.APPROVED,
-        sortBy: 'targetAmount',
-        sortOrder: 'asc',
-      });
+      await service.getAllStaffPosts(
+        {
+          page: 3,
+          limit: 200,
+          authorId: 'author-1',
+          status: PostStatus.APPROVED,
+          sortBy: 'targetAmount',
+          sortOrder: 'asc',
+        },
+        { userId: 'moderator-1', role: UserRoles.MODERATOR },
+      );
 
       expect(mockPostsRepo.findManyStaff).toHaveBeenCalledWith({
         page: 3,
@@ -161,6 +164,7 @@ describe('PostsService', () => {
         currentAmount: undefined,
         authorId: 'author-1',
         status: PostStatus.APPROVED,
+        reviewerId: 'moderator-1',
         sortBy: 'targetAmount',
         sortOrder: 'asc',
       });

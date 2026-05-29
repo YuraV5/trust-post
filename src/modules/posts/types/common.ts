@@ -85,10 +85,12 @@ export type StaffModerationPost = Post & {
   author: StaffModeratorSummary | null;
   postReviews: StaffPostReviewSummary[];
   mainImageUrl: string | null;
+  lastPostReviewAt: Date | null;
 };
 
 export type PublicPostWithMainImage = Post & {
   mainImageUrl: string | null;
+  lastPostReviewAt: Date | null;
 };
 
 export type StaffModerationHistoryPost = {

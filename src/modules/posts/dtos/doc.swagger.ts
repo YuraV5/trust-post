@@ -82,6 +82,13 @@ export class PostResponseDto extends PostBaseResponseDto {
 export class PublicPostListItemDto extends PostBaseResponseDto {
   @ApiProperty({ example: 'https://cdn.example.com/post-main.jpg', nullable: true, description: 'Main image URL' })
   mainImageUrl: string | null;
+
+  @ApiProperty({
+    example: '2026-02-03T12:40:00.000Z',
+    nullable: true,
+    description: 'Timestamp of the latest moderation review record for this post',
+  })
+  lastPostReviewAt: Date | null;
 }
 
 export class CommentAuthorDto {
@@ -210,6 +217,13 @@ export class StaffPostReviewSummaryDto {
 export class StaffModerationPostResponseDto extends PostBaseResponseDto {
   @ApiProperty({ example: 'https://cdn.example.com/post-main.jpg', nullable: true, description: 'Main image URL' })
   mainImageUrl: string | null;
+
+  @ApiProperty({
+    example: '2026-02-03T12:40:00.000Z',
+    nullable: true,
+    description: 'Timestamp of the latest active moderation review record',
+  })
+  lastPostReviewAt: Date | null;
 
   @ApiProperty({ type: StaffModeratorSummaryDto, nullable: true, description: 'Post author summary' })
   author: StaffModeratorSummaryDto | null;

@@ -17,7 +17,7 @@ import { LinkPostFilesDto } from '../dtos';
 import { type AuthenticatedUser } from '../../../../common/interfaces';
 import { resolveFileUploadConfig } from '../../../files/helpers/storage-config.helper';
 import { FileUploadTarget } from '../../../files/types';
-import { CurrentUser } from '../../../../common/decorators';
+import { CurrentUser, PublicRoute } from '../../../../common/decorators';
 import { OwnershipGuard } from '../../../../common/guards';
 import { PostFile } from '@prisma/client';
 import {
@@ -84,6 +84,25 @@ export class PostFilesController {
   })
   async getPostFiles(@Param('postId', ParseIntPipe) postId: number): Promise<PostFile[]> {
     return this.postFilesService.getPostFiles(postId);
+  }
+
+  @Get('/:postId/files/public')
+  @PublicRoute()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get public files for approved post' })
+  @ApiParam({ name: 'postId', type: Number })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Public post files retrieved',
+    isArray: true,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Approved post not found',
+    type: NotFoundErrorResponse,
+  })
+  async getPublicPostFiles(@Param('postId', ParseIntPipe) postId: number): Promise<PostFile[]> {
+    return this.postFilesService.getPublicPostFiles(postId);
   }
 
   @UseGuards(OwnershipGuard({ model: 'postFile', paramKey: 'fileId' }))

@@ -43,6 +43,7 @@ export const POST_ROUTES = {
   status: (id: number) => `${V1}/posts/${id}/status`,
   comments: (postId: number) => `${V1}/posts/${postId}/comments`,
   files: (postId: number) => `${V1}/posts/${postId}/files`,
+  publicFiles: (postId: number) => `${V1}/posts/${postId}/files/public`,
 };
 
 // --- Comments module ---

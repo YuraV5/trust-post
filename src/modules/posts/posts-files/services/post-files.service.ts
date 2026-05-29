@@ -189,6 +189,10 @@ export class PostFilesService {
     return this.postFilesRepo.getPostFilesDetail(postId);
   }
 
+  async getPublicPostFiles(postId: number): Promise<PostFile[]> {
+    return this.postFilesRepo.getPublicPostFilesDetail(postId);
+  }
+
   private getErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
   }

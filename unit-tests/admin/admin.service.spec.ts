@@ -10,6 +10,7 @@ import { UserRolePeriodService } from '../../src/modules/user-role-periods/servi
 import { UserRolePeriodRepo } from '../../src/modules/user-role-periods/repo/user-role-period.repo';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
 import { CommentsService } from '../../src/modules/posts/comments/services/comments.service';
+import { PostsQueueService } from '../../src/modules/posts/queue';
 import { EmailQueueServiceMock, StubAppLogger } from '../__mock__';
 import { mockPasswordService } from '../security/mock/password.mock';
 import { mockUser, mockUserAdminOutput, mockUsersRepo } from '../users/__mock';
@@ -36,6 +37,10 @@ describe('AdminService', () => {
     retryFailedModerationByAdmin: jest.fn(),
   };
 
+  const postsQueueServiceMock = {
+    reassignDemotedModeratorPosts: jest.fn(),
+  };
+
   beforeEach(async () => {
     prismaMock = {
       transaction: jest.fn((cb) => cb({})),
@@ -49,6 +54,7 @@ describe('AdminService', () => {
         { provide: EmailQueueService, useValue: EmailQueueServiceMock },
         { provide: LinksService, useValue: linksServiceMock },
         { provide: CommentsService, useValue: commentsServiceMock },
+        { provide: PostsQueueService, useValue: postsQueueServiceMock },
         { provide: UserRolePeriodService, useValue: userRolePeriodServiceMock },
         { provide: UserRolePeriodRepo, useValue: userRolePeriodRepoMock },
         {
@@ -146,6 +152,28 @@ describe('AdminService', () => {
 
       await expect(service.changeRoles('missing-id', 'admin-id', UserRoles.ADMIN)).rejects.toThrow('User not found');
       expect(prismaMock.transaction).not.toHaveBeenCalled();
+    });
+
+    it('should enqueue reassignment job when role changes from MODERATOR to USER', async () => {
+      mockUsersRepo.findById.mockResolvedValue({ ...mockUser, role: UserRoles.MODERATOR });
+      mockUsersRepo.updateRoles.mockResolvedValue(1);
+
+      await expect(service.changeRoles('user-id', 'admin-id', UserRoles.USER)).resolves.toEqual({
+        message: 'User roles updated successfully',
+      });
+
+      expect(postsQueueServiceMock.reassignDemotedModeratorPosts).toHaveBeenCalledWith('user-id', 'admin-id');
+    });
+
+    it('should not enqueue reassignment job for non-moderator demotion role changes', async () => {
+      mockUsersRepo.findById.mockResolvedValue({ ...mockUser, role: UserRoles.USER });
+      mockUsersRepo.updateRoles.mockResolvedValue(1);
+
+      await expect(service.changeRoles('user-id', 'admin-id', UserRoles.ADMIN)).resolves.toEqual({
+        message: 'User roles updated successfully',
+      });
+
+      expect(postsQueueServiceMock.reassignDemotedModeratorPosts).not.toHaveBeenCalled();
     });
   });
 

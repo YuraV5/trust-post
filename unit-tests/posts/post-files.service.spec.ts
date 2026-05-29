@@ -16,6 +16,7 @@ describe('PostFilesService', () => {
     deleteFileById: jest.fn(),
     setFileAsMainImage: jest.fn(),
     getPostFilesDetail: jest.fn(),
+    getPublicPostFilesDetail: jest.fn(),
   };
 
   const filesServiceMock = {
@@ -214,6 +215,18 @@ describe('PostFilesService', () => {
 
       expect(result).toEqual(files);
       expect(postFilesRepoMock.getPostFilesDetail).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('getPublicPostFiles', () => {
+    it('delegates to repo and returns only public files', async () => {
+      const files = [{ id: 7, storageKey: 'public-key', postId: 2 }];
+      postFilesRepoMock.getPublicPostFilesDetail.mockResolvedValue(files);
+
+      const result = await service.getPublicPostFiles(2);
+
+      expect(result).toEqual(files);
+      expect(postFilesRepoMock.getPublicPostFilesDetail).toHaveBeenCalledWith(2);
     });
   });
 });

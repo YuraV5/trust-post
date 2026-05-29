@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { PostStatus, PrismaClient } from '@prisma/client';
+import { FileProvider, PostStatus, PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 import { cleanupRunUsers, createAuthorizedSession } from './helpers/auth-e2e.helper';
@@ -92,6 +92,80 @@ describe('Posts (e2e)', () => {
 
       expect(res.body.id).toBe(post.id);
       expect(res.body.title).toBe(post.title);
+    });
+  });
+
+  describe('GET /api/v1/posts/:postId/files/public', () => {
+    it('should return approved post files without auth token', async () => {
+      const session = await createAuthorizedSession(app, prisma, runId, 'public-files-approved');
+      const post = await createPost(app, session.accessToken);
+      await approvePost(prisma, post.id);
+      const uploader = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true },
+      });
+      expect(uploader).toBeTruthy();
+
+      await prisma.postFile.create({
+        data: {
+          url: 'https://cdn.example.com/public-approved.jpg',
+          postId: post.id,
+          uploadedById: uploader!.id,
+          storageKey: `trust-post/${uploader!.id}/posts/${post.id}/public-approved.jpg`,
+          provider: FileProvider.CLOUDINARY,
+          mimeType: 'image/jpeg',
+          mainImage: true,
+          size: 12345,
+          metadata: { source: 'e2e' },
+          originalName: 'public-approved.jpg',
+        },
+      });
+
+      const res = await request(app.getHttpServer()).get(POST_ROUTES.publicFiles(post.id)).expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0]).toMatchObject({
+        postId: post.id,
+        mainImage: true,
+      });
+    });
+
+    it('should not expose files for non-approved post', async () => {
+      const session = await createAuthorizedSession(app, prisma, runId, 'public-files-non-approved');
+      const post = await createPost(app, session.accessToken);
+      const uploader = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true },
+      });
+      expect(uploader).toBeTruthy();
+
+      await prisma.postFile.create({
+        data: {
+          url: 'https://cdn.example.com/private-draft.jpg',
+          postId: post.id,
+          uploadedById: uploader!.id,
+          storageKey: `trust-post/${uploader!.id}/posts/${post.id}/private-draft.jpg`,
+          provider: FileProvider.CLOUDINARY,
+          mimeType: 'image/jpeg',
+          mainImage: true,
+          size: 12345,
+          metadata: { source: 'e2e' },
+          originalName: 'private-draft.jpg',
+        },
+      });
+
+      const res = await request(app.getHttpServer()).get(POST_ROUTES.publicFiles(post.id)).expect(200);
+
+      expect(res.body).toEqual([]);
+    });
+
+    it('should keep protected files endpoint requiring auth', async () => {
+      const session = await createAuthorizedSession(app, prisma, runId, 'protected-files-auth');
+      const post = await createPost(app, session.accessToken);
+      await approvePost(prisma, post.id);
+
+      await request(app.getHttpServer()).get(POST_ROUTES.files(post.id)).expect(401);
     });
   });
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { GroupedPostFileKeysRow, NewFileRecordData } from '../types';
-import { FileProvider, PostFile, Prisma } from '@prisma/client';
+import { FileProvider, PostFile, PostStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class PostFilesRepo {
@@ -52,6 +52,18 @@ export class PostFilesRepo {
   async getPostFilesDetail(postId: number): Promise<PostFile[]> {
     return this.db.postFile.findMany({
       where: { postId },
+      orderBy: [{ mainImage: 'desc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async getPublicPostFilesDetail(postId: number): Promise<PostFile[]> {
+    return this.db.postFile.findMany({
+      where: {
+        postId,
+        post: {
+          status: PostStatus.APPROVED,
+        },
+      },
       orderBy: [{ mainImage: 'desc' }, { createdAt: 'asc' }],
     });
   }

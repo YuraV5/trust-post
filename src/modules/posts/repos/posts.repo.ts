@@ -44,6 +44,33 @@ export class PostsRepo implements IPostsRepo {
     return rows.map(({ files, ...post }) => ({
       ...post,
       mainImageUrl: files[0]?.url ?? null,
+      lastPostReviewAt: null,
+    }));
+  }
+
+  private mapUserPostsWithMainImage(
+    rows: Array<
+      Prisma.PostGetPayload<{
+        include: {
+          files: {
+            where: { mainImage: true };
+            select: { url: true };
+            take: 1;
+            orderBy: { createdAt: 'asc' };
+          };
+          postReviews: {
+            select: { createdAt: true };
+            orderBy: { createdAt: 'desc' };
+            take: 1;
+          };
+        };
+      }>
+    >,
+  ): PublicPostWithMainImage[] {
+    return rows.map(({ files, postReviews, ...post }) => ({
+      ...post,
+      mainImageUrl: files[0]?.url ?? null,
+      lastPostReviewAt: postReviews[0]?.createdAt ?? null,
     }));
   }
 
@@ -88,9 +115,11 @@ export class PostsRepo implements IPostsRepo {
       }>
     >,
   ): StaffModerationPost[] {
-    return rows.map(({ files, ...post }) => ({
+    return rows.map(({ files, postReviews, ...post }) => ({
       ...post,
+      postReviews,
       mainImageUrl: files[0]?.url ?? null,
+      lastPostReviewAt: postReviews[0]?.createdAt ?? null,
     }));
   }
 
@@ -180,12 +209,21 @@ export class PostsRepo implements IPostsRepo {
             take: 1,
             orderBy: { createdAt: 'asc' },
           },
+          postReviews: {
+            select: {
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 1,
+          },
         },
       }),
       this.db.post.count({ where }),
     ]);
 
-    const data = this.mapPostsWithMainImage(rawData);
+    const data = this.mapUserPostsWithMainImage(rawData);
 
     return {
       data,

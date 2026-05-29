@@ -1,4 +1,4 @@
-import { PostReviewStatus, PostStatus } from '@prisma/client';
+import { PostReviewStatus, PostReviewSystemReason, PostStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../../users/services';
 import { PostsRepo } from '../repos';
@@ -17,6 +17,9 @@ import { PostsCacheService } from './posts-cache.service';
 
 @Injectable()
 export class PostsReviewService {
+  private static readonly REASSIGNMENT_BATCH_SIZE = 250;
+  private static readonly REASSIGNMENT_REASON = 'Reassigned automatically because moderator role changed to USER';
+
   constructor(
     @Inject(APP_LOGGER) private readonly logger: IAppLogger,
     private readonly postsReviewRepo: PostsReviewRepo,
@@ -51,6 +54,95 @@ export class PostsReviewService {
 
     this.logger.debug(`Reviewer assigned to post ${postId} by user ${reviewerId}`);
     return { message: 'Reviewer assigned successfully' };
+  }
+
+  async reassignPostsFromDemotedModerator(demotedModeratorId: string, changedById: string): Promise<ResponseMessage> {
+    const moderators = (await this.usersService.fetchAllModerators()).filter(
+      (moderator) => moderator.id !== demotedModeratorId,
+    );
+
+    if (moderators.length === 0) {
+      throw new AppNotFoundException('No moderators available for reassignment');
+    }
+
+    const reviewsToReassign = await this.prisma.postReview.findMany({
+      where: {
+        reviewedById: demotedModeratorId,
+        isActive: true,
+        post: {
+          status: {
+            in: [PostStatus.PENDING_REVIEW, PostStatus.BLOCKED],
+          },
+        },
+      },
+      select: {
+        id: true,
+        postId: true,
+        post: {
+          select: {
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (reviewsToReassign.length === 0) {
+      this.logger.debug('No posts found for demoted moderator reassignment', {
+        demotedModeratorId,
+        changedById,
+      });
+      return { message: 'No posts to reassign for demoted moderator' };
+    }
+
+    const assignments = reviewsToReassign.map((review) => {
+      const randomIndex = Math.floor(Math.random() * moderators.length);
+      const nextModeratorId = moderators[randomIndex].id;
+      const nextReviewStatus =
+        review.post.status === PostStatus.BLOCKED ? PostReviewStatus.REJECTED : PostReviewStatus.PENDING;
+
+      return {
+        postId: review.postId,
+        reviewedById: nextModeratorId,
+        status: nextReviewStatus,
+        systemReason: PostReviewSystemReason.MODERATOR_ROLE_CHANGED,
+        reviewReason: PostsReviewService.REASSIGNMENT_REASON,
+      };
+    });
+
+    const postIds = assignments.map((item) => item.postId);
+    const oldReviewIds = reviewsToReassign.map((item) => item.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.postReview.updateMany({
+        where: {
+          id: {
+            in: oldReviewIds,
+          },
+        },
+        data: {
+          isActive: false,
+        },
+      });
+
+      for (let i = 0; i < assignments.length; i += PostsReviewService.REASSIGNMENT_BATCH_SIZE) {
+        const chunk = assignments.slice(i, i + PostsReviewService.REASSIGNMENT_BATCH_SIZE);
+        await tx.postReview.createMany({
+          data: chunk,
+        });
+      }
+    });
+
+    await this.postsCacheService.invalidatePostMutationCache(postIds);
+
+    this.logger.info('Posts reassigned from demoted moderator', {
+      demotedModeratorId,
+      changedById,
+      reassignedPostsCount: assignments.length,
+      moderatorsPoolSize: moderators.length,
+      batchSize: PostsReviewService.REASSIGNMENT_BATCH_SIZE,
+    });
+
+    return { message: `Reassigned ${assignments.length} posts from demoted moderator` };
   }
 
   async modifyPostReviewStatus(
@@ -209,6 +301,7 @@ export class PostsReviewService {
         reviewStatus: review.status,
         postStatus,
         reason,
+        systemReason: review.systemReason,
         changedAt: review.createdAt,
         moderator: review.reviewedBy
           ? {

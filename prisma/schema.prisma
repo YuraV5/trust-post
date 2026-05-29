@@ -136,6 +136,12 @@ enum PostReviewStatus {
   @@map("post_review_statuses")
 }
 
+enum PostReviewSystemReason {
+  MODERATOR_ROLE_CHANGED @map("moderator_role_changed")
+
+  @@map("post_review_system_reasons")
+}
+
 enum Currencies {
   UAH @map("uah")
 
@@ -252,6 +258,7 @@ model PostReview {
   postId       Int              @map("post_id")
   reviewedById String           @map("reviewed_by_id")
   status       PostReviewStatus @default(PENDING)
+  systemReason PostReviewSystemReason? @map("system_reason")
   isActive     Boolean          @default(true) @map("is_active")
   reviewReason String?          @map("review_reason") @db.Text
   createdAt    DateTime         @default(now()) @map("created_at")

@@ -20,6 +20,7 @@ import { LinksService } from '../../links/links.service';
 import { REDIS_KEYS } from '../../auth/const';
 import { CommentsService } from '../../posts/comments/services/comments.service';
 import { RetryFailedCommentsInput } from '../../posts/comments/types';
+import { PostsQueueService } from '../../posts/queue';
 
 @Injectable()
 export class AdminService {
@@ -32,6 +33,7 @@ export class AdminService {
     private readonly emailQueueService: EmailQueueService,
     private readonly linksService: LinksService,
     private readonly commentsService: CommentsService,
+    private readonly postsQueueService: PostsQueueService,
     private readonly userRolePeriodService: UserRolePeriodService,
     private readonly userRolePeriodRepo: UserRolePeriodRepo,
     private readonly prismaService: PrismaService,
@@ -126,6 +128,18 @@ export class AdminService {
 
     if (result === 0) {
       throw new AppUserNotFoundException();
+    }
+
+    if (user.role === UserRoles.MODERATOR && role === UserRoles.USER) {
+      try {
+        await this.postsQueueService.reassignDemotedModeratorPosts(id, changedById);
+      } catch (error) {
+        this.logger.error('Failed to enqueue demoted moderator reassignment job', {
+          demotedModeratorId: id,
+          changedById,
+          error: error as Error,
+        });
+      }
     }
 
     return { message: 'User roles updated successfully' };

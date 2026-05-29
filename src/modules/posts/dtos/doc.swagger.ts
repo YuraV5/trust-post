@@ -288,6 +288,14 @@ export class ModerationHistoryEventDto {
   @ApiProperty({ nullable: true, example: 'Contains prohibited content', description: 'Moderation reason if present' })
   reason: string | null;
 
+  @ApiProperty({
+    nullable: true,
+    enum: ['MODERATOR_ROLE_CHANGED'],
+    example: 'MODERATOR_ROLE_CHANGED',
+    description: 'System reason for automatic moderation reassignments if present',
+  })
+  systemReason: 'MODERATOR_ROLE_CHANGED' | null;
+
   @ApiProperty({ example: '2026-02-03T12:40:00.000Z', description: 'Date of this status transition' })
   changedAt: Date;
 

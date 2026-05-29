@@ -47,6 +47,11 @@ export type AssignReviewerJobData = {
   postId: number;
 };
 
+export type ReassignDemotedModeratorPostsJobData = {
+  demotedModeratorId: string;
+  changedById: string;
+};
+
 export type StaffModeratorSummary = {
   id: string;
   name: string;
@@ -102,6 +107,7 @@ export type StaffModerationHistoryEvent = {
   reviewStatus: PostReviewStatus;
   postStatus: PostStatus;
   reason: string | null;
+  systemReason: string | null;
   changedAt: Date;
   moderator: {
     id: string;

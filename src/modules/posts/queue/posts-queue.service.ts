@@ -25,4 +25,16 @@ export class PostsQueueService extends BaseQueueService {
       { ...POST_QUEUE_JOB_OPTIONS, jobId: `${POSTS_JOB.ASSIGN_REVIEWER}-${postId}`, priority: 1 }, // High priority
     );
   }
+
+  async reassignDemotedModeratorPosts(demotedModeratorId: string, changedById: string): Promise<void> {
+    return this.add(
+      POSTS_JOB.REASSIGN_DEMOTED_MODERATOR_POSTS,
+      { demotedModeratorId, changedById },
+      {
+        ...POST_QUEUE_JOB_OPTIONS,
+        jobId: `${POSTS_JOB.REASSIGN_DEMOTED_MODERATOR_POSTS}-${demotedModeratorId}-${Date.now()}`,
+        priority: 1,
+      },
+    );
+  }
 }

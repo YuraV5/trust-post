@@ -15,12 +15,12 @@ import { PaginatedResult } from '../types';
 export interface IPostsService {
   create(authorId: string, data: CreatePost): Promise<Post>;
   getUserPosts(userId: string, query: UserPostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>>;
-  getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>>;
+  getAllPublicPosts(query: PostsQueryDto, authorization?: string): Promise<PaginatedResult<PublicPostWithMainImage>>;
   getAllStaffPosts(
     query: PostsStaffQueryDto,
     currentUser: AuthenticatedUser,
   ): Promise<PaginatedResult<StaffModerationPost>>;
-  findById(id: number): Promise<PublicPostDetails>;
+  findById(id: number, authorization?: string): Promise<PublicPostDetails>;
   findByIdForAuthor(id: number, authorId: string): Promise<Post>;
   editUserPostStatus(postId: number, data: EditUserPostStatus): Promise<ResponseMessage>;
   update(postIds: number[], data: StaffPostUpdate): Promise<ResponseMessage>;

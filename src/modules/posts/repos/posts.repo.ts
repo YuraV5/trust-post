@@ -15,6 +15,25 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { NormalizedPublicQuery, NormalizedStaffQuery, NormalizedUserQuery } from '../types';
 
+type PostLikeViewerRow = {
+  userId: string;
+};
+
+type PostWithMainImageRow = Post & {
+  files: Array<{ url: string }>;
+  likes?: PostLikeViewerRow[];
+};
+
+type PostDetailsRow = Post & {
+  author: {
+    id: string;
+    name: string;
+    photoUrl: string | null;
+    isEmailVerified: boolean;
+  } | null;
+  likes?: PostLikeViewerRow[];
+};
+
 function resolveStaffReviewStatus(postStatus?: PostStatus): PostReviewStatus {
   if (postStatus === PostStatus.BLOCKED || postStatus === PostStatus.REJECTED) {
     return PostReviewStatus.REJECTED;
@@ -27,24 +46,12 @@ function resolveStaffReviewStatus(postStatus?: PostStatus): PostReviewStatus {
 export class PostsRepo implements IPostsRepo {
   constructor(private readonly db: PrismaService) {}
 
-  private mapPostsWithMainImage(
-    rows: Array<
-      Prisma.PostGetPayload<{
-        include: {
-          files: {
-            where: { mainImage: true };
-            select: { url: true };
-            take: 1;
-            orderBy: { createdAt: 'asc' };
-          };
-        };
-      }>
-    >,
-  ): PublicPostWithMainImage[] {
-    return rows.map(({ files, ...post }) => ({
+  private mapPostsWithMainImage(rows: PostWithMainImageRow[], viewerId?: string): PublicPostWithMainImage[] {
+    return rows.map(({ files, likes, ...post }) => ({
       ...post,
       mainImageUrl: files[0]?.url ?? null,
       lastPostReviewAt: null,
+      likedByMe: viewerId ? (likes?.length ?? 0) > 0 : false,
     }));
   }
 
@@ -137,9 +144,9 @@ export class PostsRepo implements IPostsRepo {
     });
   }
 
-  async getPostById(id: number, tx?: Prisma.TransactionClient): Promise<PublicPostDetails | null> {
+  async getPostById(id: number, viewerId?: string, tx?: Prisma.TransactionClient): Promise<PublicPostDetails | null> {
     const client = tx ?? this.db;
-    return await client.post.findUnique({
+    const post = (await client.post.findUnique({
       where: {
         id,
         status: PostStatus.APPROVED,
@@ -153,8 +160,27 @@ export class PostsRepo implements IPostsRepo {
             isEmailVerified: true,
           },
         },
+        ...(viewerId
+          ? {
+              likes: {
+                where: { userId: viewerId },
+                select: { userId: true },
+                take: 1,
+              },
+            }
+          : {}),
       },
-    });
+    })) as PostDetailsRow | null;
+
+    if (!post) {
+      return null;
+    }
+
+    const { likes, ...rest } = post;
+    return {
+      ...rest,
+      likedByMe: viewerId ? (likes?.length ?? 0) > 0 : false,
+    };
   }
 
   async getPostLikeSummary(id: number): Promise<{ id: number; totalLikes: number } | null> {
@@ -247,7 +273,7 @@ export class PostsRepo implements IPostsRepo {
     };
   }
 
-  async findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<PublicPostWithMainImage>> {
+  async findManyPublic(query: NormalizedPublicQuery, viewerId?: string): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
 
@@ -294,12 +320,21 @@ export class PostsRepo implements IPostsRepo {
             take: 1,
             orderBy: { createdAt: 'asc' },
           },
+          ...(viewerId
+            ? {
+                likes: {
+                  where: { userId: viewerId },
+                  select: { userId: true },
+                  take: 1,
+                },
+              }
+            : {}),
         },
-      }),
+      }) as unknown as PostWithMainImageRow[],
       this.db.post.count({ where }),
     ]);
 
-    const data = this.mapPostsWithMainImage(rawData);
+    const data = this.mapPostsWithMainImage(rawData, viewerId);
 
     return {
       data,

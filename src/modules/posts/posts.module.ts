@@ -15,6 +15,7 @@ import { PostsFilesModule } from './posts-files/posts-files.module';
 import { MetricsModule } from '../../infrastructure/metrics/metrics.module';
 import { QueueRetryHandlerService } from '../queues/services';
 import { APP_MODE } from '../../common/consts';
+import { SecurityModule } from '../security/security.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { APP_MODE } from '../../common/consts';
     EmailsModule,
     CommentsModule,
     PostsFilesModule,
+    SecurityModule,
     MetricsModule,
   ],
   controllers: [PublicPostsController, StaffPostsController],

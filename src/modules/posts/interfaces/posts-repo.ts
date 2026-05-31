@@ -16,7 +16,7 @@ import {
 
 export interface IPostsRepo {
   create(authorId: string, inp: CreatePost): Promise<PostId>;
-  getPostById(id: number): Promise<PublicPostDetails | null>;
+  getPostById(id: number, viewerId?: string, tx?: Prisma.TransactionClient): Promise<PublicPostDetails | null>;
   getPostLikeSummary(id: number): Promise<{ id: number; totalLikes: number } | null>;
   getPostByIdForAuthor(id: number, authorId: string): Promise<Post | null>;
   findByAuthorId(authorId: string): Promise<Post[]>;
@@ -24,7 +24,7 @@ export interface IPostsRepo {
     authorId: string,
     query: NormalizedUserQuery,
   ): Promise<PaginatedResult<PublicPostWithMainImage>>;
-  findManyPublic(query: NormalizedPublicQuery): Promise<PaginatedResult<PublicPostWithMainImage>>;
+  findManyPublic(query: NormalizedPublicQuery, viewerId?: string): Promise<PaginatedResult<PublicPostWithMainImage>>;
   findManyStaff(query: NormalizedStaffQuery): Promise<PaginatedResult<StaffModerationPost>>;
   update(ids: number[], data: StaffPostUpdate): Promise<PostCount>;
   delete(ids: number[], statusReason?: string): Promise<PostCount>;

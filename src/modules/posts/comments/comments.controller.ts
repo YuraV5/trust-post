@@ -20,8 +20,9 @@ import { CurrentUser, PublicRoute, Roles } from '../../../common/decorators';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { CreateCommentDto, UpdateCommentDto, CommentsQueryDto, PostIdParamDto, DeleteCommentsDto } from './dtos';
 import { RolesGuard, OwnershipGuard } from '../../../common/guards';
-import { UserRoles, Comment } from '@prisma/client';
+import { UserRoles } from '@prisma/client';
 import { PaginatedResult } from './types';
+import { CommentListItem } from './types';
 import {
   MessageResponseDto,
   BadRequestErrorResponse,
@@ -122,7 +123,7 @@ export class CommentsController {
     @Param() params: PostIdParamDto,
     @Query() query: CommentsQueryDto,
     @Headers('authorization') authorization?: string,
-  ): Promise<PaginatedResult<Comment>> {
+  ): Promise<PaginatedResult<CommentListItem>> {
     const viewerId = await this.commentsService.resolveViewerId(authorization);
     return await this.commentsService.getCommentsByPostId(params.postId, query, viewerId);
   }

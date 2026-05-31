@@ -9,8 +9,8 @@ import {
   RetryFailedCommentsInput,
   RetryFailedCommentsResult,
   RetryFailedCommentCandidate,
+  CommentListItem,
 } from '../types';
-import { Comment } from '@prisma/client';
 import { AppBadRequestException, AppNotFoundException } from '../../../../shared/errors/app-errors';
 import { ICommentsService } from '../interfaces';
 import { CommentsQueryDto } from '../dtos';
@@ -61,9 +61,9 @@ export class CommentsService implements ICommentsService {
     postId: number,
     query: CommentsQueryDto,
     viewerId?: string,
-  ): Promise<PaginatedResult<Comment>> {
+  ): Promise<PaginatedResult<CommentListItem>> {
     const normalized = this.normalizeQuery(query);
-    const cached = await this.commentsCacheService.getByPostQuery<PaginatedResult<Comment>>(
+    const cached = await this.commentsCacheService.getByPostQuery<PaginatedResult<CommentListItem>>(
       postId,
       normalized,
       viewerId,
@@ -195,9 +195,17 @@ export class CommentsService implements ICommentsService {
     const like = await this.commentLikesRepo.getLikeByUserComment(commentId, userId);
     if (like) {
       await this.commentLikesRepo.deleteLike(commentId, userId);
+      const comment = await this.commentsRepo.getById(commentId);
+      if (comment) {
+        await this.commentsCacheService.invalidatePostComments(comment.postId);
+      }
       return { message: 'Like removed', liked: false };
     } else {
       await this.commentLikesRepo.createLike(commentId, userId);
+      const comment = await this.commentsRepo.getById(commentId);
+      if (comment) {
+        await this.commentsCacheService.invalidatePostComments(comment.postId);
+      }
       return { message: 'Like added', liked: true };
     }
   }

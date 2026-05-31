@@ -11,6 +11,13 @@ export type UpdateCommentInput = {
 
 export type CommentId = Pick<Comment, 'id'>;
 
+export type CommentListItem = Comment & {
+  likedByMe: boolean;
+  author: {
+    name: string;
+  };
+};
+
 export type LikeResult = {
   liked: boolean; // true if liked, false if unliked
 };

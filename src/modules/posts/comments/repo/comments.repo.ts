@@ -10,9 +10,21 @@ import {
   RetryFailedCommentCandidate,
   RetryFailedCommentsInput,
   RejectCommentModerationInput,
+  CommentListItem,
 } from '../types';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ICommentsRepo } from '../interfaces';
+
+type CommentLikeViewerRow = {
+  userId: string;
+};
+
+type CommentWithViewerLikeRow = Comment & {
+  author: {
+    name: string;
+  };
+  likes?: CommentLikeViewerRow[];
+};
 
 @Injectable()
 export class CommentsRepo implements ICommentsRepo {
@@ -42,7 +54,7 @@ export class CommentsRepo implements ICommentsRepo {
     postId: number,
     query: NormalizedCommentsQuery,
     viewerId?: string,
-  ): Promise<PaginatedResult<Comment>> {
+  ): Promise<PaginatedResult<CommentListItem>> {
     const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
 
@@ -75,13 +87,29 @@ export class CommentsRepo implements ICommentsRepo {
         skip,
         take: limit,
         orderBy,
-        include: { author: { select: { name: true } } },
-      }),
+        include: {
+          author: { select: { name: true } },
+          ...(viewerId
+            ? {
+                likes: {
+                  where: { userId: viewerId },
+                  select: { userId: true },
+                  take: 1,
+                },
+              }
+            : {}),
+        },
+      }) as unknown as CommentWithViewerLikeRow[],
       this.db.comment.count({ where }),
     ]);
 
+    const comments = data.map(({ likes, ...comment }) => ({
+      ...comment,
+      likedByMe: viewerId ? (likes?.length ?? 0) > 0 : false,
+    }));
+
     return {
-      data,
+      data: comments,
       total,
       page,
       limit,

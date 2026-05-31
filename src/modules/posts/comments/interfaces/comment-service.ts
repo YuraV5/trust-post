@@ -1,5 +1,6 @@
 import { Comment } from '@prisma/client';
 import {
+    CommentListItem,
   CreateCommentInput,
   NormalizedCommentsQuery,
   PaginatedResult,
@@ -10,7 +11,7 @@ import {
 
 export interface ICommentsService {
   create(postId: number, authorId: string, data: CreateCommentInput): Promise<{ message: string }>;
-  getCommentsByPostId(postId: number, query: NormalizedCommentsQuery): Promise<PaginatedResult<Comment>>;
+  getCommentsByPostId(postId: number, query: NormalizedCommentsQuery): Promise<PaginatedResult<CommentListItem>>;
   update(id: number, data: UpdateCommentInput): Promise<{ message: string }>;
   delete(id: number): Promise<{ message: string }>;
   deleteByModerator(ids: number[]): Promise<{ message: string }>;

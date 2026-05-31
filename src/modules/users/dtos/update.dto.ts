@@ -16,7 +16,7 @@ export class UpdateUserDto {
   name?: string;
 
   @ApiProperty({ example: 'http://example.com/photo.jpg', required: false, nullable: true })
-  @Transform(({ value }) => (value === '' ? null : value))
+  @Transform(({ value }: { value: string }) => (value === '' ? null : value))
   @IsString()
   @IsOptional()
   photoUrl?: string | null;

@@ -31,7 +31,11 @@ export class PostsCacheService {
   }
 
   async setPublicPosts(query: unknown, value: unknown, viewerId?: string): Promise<void> {
-    await this.write(this.buildKey('public', viewerId ?? 'anonymous', query as object), value, this.postsListTtlSeconds);
+    await this.write(
+      this.buildKey('public', viewerId ?? 'anonymous', query as object),
+      value,
+      this.postsListTtlSeconds,
+    );
   }
 
   async getStaffPosts<T>(query: unknown): Promise<T | null> {

@@ -72,10 +72,16 @@ export class PostsService implements IPostsService {
     return result;
   }
 
-  async getAllPublicPosts(query: PostsQueryDto, authorization?: string): Promise<PaginatedResult<PublicPostWithMainImage>> {
+  async getAllPublicPosts(
+    query: PostsQueryDto,
+    authorization?: string,
+  ): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const normalized = this.normalizePublicQuery(query);
     const viewerId = await this.resolveViewerId(authorization);
-    const cached = await this.postsCacheService.getPublicPosts<PaginatedResult<PublicPostWithMainImage>>(normalized, viewerId);
+    const cached = await this.postsCacheService.getPublicPosts<PaginatedResult<PublicPostWithMainImage>>(
+      normalized,
+      viewerId,
+    );
     if (cached) {
       return cached;
     }

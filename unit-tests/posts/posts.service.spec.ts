@@ -7,7 +7,7 @@ import { PostsLikeRepo, PostsRepo } from '../../src/modules/posts/repos';
 import { PostsQueueService } from '../../src/modules/posts/queue';
 import { PostsCacheService } from '../../src/modules/posts/services';
 import { QueueRetryHandlerService } from '../../src/modules/queues/services';
-import { mockPostsRepo, mockPostsLikeRepo, mockPostsQueueService, mockPostsCacheService, mockQueueRetryHandler } from './__mock__';
+import { mockPostsRepo, mockPostsLikeRepo, mockPostsQueueService, mockPostsCacheService, mockQueueRetryHandler, mockTokensService } from './__mock__';
 
 describe('PostsService', () => {
   let service: PostsService;
@@ -19,6 +19,21 @@ describe('PostsService', () => {
     mockPostsCacheService.getPublicPosts.mockResolvedValue(null);
     mockPostsCacheService.getStaffPosts.mockResolvedValue(null);
     mockPostsCacheService.getPostById.mockResolvedValue(null);
+    mockPostsRepo.findManyPublic.mockResolvedValue({
+      page: 1,
+      limit: 10,
+      total: 1,
+      totalPages: 1,
+      data: [
+        {
+          id: 1,
+          title: 'Test',
+          createdAt: '2026-01-01',
+          targetAmount: 1500,
+        },
+      ],
+    });
+    mockPostsCacheService.setPostById.mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -29,6 +44,7 @@ describe('PostsService', () => {
         { provide: PostsCacheService, useValue: mockPostsCacheService },
         { provide: QueueRetryHandlerService, useValue: mockQueueRetryHandler },
         { provide: APP_LOGGER, useValue: StubAppLogger },
+        { provide: require('../../src/modules/security/services/tokens.service').TokensService, useValue: mockTokensService },
       ],
     }).compile();
 
@@ -133,9 +149,10 @@ describe('PostsService', () => {
         targetDate: undefined,
         targetAmount: 1500,
         currentAmount: undefined,
+        search: undefined,
         sortBy: 'createdAt',
         sortOrder: 'desc',
-      });
+      }, undefined);
     });
   });
 
@@ -175,9 +192,10 @@ describe('PostsService', () => {
     it('returns post when found', async () => {
       const post = { id: 5, title: 'Existing post' };
       mockPostsRepo.getPostById.mockResolvedValue(post);
+      mockPostsCacheService.setPostById.mockResolvedValue(undefined);
 
       await expect(service.findById(5)).resolves.toEqual(post);
-      expect(mockPostsCacheService.setPostById).toHaveBeenCalledWith(5, post);
+      expect(mockPostsCacheService.setPostById).toHaveBeenCalledWith(5, post, undefined);
     });
 
     it('throws when post does not exist', async () => {

@@ -1,6 +1,6 @@
 import { Comment } from '@prisma/client';
 import {
-    CommentListItem,
+  CommentListItem,
   CreateCommentInput,
   NormalizedCommentsQuery,
   PaginatedResult,

@@ -81,27 +81,26 @@ export class CommentsRepo implements ICommentsRepo {
       [sortBy]: sortOrder,
     };
 
-    const [data, total] = await Promise.all([
-      this.db.comment.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy,
-        include: {
-          author: { select: { name: true } },
-          ...(viewerId
-            ? {
-                likes: {
-                  where: { userId: viewerId },
-                  select: { userId: true },
-                  take: 1,
-                },
-              }
-            : {}),
-        },
-      }) as unknown as CommentWithViewerLikeRow[],
-      this.db.comment.count({ where }),
-    ]);
+    const dataPromise = this.db.comment.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        author: { select: { name: true } },
+        ...(viewerId
+          ? {
+              likes: {
+                where: { userId: viewerId },
+                select: { userId: true },
+                take: 1,
+              },
+            }
+          : {}),
+      },
+    }) as unknown as Promise<CommentWithViewerLikeRow[]>;
+    const totalPromise = this.db.comment.count({ where });
+    const [data, total] = await Promise.all([dataPromise, totalPromise]);
 
     const comments = data.map(({ likes, ...comment }) => ({
       ...comment,
@@ -227,7 +226,7 @@ export class CommentsRepo implements ICommentsRepo {
 
   async hardDeleteMany(ids: number[]): Promise<DeleteResult> {
     return await this.db.$transaction(async (tx) => {
-      // Спочатку отримуємо postId для кожного коментаря
+      // Fetch comments to determine how many of them should be counted in totalComments before deletion
       const comments = await tx.comment.findMany({
         where: {
           id: {
@@ -244,7 +243,7 @@ export class CommentsRepo implements ICommentsRepo {
         },
       });
 
-      // Group comments by postId and count how many з них повинні бути враховані в totalComments
+      // Group comments by postId and count how many of them should be counted in totalComments
       const postCounts = comments.reduce(
         (acc, comment) => {
           if (!this.isCountedComment(comment)) {

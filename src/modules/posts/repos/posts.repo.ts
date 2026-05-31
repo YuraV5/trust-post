@@ -273,7 +273,10 @@ export class PostsRepo implements IPostsRepo {
     };
   }
 
-  async findManyPublic(query: NormalizedPublicQuery, viewerId?: string): Promise<PaginatedResult<PublicPostWithMainImage>> {
+  async findManyPublic(
+    query: NormalizedPublicQuery,
+    viewerId?: string,
+  ): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
 
@@ -307,32 +310,31 @@ export class PostsRepo implements IPostsRepo {
       [sortBy]: sortOrder,
     };
 
-    const [rawData, total] = await Promise.all([
-      this.db.post.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy,
-        include: {
-          files: {
-            where: { mainImage: true },
-            select: { url: true },
-            take: 1,
-            orderBy: { createdAt: 'asc' },
-          },
-          ...(viewerId
-            ? {
-                likes: {
-                  where: { userId: viewerId },
-                  select: { userId: true },
-                  take: 1,
-                },
-              }
-            : {}),
+    const dataPromise = this.db.post.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        files: {
+          where: { mainImage: true },
+          select: { url: true },
+          take: 1,
+          orderBy: { createdAt: 'asc' },
         },
-      }) as unknown as PostWithMainImageRow[],
-      this.db.post.count({ where }),
-    ]);
+        ...(viewerId
+          ? {
+              likes: {
+                where: { userId: viewerId },
+                select: { userId: true },
+                take: 1,
+              },
+            }
+          : {}),
+      },
+    }) as unknown as Promise<PostWithMainImageRow[]>;
+    const totalPromise = this.db.post.count({ where });
+    const [rawData, total] = await Promise.all([dataPromise, totalPromise]);
 
     const data = this.mapPostsWithMainImage(rawData, viewerId);
 

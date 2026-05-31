@@ -53,11 +53,7 @@ export class PostsCacheService {
   async invalidateLikeRelatedCache(postId: number, userId: string): Promise<void> {
     const exactKey = this.buildKey('post', postId);
     const viewerAwarePattern = this.buildKey('post', '*', postId);
-    const wildcardPatterns = [
-      this.buildKey('user', userId, '*'),
-      this.buildKey('public', '*'),
-      this.buildKey('staff', '*'),
-    ];
+    const currentUserListPatterns = [this.buildKey('public', userId, '*'), this.buildKey('user', userId, '*')];
 
     try {
       await this.redisService.del(exactKey);
@@ -79,7 +75,7 @@ export class PostsCacheService {
       });
     }
 
-    for (const pattern of wildcardPatterns) {
+    for (const pattern of currentUserListPatterns) {
       try {
         await this.redisService.delByPattern(pattern);
       } catch (error) {

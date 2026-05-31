@@ -9,6 +9,7 @@ import {
   RejectCommentModerationInput,
   UpdateCommentInput,
   DeleteResult,
+  CommentListItem,
 } from '../types';
 
 export interface ICommentsRepo {
@@ -18,7 +19,7 @@ export interface ICommentsRepo {
     postId: number,
     query: NormalizedCommentsQuery,
     viewerId?: string,
-  ): Promise<PaginatedResult<Comment>>;
+  ): Promise<PaginatedResult<CommentListItem>>;
   update(id: number, data: UpdateCommentInput): Promise<Comment | null>;
   delete(id: number): Promise<Comment | null>;
   hardDeleteMany(ids: number[]): Promise<DeleteResult>;

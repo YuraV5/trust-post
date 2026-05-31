@@ -68,6 +68,7 @@ export type PublicPostAuthorSummary = {
 
 export type PublicPostDetails = Post & {
   author: PublicPostAuthorSummary | null;
+  likedByMe?: boolean;
 };
 
 export type StaffPostReviewSummary = {
@@ -91,6 +92,7 @@ export type StaffModerationPost = Post & {
 export type PublicPostWithMainImage = Post & {
   mainImageUrl: string | null;
   lastPostReviewAt: Date | null;
+  likedByMe?: boolean;
 };
 
 export type StaffModerationHistoryPost = {

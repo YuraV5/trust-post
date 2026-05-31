@@ -23,6 +23,7 @@ import { type IAppLogger } from '../../../shared/logger/interfaces/interface';
 import { PostsCacheService } from './posts-cache.service';
 import { QueueRetryHandlerService } from '../../queues/services';
 import { AuthenticatedUser } from '../../../common/interfaces';
+import { TokensService } from '../../security/services';
 
 @Injectable()
 export class PostsService implements IPostsService {
@@ -35,6 +36,7 @@ export class PostsService implements IPostsService {
     private readonly postQueue: PostsQueueService,
     private readonly postsCacheService: PostsCacheService,
     private readonly queueRetryHandler: QueueRetryHandlerService,
+    private readonly tokensService: TokensService,
   ) {}
 
   async create(authorId: string, data: CreatePost): Promise<Post> {
@@ -70,15 +72,22 @@ export class PostsService implements IPostsService {
     return result;
   }
 
-  async getAllPublicPosts(query: PostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>> {
+  async getAllPublicPosts(
+    query: PostsQueryDto,
+    authorization?: string,
+  ): Promise<PaginatedResult<PublicPostWithMainImage>> {
     const normalized = this.normalizePublicQuery(query);
-    const cached = await this.postsCacheService.getPublicPosts<PaginatedResult<PublicPostWithMainImage>>(normalized);
+    const viewerId = await this.resolveViewerId(authorization);
+    const cached = await this.postsCacheService.getPublicPosts<PaginatedResult<PublicPostWithMainImage>>(
+      normalized,
+      viewerId,
+    );
     if (cached) {
       return cached;
     }
 
-    const result = await this.postsRepo.findManyPublic(normalized);
-    await this.postsCacheService.setPublicPosts(normalized, result);
+    const result = await this.postsRepo.findManyPublic(normalized, viewerId);
+    await this.postsCacheService.setPublicPosts(normalized, result, viewerId);
     return result;
   }
 
@@ -97,19 +106,20 @@ export class PostsService implements IPostsService {
     return result;
   }
 
-  async findById(id: number): Promise<PublicPostDetails> {
-    const cached = await this.postsCacheService.getPostById<PublicPostDetails>(id);
+  async findById(id: number, authorization?: string): Promise<PublicPostDetails> {
+    const viewerId = await this.resolveViewerId(authorization);
+    const cached = await this.postsCacheService.getPostById<PublicPostDetails>(id, viewerId);
 
     if (cached) {
       return cached;
     }
 
-    const post = await this.postsRepo.getPostById(id);
+    const post = await this.postsRepo.getPostById(id, viewerId);
     if (!post) {
       throw new AppNotFoundException('No posts found');
     }
 
-    await this.postsCacheService.setPostById(id, post);
+    await this.postsCacheService.setPostById(id, post, viewerId);
     return post;
   }
 
@@ -276,5 +286,18 @@ export class PostsService implements IPostsService {
       sortBy,
       sortOrder,
     };
+  }
+
+  private async resolveViewerId(authorization?: string): Promise<string | undefined> {
+    if (!authorization?.startsWith('Bearer ')) {
+      return undefined;
+    }
+
+    try {
+      const payload = await this.tokensService.verifyAccess(authorization.slice('Bearer '.length));
+      return payload.sub;
+    } catch {
+      return undefined;
+    }
   }
 }

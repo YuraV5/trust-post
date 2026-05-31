@@ -1,3 +1,6 @@
+export const mockTokensService = {
+  verifyAccess: jest.fn(),
+};
 export const mockPostsRepo = {
   create: jest.fn(),
   findByAuthorIdPaginated: jest.fn(),
@@ -23,15 +26,15 @@ export const mockPostsQueueService = {
 
 export const mockPostsCacheService = {
   getUserPosts: jest.fn(),
-  setUserPosts: jest.fn(),
+  setUserPosts: jest.fn().mockResolvedValue(undefined),
   getPublicPosts: jest.fn(),
-  setPublicPosts: jest.fn(),
+  setPublicPosts: jest.fn().mockResolvedValue(undefined),
   getStaffPosts: jest.fn(),
-  setStaffPosts: jest.fn(),
+  setStaffPosts: jest.fn().mockResolvedValue(undefined),
   getPostById: jest.fn(),
-  setPostById: jest.fn(),
-  invalidateLikeRelatedCache: jest.fn(),
-  invalidatePostMutationCache: jest.fn(),
+  setPostById: jest.fn().mockResolvedValue(undefined),
+  invalidateLikeRelatedCache: jest.fn().mockResolvedValue(undefined),
+  invalidatePostMutationCache: jest.fn().mockResolvedValue(undefined),
 };
 
 export const mockQueueRetryHandler = {

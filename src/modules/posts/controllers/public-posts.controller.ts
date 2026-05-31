@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -74,8 +75,11 @@ export class PublicPostsController {
     description: 'Posts retrieved with pagination metadata',
     type: PaginatedPostsResponseDto,
   })
-  async getAllPosts(@Query() query: PostsQueryDto): Promise<PaginatedResult<PublicPostWithMainImage>> {
-    return await this.postsService.getAllPublicPosts(query);
+  async getAllPosts(
+    @Query() query: PostsQueryDto,
+    @Headers('authorization') authorization?: string,
+  ): Promise<PaginatedResult<PublicPostWithMainImage>> {
+    return await this.postsService.getAllPublicPosts(query, authorization);
   }
 
   @Get('my')
@@ -258,7 +262,10 @@ export class PublicPostsController {
     description: 'Post not found',
     type: NotFoundErrorResponse,
   })
-  async getPostById(@Param() params: NumericIdParamDto): Promise<PublicPostDetails> {
-    return await this.postsService.findById(params.id);
+  async getPostById(
+    @Param() params: NumericIdParamDto,
+    @Headers('authorization') authorization?: string,
+  ): Promise<PublicPostDetails> {
+    return await this.postsService.findById(params.id, authorization);
   }
 }

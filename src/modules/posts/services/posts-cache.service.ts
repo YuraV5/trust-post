@@ -26,12 +26,16 @@ export class PostsCacheService {
     await this.write(this.buildKey('user', userId, query as object), value, this.postsListTtlSeconds);
   }
 
-  async getPublicPosts<T>(query: unknown): Promise<T | null> {
-    return this.read<T>(this.buildKey('public', query as object));
+  async getPublicPosts<T>(query: unknown, viewerId?: string): Promise<T | null> {
+    return this.read<T>(this.buildKey('public', viewerId ?? 'anonymous', query as object));
   }
 
-  async setPublicPosts(query: unknown, value: unknown): Promise<void> {
-    await this.write(this.buildKey('public', query as object), value, this.postsListTtlSeconds);
+  async setPublicPosts(query: unknown, value: unknown, viewerId?: string): Promise<void> {
+    await this.write(
+      this.buildKey('public', viewerId ?? 'anonymous', query as object),
+      value,
+      this.postsListTtlSeconds,
+    );
   }
 
   async getStaffPosts<T>(query: unknown): Promise<T | null> {
@@ -42,21 +46,18 @@ export class PostsCacheService {
     await this.write(this.buildKey('staff', query as object), value, this.postsListTtlSeconds);
   }
 
-  async getPostById<T>(postId: number): Promise<T | null> {
-    return this.read<T>(this.buildKey('post', postId));
+  async getPostById<T>(postId: number, viewerId?: string): Promise<T | null> {
+    return this.read<T>(this.buildKey('post', viewerId ?? 'anonymous', postId));
   }
 
-  async setPostById(postId: number, value: unknown): Promise<void> {
-    await this.write(this.buildKey('post', postId), value, this.postByIdTtlSeconds);
+  async setPostById(postId: number, value: unknown, viewerId?: string): Promise<void> {
+    await this.write(this.buildKey('post', viewerId ?? 'anonymous', postId), value, this.postByIdTtlSeconds);
   }
 
   async invalidateLikeRelatedCache(postId: number, userId: string): Promise<void> {
     const exactKey = this.buildKey('post', postId);
-    const wildcardPatterns = [
-      this.buildKey('user', userId, '*'),
-      this.buildKey('public', '*'),
-      this.buildKey('staff', '*'),
-    ];
+    const viewerAwarePattern = this.buildKey('post', '*', postId);
+    const currentUserListPatterns = [this.buildKey('public', userId, '*'), this.buildKey('user', userId, '*')];
 
     try {
       await this.redisService.del(exactKey);
@@ -68,7 +69,17 @@ export class PostsCacheService {
       });
     }
 
-    for (const pattern of wildcardPatterns) {
+    try {
+      await this.redisService.delByPattern(viewerAwarePattern);
+    } catch (error) {
+      this.logger.warn('Posts cache invalidation failed after like toggle', {
+        pattern: viewerAwarePattern,
+        postId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    for (const pattern of currentUserListPatterns) {
       try {
         await this.redisService.delByPattern(pattern);
       } catch (error) {
@@ -85,6 +96,7 @@ export class PostsCacheService {
   async invalidatePostMutationCache(postIds: number[]): Promise<void> {
     const uniquePostIds = Array.from(new Set(postIds));
     const exactKeys = uniquePostIds.map((postId) => this.buildKey('post', postId));
+    const viewerAwarePatterns = uniquePostIds.map((postId) => this.buildKey('post', '*', postId));
     const wildcardPatterns = [this.buildKey('user', '*'), this.buildKey('public', '*'), this.buildKey('staff', '*')];
 
     for (const key of exactKeys) {
@@ -93,6 +105,18 @@ export class PostsCacheService {
       } catch (error) {
         this.logger.warn('Posts cache invalidation failed after post mutation', {
           key,
+          postIds: uniquePostIds,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    for (const pattern of viewerAwarePatterns) {
+      try {
+        await this.redisService.delByPattern(pattern);
+      } catch (error) {
+        this.logger.warn('Posts cache invalidation failed after post mutation', {
+          pattern,
           postIds: uniquePostIds,
           error: error instanceof Error ? error.message : String(error),
         });

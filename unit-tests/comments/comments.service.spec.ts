@@ -36,6 +36,7 @@ describe('CommentsService', () => {
   const mockCommentsCacheService = {
     getByPostQuery: jest.fn(),
     setByPostQuery: jest.fn(),
+    invalidatePostComments: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockTokensService = {

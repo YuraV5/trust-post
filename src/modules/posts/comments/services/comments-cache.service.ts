@@ -38,6 +38,17 @@ export class CommentsCacheService {
     );
   }
 
+  async invalidatePostComments(postId: number): Promise<void> {
+    try {
+      await this.redisService.delByPattern(`cache:comments:comments-by-post:{"postId":${postId},*`);
+    } catch (error) {
+      this.logger.warn('Comments cache invalidation failed after like toggle', {
+        postId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   private buildKey(scope: string, payload: unknown): string {
     return `cache:comments:${scope}:${JSON.stringify(payload)}`;
   }

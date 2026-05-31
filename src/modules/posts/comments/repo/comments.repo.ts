@@ -10,9 +10,21 @@ import {
   RetryFailedCommentCandidate,
   RetryFailedCommentsInput,
   RejectCommentModerationInput,
+  CommentListItem,
 } from '../types';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ICommentsRepo } from '../interfaces';
+
+type CommentLikeViewerRow = {
+  userId: string;
+};
+
+type CommentWithViewerLikeRow = Comment & {
+  author: {
+    name: string;
+  };
+  likes?: CommentLikeViewerRow[];
+};
 
 @Injectable()
 export class CommentsRepo implements ICommentsRepo {
@@ -42,7 +54,7 @@ export class CommentsRepo implements ICommentsRepo {
     postId: number,
     query: NormalizedCommentsQuery,
     viewerId?: string,
-  ): Promise<PaginatedResult<Comment>> {
+  ): Promise<PaginatedResult<CommentListItem>> {
     const { page, limit, sortBy, sortOrder } = query;
     const skip = (page - 1) * limit;
 
@@ -69,19 +81,34 @@ export class CommentsRepo implements ICommentsRepo {
       [sortBy]: sortOrder,
     };
 
-    const [data, total] = await Promise.all([
-      this.db.comment.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy,
-        include: { author: { select: { name: true } } },
-      }),
-      this.db.comment.count({ where }),
-    ]);
+    const dataPromise = this.db.comment.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        author: { select: { name: true } },
+        ...(viewerId
+          ? {
+              likes: {
+                where: { userId: viewerId },
+                select: { userId: true },
+                take: 1,
+              },
+            }
+          : {}),
+      },
+    }) as unknown as Promise<CommentWithViewerLikeRow[]>;
+    const totalPromise = this.db.comment.count({ where });
+    const [data, total] = await Promise.all([dataPromise, totalPromise]);
+
+    const comments = data.map(({ likes, ...comment }) => ({
+      ...comment,
+      likedByMe: viewerId ? (likes?.length ?? 0) > 0 : false,
+    }));
 
     return {
-      data,
+      data: comments,
       total,
       page,
       limit,
@@ -199,7 +226,7 @@ export class CommentsRepo implements ICommentsRepo {
 
   async hardDeleteMany(ids: number[]): Promise<DeleteResult> {
     return await this.db.$transaction(async (tx) => {
-      // Спочатку отримуємо postId для кожного коментаря
+      // Fetch comments to determine how many of them should be counted in totalComments before deletion
       const comments = await tx.comment.findMany({
         where: {
           id: {
@@ -216,7 +243,7 @@ export class CommentsRepo implements ICommentsRepo {
         },
       });
 
-      // Group comments by postId and count how many з них повинні бути враховані в totalComments
+      // Group comments by postId and count how many of them should be counted in totalComments
       const postCounts = comments.reduce(
         (acc, comment) => {
           if (!this.isCountedComment(comment)) {

@@ -185,20 +185,36 @@ export class PostsService implements IPostsService {
     return { message: 'Posts deleted successfully' };
   }
 
-  async toggleLike(postId: number, userId: string): Promise<{ message: string; liked: boolean }> {
-    await this.findById(postId);
+  async toggleLike(postId: number, userId: string): Promise<{ message: string; liked: boolean; totalLikes: number }> {
+    const post = await this.postsRepo.getPostLikeSummary(postId);
+
+    if (!post) {
+      throw new AppNotFoundException('No posts found');
+    }
 
     const like = await this.postLikeRepo.getLikeByUserPost(postId, userId);
 
     if (like) {
       await this.postLikeRepo.deleteLike(postId, userId);
       await this.postsCacheService.invalidateLikeRelatedCache(postId, userId);
-      return { message: 'Like removed', liked: false };
+
+      const current = await this.postsRepo.getPostLikeSummary(postId);
+      return {
+        message: 'Like removed',
+        liked: false,
+        totalLikes: current?.totalLikes ?? 0,
+      };
     }
 
     await this.postLikeRepo.createLike(postId, userId);
     await this.postsCacheService.invalidateLikeRelatedCache(postId, userId);
-    return { message: 'Like added', liked: true };
+
+    const current = await this.postsRepo.getPostLikeSummary(postId);
+    return {
+      message: 'Like added',
+      liked: true,
+      totalLikes: current?.totalLikes ?? 0,
+    };
   }
 
   private normalizePublicQuery(query: PostsQueryDto): NormalizedPublicQuery {

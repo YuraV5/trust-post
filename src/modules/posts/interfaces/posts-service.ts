@@ -26,5 +26,5 @@ export interface IPostsService {
   update(postIds: number[], data: StaffPostUpdate): Promise<ResponseMessage>;
   delete(postIds: number[], statusReason?: string): Promise<ResponseMessage>;
   deleteManyByAdmin(postIds: number[], adminId: string): Promise<ResponseMessage>;
-  toggleLike(postId: number, userId: string): Promise<{ message: string; liked: boolean }>;
+  toggleLike(postId: number, userId: string): Promise<{ message: string; liked: boolean; totalLikes: number }>;
 }

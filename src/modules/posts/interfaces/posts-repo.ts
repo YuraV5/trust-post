@@ -17,6 +17,7 @@ import {
 export interface IPostsRepo {
   create(authorId: string, inp: CreatePost): Promise<PostId>;
   getPostById(id: number): Promise<PublicPostDetails | null>;
+  getPostLikeSummary(id: number): Promise<{ id: number; totalLikes: number } | null>;
   getPostByIdForAuthor(id: number, authorId: string): Promise<Post | null>;
   findByAuthorId(authorId: string): Promise<Post[]>;
   findByAuthorIdPaginated(

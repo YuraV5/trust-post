@@ -4,6 +4,7 @@ export const mockPostsRepo = {
   findManyPublic: jest.fn(),
   findManyStaff: jest.fn(),
   getPostById: jest.fn(),
+  getPostLikeSummary: jest.fn(),
   updateStatus: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),

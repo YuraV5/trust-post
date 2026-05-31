@@ -157,6 +157,19 @@ export class PostsRepo implements IPostsRepo {
     });
   }
 
+  async getPostLikeSummary(id: number): Promise<{ id: number; totalLikes: number } | null> {
+    return await this.db.post.findFirst({
+      where: {
+        id,
+        status: PostStatus.APPROVED,
+      },
+      select: {
+        id: true,
+        totalLikes: true,
+      },
+    });
+  }
+
   async getPostByIdForAuthor(id: number, authorId: string): Promise<Post | null> {
     return await this.db.post.findFirst({
       where: {

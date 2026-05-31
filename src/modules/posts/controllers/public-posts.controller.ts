@@ -109,7 +109,7 @@ export class PublicPostsController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Like status toggled',
-    schema: { properties: { message: { type: 'string' }, liked: { type: 'boolean' } } },
+    schema: { properties: { message: { type: 'string' }, liked: { type: 'boolean' }, totalLikes: { type: 'number' } } },
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -124,7 +124,7 @@ export class PublicPostsController {
   async togglePostLike(
     @CurrentUser() user: AuthenticatedUser,
     @Param() params: NumericIdParamDto,
-  ): Promise<{ message: string; liked: boolean }> {
+  ): Promise<{ message: string; liked: boolean; totalLikes: number }> {
     return await this.postsService.toggleLike(params.id, user.userId);
   }
 

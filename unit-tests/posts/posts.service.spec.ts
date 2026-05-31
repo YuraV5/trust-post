@@ -253,33 +253,33 @@ describe('PostsService', () => {
 
   describe('toggleLike', () => {
     it('removes like when one already exists', async () => {
-      mockPostsRepo.getPostById.mockResolvedValue({ id: 3 });
+      mockPostsRepo.getPostLikeSummary.mockResolvedValueOnce({ id: 3, totalLikes: 9 }).mockResolvedValueOnce({ id: 3, totalLikes: 8 });
       mockPostsLikeRepo.getLikeByUserPost.mockResolvedValue({ postId: 3, userId: 'user-1' });
-      mockPostsLikeRepo.deleteLike.mockResolvedValue(undefined);
+      mockPostsLikeRepo.deleteLike.mockResolvedValue(true);
 
       const result = await service.toggleLike(3, 'user-1');
 
-      expect(result).toEqual({ message: 'Like removed', liked: false });
+      expect(result).toEqual({ message: 'Like removed', liked: false, totalLikes: 8 });
       expect(mockPostsLikeRepo.deleteLike).toHaveBeenCalledWith(3, 'user-1');
       expect(mockPostsCacheService.invalidateLikeRelatedCache).toHaveBeenCalledWith(3, 'user-1');
       expect(mockPostsLikeRepo.createLike).not.toHaveBeenCalled();
     });
 
     it('creates like when none exists', async () => {
-      mockPostsRepo.getPostById.mockResolvedValue({ id: 4 });
+      mockPostsRepo.getPostLikeSummary.mockResolvedValueOnce({ id: 4, totalLikes: 2 }).mockResolvedValueOnce({ id: 4, totalLikes: 3 });
       mockPostsLikeRepo.getLikeByUserPost.mockResolvedValue(null);
-      mockPostsLikeRepo.createLike.mockResolvedValue(undefined);
+      mockPostsLikeRepo.createLike.mockResolvedValue(true);
 
       const result = await service.toggleLike(4, 'user-2');
 
-      expect(result).toEqual({ message: 'Like added', liked: true });
+      expect(result).toEqual({ message: 'Like added', liked: true, totalLikes: 3 });
       expect(mockPostsLikeRepo.createLike).toHaveBeenCalledWith(4, 'user-2');
       expect(mockPostsCacheService.invalidateLikeRelatedCache).toHaveBeenCalledWith(4, 'user-2');
       expect(mockPostsLikeRepo.deleteLike).not.toHaveBeenCalled();
     });
 
     it('throws when trying to like a missing post', async () => {
-      mockPostsRepo.getPostById.mockResolvedValue(null);
+      mockPostsRepo.getPostLikeSummary.mockResolvedValue(null);
 
       await expect(service.toggleLike(123, 'user-3')).rejects.toThrow('No posts found');
       expect(mockPostsLikeRepo.getLikeByUserPost).not.toHaveBeenCalled();

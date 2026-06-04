@@ -68,6 +68,21 @@ export type PaymentAttemptsHistoryResponse = {
   >;
 };
 
+export type PaymentPostHistoryResponse = {
+  post: {
+    id: number;
+    title: string;
+  };
+  donations: Array<{
+    paymentId: string;
+    donorName: string | null;
+    isAnonymous: boolean;
+    amount: Prisma.Decimal;
+    currency: Currencies;
+    confirmedAt: Date;
+  }>;
+};
+
 export type PaymentsRepo = {
   create(input: CreatePaymentInput): Promise<Payment>;
   findById(id: string): Promise<PaymentWithLastAttempt | null>;
@@ -76,6 +91,7 @@ export type PaymentsRepo = {
   updatePaymentCheckoutState(input: UpdatePaymentCheckoutStateInput): Promise<void>;
   listByUserId(userId: string, query: PaymentsListQuery): Promise<PaymentsPage>;
   getPaymentAttemptsByUserId(userId: string, paymentId: string): Promise<PaymentAttemptsHistoryResponse | null>;
+  getSuccessfulPostPaymentsHistory(postId: number): Promise<PaymentPostHistoryResponse | null>;
   updateStatusWithPostIncrement(input: PaymentUpdateWebhookSuccessInput): Promise<boolean>;
   updateStatusWithoutPostIncrement(input: PaymentUpdateWebhookStatusInput): Promise<boolean>;
 };

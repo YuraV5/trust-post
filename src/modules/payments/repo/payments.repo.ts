@@ -6,6 +6,7 @@ import {
   CreatePaymentInput,
   PaymentAttemptsHistoryResponse,
   PaymentForRegeneration,
+  PaymentPostHistoryResponse,
   PaymentUpdateWebhookStatusInput,
   PaymentUpdateWebhookSuccessInput,
   PaymentWithLastAttempt,
@@ -196,6 +197,77 @@ export class PaymentsRepo implements IPaymentsRepo {
       isAnonymous: payment.isAnonymous,
       post: payment.post,
       attempts: payment.paymentAttempts,
+    };
+  }
+
+  async getSuccessfulPostPaymentsHistory(postId: number): Promise<PaymentPostHistoryResponse | null> {
+    const post = await this.db.post.findFirst({
+      where: {
+        id: postId,
+        status: PostStatus.APPROVED,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        title: true,
+      },
+    });
+
+    if (!post) {
+      return null;
+    }
+
+    const donations = await this.db.payment.findMany({
+      where: {
+        postId,
+        status: PaymentStatus.SUCCESS,
+        confirmedAt: {
+          not: null,
+        },
+      },
+      orderBy: {
+        confirmedAt: 'desc',
+      },
+      select: {
+        id: true,
+        userId: true,
+        isAnonymous: true,
+        amount: true,
+        currency: true,
+        confirmedAt: true,
+      },
+    });
+
+    const donorIds = [...new Set(donations.map((donation) => donation.userId))];
+    const donors = donorIds.length > 0
+      ? await this.db.user.findMany({
+          where: {
+            id: {
+              in: donorIds,
+            },
+          },
+          select: {
+            id: true,
+            name: true,
+          },
+        })
+      : [];
+    const donorNamesById = new Map(donors.map((donor) => [donor.id, donor.name]));
+
+    return {
+      post,
+      donations: donations.flatMap((donation) => (
+        donation.confirmedAt
+          ? [{
+              paymentId: donation.id,
+              donorName: donorNamesById.get(donation.userId) ?? null,
+              isAnonymous: donation.isAnonymous,
+              amount: donation.amount,
+              currency: donation.currency,
+              confirmedAt: donation.confirmedAt,
+            }]
+          : []
+      )),
     };
   }
 

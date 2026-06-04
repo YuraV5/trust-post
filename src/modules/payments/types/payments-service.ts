@@ -29,6 +29,11 @@ export type PaymentAttemptsHistoryRequest = {
   paymentId: string;
 };
 
+export type PaymentPostHistoryRequest = {
+  userId: string;
+  postId: number;
+};
+
 export type HandleWebhookRequest = {
   provider: PaymentProvider;
   payload: WayForPayWebhookPayload;

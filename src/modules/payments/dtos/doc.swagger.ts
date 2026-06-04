@@ -138,3 +138,31 @@ export class PaymentAttemptsHistoryResponseDto {
   @ApiProperty({ type: [PaymentAttemptHistoryItemDto] })
   attempts: PaymentAttemptHistoryItemDto[];
 }
+
+export class PaymentPostDonationHistoryItemDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  paymentId: string;
+
+  @ApiProperty({ example: 'Ivan Petrenko', nullable: true, description: 'Donor name when donation is not anonymous' })
+  donorName: string | null;
+
+  @ApiProperty({ example: false })
+  isAnonymous: boolean;
+
+  @ApiProperty({ example: '1500.00' })
+  amount: string;
+
+  @ApiProperty({ example: 'UAH' })
+  currency: string;
+
+  @ApiProperty({ example: '2026-06-04T10:35:00Z' })
+  confirmedAt: Date;
+}
+
+export class PaymentPostDonationHistoryResponseDto {
+  @ApiProperty({ type: () => PaymentPostPreviewDto })
+  post: PaymentPostPreviewDto;
+
+  @ApiProperty({ type: [PaymentPostDonationHistoryItemDto] })
+  donations: PaymentPostDonationHistoryItemDto[];
+}

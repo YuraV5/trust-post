@@ -1,16 +1,22 @@
 import { Body, Controller, Get, Param, Post, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { CurrentUser, RequireIdempotencyKey } from '../../../common/decorators';
+import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { CreateUserPaymentDto, PaymentsQueryDto, RegeneratePaymentLinkDto } from '../dtos';
 import { PaymentsService } from '../services';
-import { PaymentAttemptsHistoryResponse, PaymentInitResponse, PaymentsPage } from '../types';
+import { PaymentAttemptsHistoryResponse, PaymentInitResponse, PaymentPostHistoryResponse, PaymentsPage } from '../types';
 import {
   BadRequestErrorResponse,
   UnauthorizedErrorResponse,
   NotFoundErrorResponse,
 } from '../../../common/swagger/responses';
-import { PaymentAttemptsHistoryResponseDto, PaymentInitResponseDto, PaginatedPaymentsResponseDto } from '../dtos/doc.swagger';
+import {
+  PaymentAttemptsHistoryResponseDto,
+  PaymentInitResponseDto,
+  PaginatedPaymentsResponseDto,
+  PaymentPostDonationHistoryResponseDto,
+} from '../dtos/doc.swagger';
 
 @ApiTags('payments')
 @ApiBearerAuth('JWT-auth')
@@ -115,6 +121,35 @@ export class UserPaymentsController {
     return await this.paymentsService.getMyPaymentAttempts({
       userId: user.userId,
       paymentId,
+    });
+  }
+
+  @Get('posts/:id/history')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get successful donations history for a post' })
+  @ApiParam({ name: 'id', type: Number, description: 'Post ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Post donation history retrieved',
+    type: PaymentPostDonationHistoryResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Post not found',
+    type: NotFoundErrorResponse,
+  })
+  async getPostDonationHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: NumericIdParamDto,
+  ): Promise<PaymentPostHistoryResponse> {
+    return await this.paymentsService.getPostDonationHistory({
+      userId: user.userId,
+      postId: params.id,
     });
   }
 

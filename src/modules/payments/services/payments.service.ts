@@ -13,6 +13,8 @@ import {
   PaymentAttemptsHistoryRequest,
   PaymentAttemptsHistoryResponse,
   PaymentInitResponse,
+  PaymentPostHistoryRequest,
+  PaymentPostHistoryResponse,
   PaymentsListRequest,
   PaymentsPage,
   RegeneratePaymentLinkRequest,
@@ -216,5 +218,15 @@ export class PaymentsService implements IPaymentsService {
     }
 
     return payment;
+  }
+
+  async getPostDonationHistory(input: PaymentPostHistoryRequest): Promise<PaymentPostHistoryResponse> {
+    const history = await this.paymentRepo.getSuccessfulPostPaymentsHistory(input.postId);
+
+    if (!history) {
+      throw new AppNotFoundException('Post donation history not found');
+    }
+
+    return history;
   }
 }

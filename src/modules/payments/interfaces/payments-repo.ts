@@ -4,6 +4,7 @@ import {
   DonationPost,
   PaymentAttemptsHistoryResponse,
   PaymentForRegeneration,
+  PaymentPostHistoryResponse,
   PaymentsListQuery,
   PaymentsPage,
   PaymentUpdateWebhookStatusInput,
@@ -20,6 +21,7 @@ export interface IPaymentsRepo {
   updatePaymentCheckoutState(input: UpdatePaymentCheckoutStateInput): Promise<void>;
   listByUserId(userId: string, query: PaymentsListQuery): Promise<PaymentsPage>;
   getPaymentAttemptsByUserId(userId: string, paymentId: string): Promise<PaymentAttemptsHistoryResponse | null>;
+  getSuccessfulPostPaymentsHistory(postId: number): Promise<PaymentPostHistoryResponse | null>;
   updateStatusWithPostIncrement(input: PaymentUpdateWebhookSuccessInput): Promise<boolean>;
   updateStatusWithoutPostIncrement(input: PaymentUpdateWebhookStatusInput): Promise<boolean>;
 }

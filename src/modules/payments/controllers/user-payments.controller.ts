@@ -5,7 +5,12 @@ import { NumericIdParamDto } from '../../../common/dtos/req-params.dto';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { CreateUserPaymentDto, PaymentsQueryDto, RegeneratePaymentLinkDto } from '../dtos';
 import { PaymentsService } from '../services';
-import { PaymentAttemptsHistoryResponse, PaymentInitResponse, PaymentPostHistoryResponse, PaymentsPage } from '../types';
+import {
+  PaymentAttemptsHistoryResponse,
+  PaymentInitResponse,
+  PaymentPostHistoryResponse,
+  PaymentsPage,
+} from '../types';
 import {
   BadRequestErrorResponse,
   UnauthorizedErrorResponse,

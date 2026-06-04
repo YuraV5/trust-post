@@ -1,7 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Currencies, PaymentProvider } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, MaxLength, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsPositive,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateUserPaymentDto {
   @ApiProperty({ example: 12 })

@@ -1,6 +1,8 @@
 import {
   CreatePaymentRequest,
   HandleWebhookRequest,
+  PaymentAttemptsHistoryRequest,
+  PaymentAttemptsHistoryResponse,
   PaymentInitResponse,
   PaymentsListRequest,
   PaymentsPage,
@@ -13,4 +15,5 @@ export interface IPaymentsService {
   regeneratePaymentLink(input: RegeneratePaymentLinkRequest): Promise<PaymentInitResponse>;
   handleWebhook(input: HandleWebhookRequest): Promise<WayForPayWebhookAcknowledge>;
   listMyPayments(input: PaymentsListRequest): Promise<PaymentsPage>;
+  getMyPaymentAttempts(input: PaymentAttemptsHistoryRequest): Promise<PaymentAttemptsHistoryResponse>;
 }

@@ -4,13 +4,13 @@ import { CurrentUser, RequireIdempotencyKey } from '../../../common/decorators';
 import { type AuthenticatedUser } from '../../../common/interfaces';
 import { CreateUserPaymentDto, PaymentsQueryDto, RegeneratePaymentLinkDto } from '../dtos';
 import { PaymentsService } from '../services';
-import { PaymentInitResponse, PaymentsPage } from '../types';
+import { PaymentAttemptsHistoryResponse, PaymentInitResponse, PaymentsPage } from '../types';
 import {
   BadRequestErrorResponse,
   UnauthorizedErrorResponse,
   NotFoundErrorResponse,
 } from '../../../common/swagger/responses';
-import { PaymentInitResponseDto, PaginatedPaymentsResponseDto } from '../dtos/doc.swagger';
+import { PaymentAttemptsHistoryResponseDto, PaymentInitResponseDto, PaginatedPaymentsResponseDto } from '../dtos/doc.swagger';
 
 @ApiTags('payments')
 @ApiBearerAuth('JWT-auth')
@@ -52,6 +52,7 @@ export class UserPaymentsController {
       amount: dto.amount,
       currency: dto.currency,
       userId: user.userId,
+      isAnonymous: dto.isAnonymous,
       provider: dto.provider,
     });
   }
@@ -85,6 +86,35 @@ export class UserPaymentsController {
       userId: user.userId,
       paymentId,
       provider: dto.provider,
+    });
+  }
+
+  @Get('my/:paymentId/attempts')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get payment attempts history for current user' })
+  @ApiParam({ name: 'paymentId', type: String, description: 'Payment ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Payment attempts history retrieved',
+    type: PaymentAttemptsHistoryResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid access token',
+    type: UnauthorizedErrorResponse,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Payment not found',
+    type: NotFoundErrorResponse,
+  })
+  async getMyPaymentAttempts(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('paymentId') paymentId: string,
+  ): Promise<PaymentAttemptsHistoryResponse> {
+    return await this.paymentsService.getMyPaymentAttempts({
+      userId: user.userId,
+      paymentId,
     });
   }
 

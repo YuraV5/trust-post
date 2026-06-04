@@ -2,6 +2,7 @@ import { Payment } from '@prisma/client';
 import {
   CreatePaymentInput,
   DonationPost,
+  PaymentAttemptsHistoryResponse,
   PaymentForRegeneration,
   PaymentsListQuery,
   PaymentsPage,
@@ -18,6 +19,7 @@ export interface IPaymentsRepo {
   getPaymentForRegeneration(paymentId: string, userId: string): Promise<PaymentForRegeneration | null>;
   updatePaymentCheckoutState(input: UpdatePaymentCheckoutStateInput): Promise<void>;
   listByUserId(userId: string, query: PaymentsListQuery): Promise<PaymentsPage>;
+  getPaymentAttemptsByUserId(userId: string, paymentId: string): Promise<PaymentAttemptsHistoryResponse | null>;
   updateStatusWithPostIncrement(input: PaymentUpdateWebhookSuccessInput): Promise<boolean>;
   updateStatusWithoutPostIncrement(input: PaymentUpdateWebhookStatusInput): Promise<boolean>;
 }

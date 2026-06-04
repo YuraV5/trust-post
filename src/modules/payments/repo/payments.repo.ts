@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { IPaymentsRepo } from '../interfaces';
 import {
   CreatePaymentInput,
+  PaymentAttemptsHistoryResponse,
   PaymentForRegeneration,
   PaymentUpdateWebhookStatusInput,
   PaymentUpdateWebhookSuccessInput,
@@ -26,6 +27,7 @@ export class PaymentsRepo implements IPaymentsRepo {
       data: {
         postId: input.postId,
         userId: input.userId,
+        isAnonymous: input.isAnonymous,
         amount: input.amount,
         currency: input.currency,
         referencePaymentId: input.referencePaymentId,
@@ -118,6 +120,24 @@ export class PaymentsRepo implements IPaymentsRepo {
         orderBy: { createdAt: 'desc' },
         skip,
         take: query.limit,
+        include: {
+          post: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+          lastAttempt: {
+            select: {
+              id: true,
+              provider: true,
+              providerPaymentId: true,
+              status: true,
+              statusReason: true,
+              createdAt: true,
+            },
+          },
+        },
       }),
       this.db.payment.count({ where }),
     ]);
@@ -128,6 +148,54 @@ export class PaymentsRepo implements IPaymentsRepo {
       page: query.page,
       limit: query.limit,
       totalPages: Math.ceil(total / query.limit),
+    };
+  }
+
+  async getPaymentAttemptsByUserId(userId: string, paymentId: string): Promise<PaymentAttemptsHistoryResponse | null> {
+    const payment = await this.db.payment.findFirst({
+      where: {
+        id: paymentId,
+        userId,
+      },
+      select: {
+        id: true,
+        status: true,
+        statusReason: true,
+        isAnonymous: true,
+        post: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        paymentAttempts: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          select: {
+            id: true,
+            provider: true,
+            providerPaymentId: true,
+            status: true,
+            statusReason: true,
+            providerResponse: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      return null;
+    }
+
+    return {
+      paymentId: payment.id,
+      paymentStatus: payment.status,
+      paymentStatusReason: payment.statusReason,
+      isAnonymous: payment.isAnonymous,
+      post: payment.post,
+      attempts: payment.paymentAttempts,
     };
   }
 

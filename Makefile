@@ -1,4 +1,5 @@
 ENV_FILE ?= .env
+POSTS ?= 25
 DOCKER_COMPOSE := docker compose --env-file $(ENV_FILE)
 DEV_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml
 PROD_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.yml --profile monitoring
@@ -109,9 +110,13 @@ prisma-reset:
 seed-users:
 	npm run seed:users
 
+# Seed only staff users (1 admin + 2 moderators).
+seed-staff:
+	npm run seed:staff
+
 # Seed only posts.
 seed-posts:
-	npm run seed:posts
+	npm run seed:posts -- --posts=$(POSTS)
 
 # Seed only comments.
 seed-comments:
@@ -119,4 +124,4 @@ seed-comments:
 
 # Seed the full demo dataset.
 seed-full:
-	npm run seed:full
+	npm run seed:full -- --posts=$(POSTS)

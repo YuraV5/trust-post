@@ -34,10 +34,14 @@
     "db:reset": "prisma migrate reset --force",
     "mgr:deploy": "prisma migrate deploy",
     "pr:gen": "prisma generate",
+    "seed:staff": "ts-node tools/seeds.ts staff",
     "seed:users": "ts-node tools/seeds.ts users",
     "seed:posts": "ts-node tools/seeds.ts posts",
+    "seed:posts:25": "ts-node tools/seeds.ts posts -- --posts=25",
     "seed:comments": "ts-node tools/seeds.ts comments",
-    "seed:full": "ts-node tools/seeds.ts full"
+    "seed:full": "ts-node tools/seeds.ts full",
+    "seed:full:25": "ts-node tools/seeds.ts full -- --posts=25",
+    "seed:full:prod": "ts-node tools/seeds.ts full -- --posts=100"
   },
   "dependencies": {
     "@google/genai": "^1.46.0",

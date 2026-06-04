@@ -278,6 +278,13 @@ export class MessageService implements IMessageService {
       return { message: 'Message deleted successfully' };
     }
 
+    const storageKeys = message.attachments.map((attachment) => attachment.storageKey).filter(Boolean);
+
+    if (storageKeys.length > 0) {
+      await this.filesService.delete(storageKeys);
+      await this.repo.deleteFilesByMessageId(messageId);
+    }
+
     await this.repo.softDeleteMessage(messageId);
 
     this.socketService.emitToRoom('chat', `chat:${message.chatId}`, 'message:deleted', {
@@ -306,6 +313,8 @@ export class MessageService implements IMessageService {
     if (file.message.deletedAt) {
       throw new AppBadRequestException('Cannot modify files of a deleted message');
     }
+
+    await this.filesService.delete([file.storageKey]);
 
     await this.repo.deleteFile(fileId);
 

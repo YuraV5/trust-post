@@ -7,14 +7,12 @@ export class PaymentsQueryDto {
   @ApiProperty({ example: 1, required: false })
   @Type(() => Number)
   @IsInt()
-  @Min(1)
   @IsOptional()
   page?: number = 1;
 
   @ApiProperty({ example: 10, required: false })
   @Type(() => Number)
   @IsInt()
-  @Min(1)
   @IsOptional()
   limit?: number = 10;
 

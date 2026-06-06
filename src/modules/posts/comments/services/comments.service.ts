@@ -52,6 +52,8 @@ export class CommentsService implements ICommentsService {
       },
     );
 
+    await this.commentsCacheService.invalidatePostComments(postId);
+
     this.logger.info(`Comment created by user ${authorId} on post ${postId}`, { commentId: comment.id });
 
     return { message: 'Comment created successfully' };
@@ -102,6 +104,8 @@ export class CommentsService implements ICommentsService {
           setProcessing: true,
         },
       );
+
+      await this.commentsCacheService.invalidatePostComments(updatedComment.postId);
     }
 
     return { message: 'Comment updated successfully' };
@@ -115,6 +119,8 @@ export class CommentsService implements ICommentsService {
 
     await this.commentsRepo.delete(id);
 
+    await this.commentsCacheService.invalidatePostComments(comment.postId);
+
     this.logger.info(`Comment ${id} deleted`);
 
     return { message: 'Comment deleted successfully' };
@@ -125,11 +131,26 @@ export class CommentsService implements ICommentsService {
       throw new AppBadRequestException('At least one comment ID must be provided');
     }
 
+    const affectedPostIds = [
+      ...new Set(
+        (
+          await Promise.all(
+            ids.map(async (commentId) => {
+              const comment = await this.commentsRepo.getById(commentId);
+              return comment?.postId ?? null;
+            }),
+          )
+        ).filter((postId): postId is number => typeof postId === 'number'),
+      ),
+    ];
+
     const result = await this.commentsRepo.hardDeleteMany(ids);
 
     if (result.count === 0) {
       throw new AppNotFoundException('No comments were deleted');
     }
+
+    await Promise.all(affectedPostIds.map((postId) => this.commentsCacheService.invalidatePostComments(postId)));
 
     this.logger.info(`${result.count} comment(s) permanently deleted by moderator`, { deletedIds: ids });
 

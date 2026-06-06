@@ -21,6 +21,7 @@ import { REDIS_KEYS } from '../../auth/const';
 import { CommentsService } from '../../posts/comments/services/comments.service';
 import { RetryFailedCommentsInput } from '../../posts/comments/types';
 import { PostsQueueService } from '../../posts/queue';
+import { AppBadRequestException } from '../../../shared/errors/app-errors';
 
 export type AdminDashboardUsersInfo = {
   totalUsers: number;
@@ -164,6 +165,28 @@ export class AdminService {
     }
 
     const result = await this.prismaService.transaction(async (tx) => {
+      const isPrivilegedRole = user.role === UserRoles.ADMIN || user.role === UserRoles.MODERATOR;
+      const isDemotionToUser = role === UserRoles.USER;
+
+      if (isPrivilegedRole && isDemotionToUser) {
+        const remainingPrivilegedUsers = await tx.user.count({
+          where: {
+            id: {
+              not: id,
+            },
+            role: {
+              in: [UserRoles.ADMIN, UserRoles.MODERATOR],
+            },
+          },
+        });
+
+        if (remainingPrivilegedUsers === 0) {
+          throw new AppBadRequestException(
+            'At least one admin or moderator must remain assigned. Assign a new admin or moderator before changing this role.',
+          );
+        }
+      }
+
       await this.userRolePeriodService.handleRoleChange(
         {
           userId: id,

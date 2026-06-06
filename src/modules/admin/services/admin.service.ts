@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { UserRoles } from '@prisma/client';
+import { PostStatus, UserRoles } from '@prisma/client';
 import { ResponseMessage } from '../../../common/types';
 import { generateRandomUsername } from '../../../common/utils/generate-name.util';
 import { AppUserAlreadyExistsException, AppUserNotFoundException } from '../../users/errors';
@@ -21,6 +21,57 @@ import { REDIS_KEYS } from '../../auth/const';
 import { CommentsService } from '../../posts/comments/services/comments.service';
 import { RetryFailedCommentsInput } from '../../posts/comments/types';
 import { PostsQueueService } from '../../posts/queue';
+
+export type AdminDashboardUsersInfo = {
+  totalUsers: number;
+  activeUsers: number;
+  verifiedUsers: number;
+  byRole: Record<UserRoles, number>;
+};
+
+export type AdminDashboardPostStatusInfo = {
+  status: PostStatus;
+  count: number;
+};
+
+export type AdminDashboardModeratorLoad = {
+  id: string;
+  name: string;
+  email: string;
+  photoUrl: string | null;
+  pendingReviewCount: number;
+  blockedCount: number;
+  totalOnReview: number;
+};
+
+export type AdminDashboardPostsInfo = {
+  totalPosts: number;
+  byStatus: AdminDashboardPostStatusInfo[];
+  moderators: AdminDashboardModeratorLoad[];
+};
+
+export type AdminDashboardRoleHistoryInfo = {
+  totalEntries: number;
+  latestChangedAt: Date | null;
+};
+
+export type AdminDashboardOutput = {
+  usersInfo: AdminDashboardUsersInfo;
+  postsInfo: AdminDashboardPostsInfo;
+  userRolesInfo: AdminDashboardRoleHistoryInfo;
+};
+
+export type AdminRoleHistoryEntryOutput = {
+  id: number;
+  userId: string;
+  userName: string;
+  role: UserRoles;
+  startDate: Date;
+  endDate: Date | null;
+  changedById: string;
+  changedByName: string | null;
+  createdAt: Date;
+};
 
 @Injectable()
 export class AdminService {
@@ -176,6 +227,166 @@ export class AdminService {
     }
 
     return this.userRolePeriodService.getUserRoleHistory(userId);
+  }
+
+  async getDashboardSummary(): Promise<AdminDashboardOutput> {
+    const [
+      totalUsers,
+      activeUsers,
+      verifiedUsers,
+      usersByRole,
+      totalPosts,
+      postsByStatus,
+      moderators,
+      roleHistoryEntriesCount,
+      latestRoleHistoryEntry,
+    ] = await Promise.all([
+      this.prismaService.user.count(),
+      this.prismaService.user.count({ where: { isActive: true } }),
+      this.prismaService.user.count({ where: { isEmailVerified: true } }),
+      this.prismaService.user.groupBy({
+        by: ['role'],
+        _count: { _all: true },
+      }),
+      this.prismaService.post.count(),
+      this.prismaService.post.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+      this.prismaService.user.findMany({
+        where: { role: UserRoles.MODERATOR },
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          photoUrl: true,
+          postReviews: {
+            where: {
+              isActive: true,
+              post: {
+                status: {
+                  in: [PostStatus.PENDING_REVIEW, PostStatus.BLOCKED],
+                },
+              },
+            },
+            select: {
+              post: {
+                select: {
+                  status: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prismaService.userRolePeriod.count(),
+      this.prismaService.userRolePeriod.findFirst({
+        orderBy: [{ startDate: 'desc' }, { createdAt: 'desc' }],
+        select: {
+          startDate: true,
+        },
+      }),
+    ]);
+
+    const roleCounts: Record<UserRoles, number> = {
+      [UserRoles.USER]: 0,
+      [UserRoles.ADMIN]: 0,
+      [UserRoles.MODERATOR]: 0,
+    };
+
+    for (const row of usersByRole) {
+      roleCounts[row.role] = row._count._all;
+    }
+
+    const statusCounts = new Map<PostStatus, number>();
+    for (const row of postsByStatus) {
+      statusCounts.set(row.status, row._count._all);
+    }
+
+    const moderatorLoad = moderators.map((moderator) => {
+      let pendingReviewCount = 0;
+      let blockedCount = 0;
+
+      for (const review of moderator.postReviews) {
+        if (review.post.status === PostStatus.PENDING_REVIEW) {
+          pendingReviewCount += 1;
+          continue;
+        }
+
+        if (review.post.status === PostStatus.BLOCKED) {
+          blockedCount += 1;
+        }
+      }
+
+      return {
+        id: moderator.id,
+        name: moderator.name,
+        email: moderator.email,
+        photoUrl: moderator.photoUrl,
+        pendingReviewCount,
+        blockedCount,
+        totalOnReview: pendingReviewCount + blockedCount,
+      };
+    });
+
+    return {
+      usersInfo: {
+        totalUsers,
+        activeUsers,
+        verifiedUsers,
+        byRole: roleCounts,
+      },
+      postsInfo: {
+        totalPosts,
+        byStatus: Object.values(PostStatus).map((status) => ({
+          status,
+          count: statusCounts.get(status) ?? 0,
+        })),
+        moderators: moderatorLoad,
+      },
+      userRolesInfo: {
+        totalEntries: roleHistoryEntriesCount,
+        latestChangedAt: latestRoleHistoryEntry?.startDate ?? null,
+      },
+    };
+  }
+
+  async getAllRoleHistory(): Promise<AdminRoleHistoryEntryOutput[]> {
+    const entries = await this.prismaService.userRolePeriod.findMany({
+      orderBy: [{ startDate: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    if (entries.length === 0) {
+      return [];
+    }
+
+    const changedByIds = [...new Set(entries.map((entry) => entry.changedById))];
+    const changedByUsers = await this.prismaService.user.findMany({
+      where: {
+        id: {
+          in: changedByIds,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    const changedByMap = new Map(changedByUsers.map((user) => [user.id, user.name]));
+
+    return entries.map((entry) => ({
+      id: entry.id,
+      userId: entry.userId,
+      userName: entry.name,
+      role: entry.role,
+      startDate: entry.startDate,
+      endDate: entry.endDate,
+      changedById: entry.changedById,
+      changedByName: changedByMap.get(entry.changedById) ?? null,
+      createdAt: entry.createdAt,
+    }));
   }
 
   async fetchAllModerators(): Promise<ModeratorsListOutput[]> {

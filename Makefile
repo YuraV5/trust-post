@@ -4,6 +4,7 @@ DOCKER_COMPOSE := docker compose --env-file $(ENV_FILE)
 DEV_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.local.yml
 PROD_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.yml --profile monitoring
 PROD_LOCAL_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod-local.yml --profile monitoring
+FULL_STACK_COMPOSE := $(DOCKER_COMPOSE) -f deploy/full-stack/docker-compose.yml
 
 # Ensure environment file exists.
 ensure-env:
@@ -77,6 +78,19 @@ prod-bootstrap: prod prod-migrate prod-seed
 
 # Full bootstrap for local-image production-like env.
 prod-local-bootstrap: prod-local prod-local-migrate prod-local-seed
+
+# Start the full stack with frontend, backend, db, and redis in containers.
+full-start: ensure-env
+	$(FULL_STACK_COMPOSE) pull frontend app
+	$(FULL_STACK_COMPOSE) up -d
+
+# Stop the full frontend+backend deployment stack.
+full-down:
+	$(FULL_STACK_COMPOSE) down
+
+# Apply production-safe Prisma migrations in the full deployment stack.
+full-migrate:
+	$(FULL_STACK_COMPOSE) exec -T app npm run mgr:deploy
 
 # Build the Nest application.
 build:

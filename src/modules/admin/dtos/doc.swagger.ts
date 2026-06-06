@@ -227,6 +227,9 @@ export class AdminRoleHistoryEntryResponseDto {
   @ApiProperty({ example: 'john_doe' })
   userName: string;
 
+  @ApiProperty({ example: 'john@example.com', nullable: true })
+  userEmail: string | null;
+
   @ApiProperty({ enum: UserRoles, example: UserRoles.MODERATOR })
   role: UserRoles;
 

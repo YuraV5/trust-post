@@ -75,6 +75,7 @@ export class AdminUsersController {
   @Roles(UserRoles.ADMIN)
   @Get('/role-history')
   @ApiOperation({ summary: 'Get role history for all users' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by user name or email' })
   @ApiResponse({
     status: 200,
     description: 'Global role history fetched successfully',
@@ -83,8 +84,8 @@ export class AdminUsersController {
   })
   @ApiResponse({ status: 401, description: 'Missing or invalid token', type: UnauthorizedErrorResponse })
   @ApiResponse({ status: 403, description: 'Admin role required', type: ForbiddenErrorResponse })
-  getAllRoleHistory(): Promise<AdminRoleHistoryEntryOutput[]> {
-    return this.adminService.getAllRoleHistory();
+  getAllRoleHistory(@Query('search') search?: string): Promise<AdminRoleHistoryEntryOutput[]> {
+    return this.adminService.getAllRoleHistory(search);
   }
 
   @Roles(UserRoles.ADMIN)

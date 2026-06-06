@@ -65,6 +65,7 @@ export type AdminRoleHistoryEntryOutput = {
   id: number;
   userId: string;
   userName: string;
+  userEmail: string | null;
   role: UserRoles;
   startDate: Date;
   endDate: Date | null;
@@ -352,8 +353,36 @@ export class AdminService {
     };
   }
 
-  async getAllRoleHistory(): Promise<AdminRoleHistoryEntryOutput[]> {
+  async getAllRoleHistory(search?: string): Promise<AdminRoleHistoryEntryOutput[]> {
     const entries = await this.prismaService.userRolePeriod.findMany({
+      where:
+        search && search.trim().length > 0
+          ? {
+              OR: [
+                {
+                  name: {
+                    contains: search.trim(),
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  user: {
+                    email: {
+                      contains: search.trim(),
+                      mode: 'insensitive',
+                    },
+                  },
+                },
+              ],
+            }
+          : undefined,
+      include: {
+        user: {
+          select: {
+            email: true,
+          },
+        },
+      },
       orderBy: [{ startDate: 'desc' }, { createdAt: 'desc' }],
     });
 
@@ -380,6 +409,7 @@ export class AdminService {
       id: entry.id,
       userId: entry.userId,
       userName: entry.name,
+      userEmail: entry.user?.email ?? null,
       role: entry.role,
       startDate: entry.startDate,
       endDate: entry.endDate,
@@ -421,6 +451,7 @@ export class AdminService {
     return {
       page,
       limit,
+      search: query.search,
       email: query.email,
       name: query.name,
       isActive: query.isActive,

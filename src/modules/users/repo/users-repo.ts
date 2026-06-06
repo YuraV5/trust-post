@@ -94,12 +94,18 @@ export class UsersRepo implements IUserRepo {
   }
 
   async findAllForAdmin(query: AdminUsersQueryDto): Promise<PaginatedResult<User>> {
-    const { page = 1, limit = 10, email, name, isActive, isEmailVerified, role, sortBy, sortOrder } = query;
+    const { page = 1, limit = 10, search, email, name, isActive, isEmailVerified, role, sortBy, sortOrder } = query;
 
     const skip = (page - 1) * limit;
 
     // Build where clause based on filters
     const where: Prisma.UserWhereInput = {};
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } },
+      ];
+    }
     if (email) where.email = { contains: email, mode: 'insensitive' };
     if (name) where.name = { contains: name, mode: 'insensitive' };
     if (isActive !== undefined) where.isActive = isActive;

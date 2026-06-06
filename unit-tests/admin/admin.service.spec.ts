@@ -15,10 +15,12 @@ import { EmailQueueServiceMock, StubAppLogger } from '../__mock__';
 import { mockPasswordService } from '../security/mock/password.mock';
 import { mockUser, mockUserAdminOutput, mockUsersRepo } from '../users/__mock';
 import { userAdminMapper, usersAdminMapper } from '../../src/modules/users/mappers';
+import { Prisma } from '@prisma/client';
 
 describe('AdminService', () => {
   let service: AdminService;
-  let prismaMock: { transaction: jest.Mock };
+  let prismaMock: { transaction: jest.Mock<Promise<unknown>, [(tx: Prisma.TransactionClient) => Promise<unknown>]> };
+  let transactionUserCountMock: jest.Mock<Promise<number>, []>;
 
   const userRolePeriodServiceMock = {
     handleRoleChange: jest.fn(),
@@ -42,8 +44,12 @@ describe('AdminService', () => {
   };
 
   beforeEach(async () => {
+    transactionUserCountMock = jest.fn<Promise<number>, []>().mockResolvedValue(1);
+
     prismaMock = {
-      transaction: jest.fn((cb) => cb({})),
+      transaction: jest.fn(async (cb: (tx: Prisma.TransactionClient) => Promise<unknown>) =>
+        cb({ user: { count: transactionUserCountMock } } as unknown as Prisma.TransactionClient),
+      ),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -95,9 +101,9 @@ describe('AdminService', () => {
     it('should throw UserAlreadyExistsError if email already exists', async () => {
       mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
 
-      await expect(service.createUserByAdmin({ email: 'test@example.com', password: 'secret123' }, 'admin-id')).rejects.toThrow(
-        'Invalid credentials',
-      );
+      await expect(
+        service.createUserByAdmin({ email: 'test@example.com', password: 'secret123' }, 'admin-id'),
+      ).rejects.toThrow('Invalid credentials');
     });
 
     it('should create a user and return success message', async () => {
@@ -106,7 +112,10 @@ describe('AdminService', () => {
       mockPasswordService.createHash.mockResolvedValue('hashed-password');
 
       await expect(
-        service.createUserByAdmin({ email: 'new-user@example.com', password: 'secret123', role: UserRoles.USER }, 'admin-id'),
+        service.createUserByAdmin(
+          { email: 'new-user@example.com', password: 'secret123', role: UserRoles.USER },
+          'admin-id',
+        ),
       ).resolves.toEqual({
         message: 'User created successfully, need verification',
       });
@@ -144,7 +153,15 @@ describe('AdminService', () => {
 
       expect(userRolePeriodServiceMock.handleRoleChange).toHaveBeenCalled();
       expect(prismaMock.transaction).toHaveBeenCalled();
-      expect(mockUsersRepo.updateRoles).toHaveBeenCalledWith('user-id', UserRoles.ADMIN, {});
+      expect(mockUsersRepo.updateRoles).toHaveBeenCalledWith('user-id', UserRoles.ADMIN, expect.anything());
+
+      const [, , transactionClient] = mockUsersRepo.updateRoles.mock.calls[0] as [
+        string,
+        UserRoles,
+        { user: { count: jest.Mock<Promise<number>, []> } },
+      ];
+
+      expect(transactionClient.user.count).toBe(transactionUserCountMock);
     });
 
     it('should throw UserNotFoundError when target user does not exist', async () => {
@@ -157,6 +174,7 @@ describe('AdminService', () => {
     it('should enqueue reassignment job when role changes from MODERATOR to USER', async () => {
       mockUsersRepo.findById.mockResolvedValue({ ...mockUser, role: UserRoles.MODERATOR });
       mockUsersRepo.updateRoles.mockResolvedValue(1);
+      transactionUserCountMock.mockResolvedValue(1);
 
       await expect(service.changeRoles('user-id', 'admin-id', UserRoles.USER)).resolves.toEqual({
         message: 'User roles updated successfully',
@@ -234,17 +252,12 @@ describe('AdminService', () => {
     it('should queue failed comments moderation retry and return the count', async () => {
       commentsServiceMock.retryFailedModerationByAdmin.mockResolvedValue({ queuedCount: 3 });
 
-      await expect(
-        service.retryFailedCommentsModeration({ limit: 5, olderThanMinutes: 30 }, 'admin-id'),
-      ).resolves.toEqual({
+      await expect(service.retryFailedCommentsModeration({ limit: 5 }, 'admin-id')).resolves.toEqual({
         message: 'Queued 3 comment(s) for moderation retry',
         queuedCount: 3,
       });
 
-      expect(commentsServiceMock.retryFailedModerationByAdmin).toHaveBeenCalledWith(
-        { limit: 5, olderThanMinutes: 30 },
-        'admin-id',
-      );
+      expect(commentsServiceMock.retryFailedModerationByAdmin).toHaveBeenCalledWith({ limit: 5 }, 'admin-id');
     });
   });
 });

@@ -11,27 +11,33 @@ services:
 
   app:
     image: ${DOCKERHUB_USERNAME}/trust-post:latest
-    container_name: trust_post_app
+    container_name: trust_post_full_app
     env_file:
       - ../../.env
+    ports:
+      - "3001:3001"
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-trust_post_full_stack_redis}
       LOGGER_FILE_ENABLED: "true"
       CORS_ALLOW_ORIGIN: ${FULL_STACK_PUBLIC_URL:-http://localhost}
       WS_CORS_ALLOW_ORIGIN: ${FULL_STACK_PUBLIC_URL:-http://localhost}
       FRONTEND_URL: ${FULL_STACK_PUBLIC_URL:-http://localhost}
       SERVICE_URL: ${FULL_STACK_SERVICE_URL:-http://localhost/api/v1}
+      GOOGLE_OAUTH_CALLBACK_URL: ${GOOGLE_OAUTH_CALLBACK_URL:-http://localhost:3001/api/v1/auth/google/callback}
     volumes:
       - ../../logs:/usr/src/app/logs
+      - ../../tools/imgs.json:/usr/src/app/tools/imgs.json:ro
+      - ../../tools/imgs.json:/usr/src/app/dist/tools/imgs.json:ro
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health/liveness || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/v1/health/liveness || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,7 +46,9 @@ services:
 
   db:
     image: postgres:15
-    container_name: trust_post_db
+    container_name: trust_post_full_db
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -56,15 +64,15 @@ services:
 
   redis:
     image: redis:7
-    container_name: trust_post_redis
+    container_name: trust_post_full_redis
     command: >
       redis-server
       --appendonly yes
-      --requirepass ${REDIS_PASSWORD}
+      --requirepass ${REDIS_PASSWORD:-trust_post_full_stack_redis}
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-trust_post_full_stack_redis}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -72,7 +80,7 @@ services:
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.16.0
-    container_name: trust_post_postgres_exporter
+    container_name: trust_post_full_postgres_exporter
     profiles: ["monitoring"]
     environment:
       DATA_SOURCE_NAME: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
@@ -83,11 +91,11 @@ services:
 
   redis-exporter:
     image: oliver006/redis_exporter:v1.62.0
-    container_name: trust_post_redis_exporter
+    container_name: trust_post_full_redis_exporter
     profiles: ["monitoring"]
     environment:
       REDIS_ADDR: redis://redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-trust_post_full_stack_redis}
     depends_on:
       redis:
         condition: service_healthy
@@ -95,7 +103,7 @@ services:
 
   node-exporter:
     image: prom/node-exporter:v1.8.2
-    container_name: trust_post_node_exporter
+    container_name: trust_post_full_node_exporter
     profiles: ["monitoring"]
     ports:
       - "9100:9100"
@@ -103,7 +111,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.54.1
-    container_name: trust_post_prometheus
+    container_name: trust_post_full_prometheus
     profiles: ["monitoring"]
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -124,7 +132,7 @@ services:
 
   alertmanager:
     image: prom/alertmanager:v0.27.0
-    container_name: trust_post_alertmanager
+    container_name: trust_post_full_alertmanager
     profiles: ["monitoring"]
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
@@ -138,7 +146,7 @@ services:
 
   loki:
     image: grafana/loki:3.1.1
-    container_name: trust_post_loki
+    container_name: trust_post_full_loki
     profiles: ["monitoring"]
     command: -config.file=/etc/loki/loki-config.yml
     ports:
@@ -150,7 +158,7 @@ services:
 
   promtail:
     image: grafana/promtail:3.1.1
-    container_name: trust_post_promtail
+    container_name: trust_post_full_promtail
     profiles: ["monitoring"]
     command: -config.file=/etc/promtail/promtail-config.yml
     volumes:
@@ -164,7 +172,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.1.4
-    container_name: trust_post_grafana
+    container_name: trust_post_full_grafana
     profiles: ["monitoring"]
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}

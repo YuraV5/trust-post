@@ -15,6 +15,7 @@ Run these from the `trust-post` root:
 ```bash
 make full-start
 make full-migrate
+make full-seed
 make full-down
 ```
 
@@ -33,9 +34,22 @@ docker compose --env-file .env -f deploy/full-stack/docker-compose.yml --profile
 ```
 
 The compose file does not build images locally. `make full-start` pulls the latest frontend and backend images from Docker Hub and then starts the stack.
+The `make full-start` target also enables the `monitoring` profile, so Grafana, Prometheus,
+Loki, Promtail, Alertmanager, postgres-exporter, redis-exporter, and node-exporter are included.
+
+Before `make full-start`, set real `CLOUDINARY_*` and `GOOGLE_OAUTH_*` values in `trust-post/.env`.
+The default callback URL for this stack is `http://localhost/api/v1/auth/google/callback`, so the same URL
+must be registered in Google Cloud Console unless you override it with `FULL_STACK_GOOGLE_OAUTH_CALLBACK_URL`.
 
 ## URLs
 
 - Frontend: `http://localhost`
 - API: `http://localhost/api/v1`
 - Swagger: `http://localhost/docs`
+
+## Steps
+1 Copy environment file: cp .env.example .env
+2 Start full stack: make full-start
+3 Run database migrations: make full-migrate
+4 Seed demo data if needed: make full-seed
+5 Open browser: http://localhost 

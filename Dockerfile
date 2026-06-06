@@ -23,6 +23,8 @@ ENV NODE_ENV=production
 COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
 COPY --from=build /usr/src/app/prisma ./prisma
+COPY --from=build /usr/src/app/tools/run-seed.js ./tools/run-seed.js
+COPY --from=build /usr/src/app/tools/imgs.json ./dist/tools/imgs.json
 COPY package.json ./
 
 # remove devDependencies

@@ -56,6 +56,23 @@ make prod-seed
 make prod-bootstrap
 ```
 
+For the frontend+backend deployment stack from `deploy/full-stack` use:
+
+```bash
+make full-start
+make full-migrate
+make full-seed
+# or all-in-one bootstrap:
+make full-bootstrap
+```
+
+`make full-start` also enables the monitoring profile, so Grafana, Prometheus, Loki,
+Promtail, Alertmanager, and exporters start together with the app stack.
+
+For Google OAuth and image uploads in `full-start`, replace the placeholder values in `.env`
+for `GOOGLE_OAUTH_*` and `CLOUDINARY_*`. The full-stack compose uses
+`http://localhost/api/v1/auth/google/callback` by default as the Google callback URL.
+
 ```bash
 make prod-down   # stop all containers
 ```

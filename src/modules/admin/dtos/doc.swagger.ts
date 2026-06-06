@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UserRoles } from '@prisma/client';
+import { PostStatus, UserRoles } from '@prisma/client';
 
 /**
  * Swagger response schemas for the Admin module.
@@ -129,4 +129,122 @@ export class PaginatedAdminUsersResponseDto {
     description: 'Items per page',
   })
   limit: number;
+}
+
+export class AdminDashboardRoleCountsDto {
+  @ApiProperty({ example: 120 })
+  USER: number;
+
+  @ApiProperty({ example: 4 })
+  ADMIN: number;
+
+  @ApiProperty({ example: 8 })
+  MODERATOR: number;
+}
+
+export class AdminDashboardUsersInfoDto {
+  @ApiProperty({ example: 132 })
+  totalUsers: number;
+
+  @ApiProperty({ example: 121 })
+  activeUsers: number;
+
+  @ApiProperty({ example: 117 })
+  verifiedUsers: number;
+
+  @ApiProperty({ type: AdminDashboardRoleCountsDto })
+  byRole: AdminDashboardRoleCountsDto;
+}
+
+export class AdminDashboardPostStatusInfoDto {
+  @ApiProperty({ enum: PostStatus, example: PostStatus.PENDING_REVIEW })
+  status: PostStatus;
+
+  @ApiProperty({ example: 42 })
+  count: number;
+}
+
+export class AdminDashboardModeratorLoadDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  id: string;
+
+  @ApiProperty({ example: 'Moderator Jane' })
+  name: string;
+
+  @ApiProperty({ example: 'moderator@example.com' })
+  email: string;
+
+  @ApiProperty({ example: 'https://example.com/avatar.png', nullable: true })
+  photoUrl: string | null;
+
+  @ApiProperty({ example: 6 })
+  pendingReviewCount: number;
+
+  @ApiProperty({ example: 2 })
+  blockedCount: number;
+
+  @ApiProperty({ example: 8 })
+  totalOnReview: number;
+}
+
+export class AdminDashboardPostsInfoDto {
+  @ApiProperty({ example: 214 })
+  totalPosts: number;
+
+  @ApiProperty({ type: [AdminDashboardPostStatusInfoDto] })
+  byStatus: AdminDashboardPostStatusInfoDto[];
+
+  @ApiProperty({ type: [AdminDashboardModeratorLoadDto] })
+  moderators: AdminDashboardModeratorLoadDto[];
+}
+
+export class AdminDashboardRoleHistoryInfoDto {
+  @ApiProperty({ example: 37 })
+  totalEntries: number;
+
+  @ApiProperty({ example: '2026-06-01T08:30:00.000Z', nullable: true })
+  latestChangedAt: Date | null;
+}
+
+export class AdminDashboardResponseDto {
+  @ApiProperty({ type: AdminDashboardUsersInfoDto })
+  usersInfo: AdminDashboardUsersInfoDto;
+
+  @ApiProperty({ type: AdminDashboardPostsInfoDto })
+  postsInfo: AdminDashboardPostsInfoDto;
+
+  @ApiProperty({ type: AdminDashboardRoleHistoryInfoDto })
+  userRolesInfo: AdminDashboardRoleHistoryInfoDto;
+}
+
+export class AdminRoleHistoryEntryResponseDto {
+  @ApiProperty({ example: 1 })
+  id: number;
+
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  userId: string;
+
+  @ApiProperty({ example: 'john_doe' })
+  userName: string;
+
+  @ApiProperty({ example: 'john@example.com', nullable: true })
+  userEmail: string | null;
+
+  @ApiProperty({ enum: UserRoles, example: UserRoles.MODERATOR })
+  role: UserRoles;
+
+  @ApiProperty({ example: '2026-06-01T08:30:00.000Z' })
+  startDate: Date;
+
+  @ApiProperty({ example: '2026-06-05T08:30:00.000Z', nullable: true })
+  endDate: Date | null;
+
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440001' })
+  changedById: string;
+
+  @ApiProperty({ example: 'Admin Jane', nullable: true })
+  changedByName: string | null;
+
+  @ApiProperty({ example: '2026-06-01T08:30:00.000Z' })
+  createdAt: Date;
 }

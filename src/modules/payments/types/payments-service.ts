@@ -5,7 +5,8 @@ export type CreatePaymentRequest = {
   postId: number;
   amount: number;
   currency?: Currencies;
-  userId: string | null;
+  userId: string;
+  isAnonymous?: boolean;
   provider?: PaymentProvider;
 };
 
@@ -21,6 +22,16 @@ export type PaymentsListRequest = {
   limit?: number;
   status?: PaymentStatus;
   postId?: number;
+};
+
+export type PaymentAttemptsHistoryRequest = {
+  userId: string;
+  paymentId: string;
+};
+
+export type PaymentPostHistoryRequest = {
+  userId: string;
+  postId: number;
 };
 
 export type HandleWebhookRequest = {

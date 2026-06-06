@@ -14,12 +14,13 @@ import {
   UnauthorizedErrorResponse,
   ValidationErrorResponse,
 } from '../../../common/swagger/responses';
+import { AdminDashboardResponseDto, AdminRoleHistoryEntryResponseDto } from '../dtos/doc.swagger';
 import { AdminDeleteDto, AdminUserCreationDto, AdminUsersQueryDto, UpdateRolesDto } from '../../users/dtos';
 import { UserAdminOutput } from '../../users/types';
 import { PaginatedResult } from '../../users/types/paginated';
 import { UserRolePeriodResponseDto } from '../../user-role-periods/dtos';
 import { UserRolePeriodOutput } from '../../user-role-periods/types';
-import { AdminService } from '../services';
+import { AdminDashboardOutput, AdminRoleHistoryEntryOutput, AdminService } from '../services';
 
 @ApiTags('admin-users')
 @ApiBearerAuth('JWT-auth')
@@ -55,6 +56,36 @@ export class AdminUsersController {
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<ResponseMessage> {
     return this.adminService.createUserByAdmin(inp, currentUser.userId);
+  }
+
+  @Roles(UserRoles.ADMIN)
+  @Get('/dashboard')
+  @ApiOperation({ summary: 'Get admin dashboard summary' })
+  @ApiResponse({
+    status: 200,
+    description: 'Admin dashboard summary retrieved successfully',
+    type: AdminDashboardResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid token', type: UnauthorizedErrorResponse })
+  @ApiResponse({ status: 403, description: 'Admin role required', type: ForbiddenErrorResponse })
+  getDashboardSummary(): Promise<AdminDashboardOutput> {
+    return this.adminService.getDashboardSummary();
+  }
+
+  @Roles(UserRoles.ADMIN)
+  @Get('/role-history')
+  @ApiOperation({ summary: 'Get role history for all users' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by user name or email' })
+  @ApiResponse({
+    status: 200,
+    description: 'Global role history fetched successfully',
+    type: AdminRoleHistoryEntryResponseDto,
+    isArray: true,
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid token', type: UnauthorizedErrorResponse })
+  @ApiResponse({ status: 403, description: 'Admin role required', type: ForbiddenErrorResponse })
+  getAllRoleHistory(@Query('search') search?: string): Promise<AdminRoleHistoryEntryOutput[]> {
+    return this.adminService.getAllRoleHistory(search);
   }
 
   @Roles(UserRoles.ADMIN)

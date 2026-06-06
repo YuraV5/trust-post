@@ -94,7 +94,7 @@ CREATE TABLE "user_role_periods" (
 CREATE TABLE "payments" (
     "id" TEXT NOT NULL,
     "post_id" INTEGER NOT NULL,
-    "user_id" TEXT,
+    "user_id" TEXT NOT NULL,
     "amount" DECIMAL(12,2) NOT NULL,
     "currency" "currencies" NOT NULL DEFAULT 'uah',
     "status" "payment_statuses" NOT NULL DEFAULT 'pending',

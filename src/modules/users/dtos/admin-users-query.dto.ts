@@ -17,6 +17,10 @@ export class AdminUsersQueryDto {
 
   @IsOptional()
   @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsString()
   email?: string;
 
   @IsOptional()

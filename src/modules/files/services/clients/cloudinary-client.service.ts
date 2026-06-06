@@ -91,15 +91,25 @@ export class CloudinaryClient implements ICloudinaryClient {
 
   async delete(storageKeys: string[]): Promise<void> {
     const client = this.getClient();
+    const resourceTypes: Exclude<ResourceType, 'auto'>[] = ['image', 'raw', 'video'];
 
     await this.applyRateLimit();
 
     try {
-      await executeWithRetry(() => client.api.delete_resources(storageKeys), {
-        maxRetries: MAX_RETRIES,
-        timeoutMs: TIMEOUT_MS.delete,
-        retryableStatuses: RETRYABLE_STATUSES,
-      });
+      for (const resourceType of resourceTypes) {
+        await executeWithRetry(
+          () =>
+            client.api.delete_resources(storageKeys, {
+              resource_type: resourceType,
+              invalidate: true,
+            }),
+          {
+            maxRetries: MAX_RETRIES,
+            timeoutMs: TIMEOUT_MS.delete,
+            retryableStatuses: RETRYABLE_STATUSES,
+          },
+        );
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error('Cloudinary delete failed', { storageKeys, error: message });
@@ -190,7 +200,7 @@ export class CloudinaryClient implements ICloudinaryClient {
         return this.uploadStream(stream, {
           folder: this.constructFilePath(data.pathSegment, data.userId, data.resourceId),
           public_id: `${Date.now()}_${randomUUID()}`,
-          resource_type: 'auto',
+          resource_type: this.resolveResourceType(file.mimetype),
         });
       },
       {
@@ -222,6 +232,18 @@ export class CloudinaryClient implements ICloudinaryClient {
     const base = `${appName}/${userId}/${pathSegment}`;
     if (!resourceId) return base;
     return `${base}/${resourceId}`;
+  }
+
+  private resolveResourceType(mimeType: string): Exclude<ResourceType, 'auto'> {
+    if (mimeType.startsWith('image/')) {
+      return 'image';
+    }
+
+    if (mimeType.startsWith('video/')) {
+      return 'video';
+    }
+
+    return 'raw';
   }
 
   // Rate limiting: ensures minimum delay between API requests

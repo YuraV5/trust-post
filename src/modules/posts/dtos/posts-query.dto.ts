@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, Min, IsString, IsEnum, IsIn } from 'class-validator';
+import { IsInt, IsOptional, Min, IsString, IsEnum, IsIn, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PostStatus } from '@prisma/client';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -59,6 +59,7 @@ export class PostsQueryDto {
   @ApiPropertyOptional({ example: 'please help', description: 'Full-text search across title and content' })
   @IsOptional()
   @IsString()
+  @MinLength(3)
   search?: string;
 }
 

@@ -10,7 +10,11 @@ import { ConfigService } from '@nestjs/config/dist/config.service';
 import {
   CreatePaymentRequest,
   HandleWebhookRequest,
+  PaymentAttemptsHistoryRequest,
+  PaymentAttemptsHistoryResponse,
   PaymentInitResponse,
+  PaymentPostHistoryRequest,
+  PaymentPostHistoryResponse,
   PaymentsListRequest,
   PaymentsPage,
   RegeneratePaymentLinkRequest,
@@ -48,6 +52,7 @@ export class PaymentsService implements IPaymentsService {
     const payment = await this.paymentRepo.create({
       postId: post.id,
       userId: input.userId,
+      isAnonymous: input.isAnonymous ?? false,
       amount: new Prisma.Decimal(String(input.amount)),
       currency,
       referencePaymentId: post.referencePaymentId,
@@ -91,6 +96,7 @@ export class PaymentsService implements IPaymentsService {
     const newPayment = await this.paymentRepo.create({
       postId: payment.postId,
       userId: input.userId,
+      isAnonymous: payment.isAnonymous,
       amount: payment.amount,
       currency: payment.currency,
       referencePaymentId: payment.referencePaymentId,
@@ -202,5 +208,25 @@ export class PaymentsService implements IPaymentsService {
       status: input.status,
       postId: input.postId,
     });
+  }
+
+  async getMyPaymentAttempts(input: PaymentAttemptsHistoryRequest): Promise<PaymentAttemptsHistoryResponse> {
+    const payment = await this.paymentRepo.getPaymentAttemptsByUserId(input.userId, input.paymentId);
+
+    if (!payment) {
+      throw new AppNotFoundException('Payment not found');
+    }
+
+    return payment;
+  }
+
+  async getPostDonationHistory(input: PaymentPostHistoryRequest): Promise<PaymentPostHistoryResponse> {
+    const history = await this.paymentRepo.getSuccessfulPostPaymentsHistory(input.postId);
+
+    if (!history) {
+      throw new AppNotFoundException('Post donation history not found');
+    }
+
+    return history;
   }
 }

@@ -71,60 +71,19 @@ full-start: ensure-env check-full-stack-integrations
 	$(FULL_STACK_COMPOSE) pull frontend app
 	$(FULL_STACK_COMPOSE) up -d
 
-# Stop the full frontend+backend deployment stack.
 full-down:
 	$(FULL_STACK_COMPOSE) down
 
-# Apply production-safe Prisma migrations in the full deployment stack.
 full-migrate:
 	$(FULL_STACK_COMPOSE) exec -T app npm run mgr:deploy
 
 full-db-reset:
 	$(FULL_STACK_COMPOSE) exec -T app npm run db:reset
 
-# Seed demo data in the full deployment stack app container.
 full-seed:
 	$(FULL_STACK_COMPOSE) exec -T app $(CONTAINER_SEED_CMD)
 
-# Full bootstrap for the frontend+backend deployment stack.
 full-bootstrap: full-start full-migrate full-seed
-
-## Full stack with frontend+backend in containers (for production-like local testing and demos).
-# Start the full stack with frontend, backend, db, and redis in containers.
-full-start: ensure-env check-full-stack-integrations
-	$(FULL_STACK_COMPOSE) pull frontend app
-	$(FULL_STACK_COMPOSE) up -d
-
-# Stop the full frontend+backend deployment stack.
-full-down:
-	$(FULL_STACK_COMPOSE) down
-
-# Apply production-safe Prisma migrations in the full deployment stack.
-full-migrate:
-	$(FULL_STACK_COMPOSE) exec -T app npm run mgr:deploy
-
-full-db-reset:
-	$(FULL_STACK_COMPOSE) exec -T app npm run db:reset
-
-# Seed demo data in the full deployment stack app container.
-full-seed:
-	$(FULL_STACK_COMPOSE) exec -T app $(CONTAINER_SEED_CMD)
-
-# Full bootstrap for the frontend+backend deployment stack.
-full-bootstrap: full-start full-migrate full-seed
-
-# Start the full stack with frontend, backend, db, and redis in containers.
-full-start: ensure-env
-	$(FULL_STACK_COMPOSE) pull frontend app
-	$(FULL_STACK_COMPOSE) up -d
-
-# Stop the full frontend+backend deployment stack.
-full-down:
-	$(FULL_STACK_COMPOSE) down
-
-# Apply production-safe Prisma migrations in the full deployment stack.
-full-migrate:
-	$(FULL_STACK_COMPOSE) exec -T app npm run mgr:deploy
 
 # Build the Nest application.
 build:

@@ -216,7 +216,10 @@ export class AdminService {
       throw new AppUserNotFoundException();
     }
 
-    if (user.role === UserRoles.MODERATOR && role === UserRoles.USER) {
+    const demotedFromModerator =
+      user.role === UserRoles.MODERATOR && (role === UserRoles.USER || role === UserRoles.ADMIN);
+
+    if (demotedFromModerator) {
       try {
         await this.postsQueueService.reassignDemotedModeratorPosts(id, changedById);
       } catch (error) {

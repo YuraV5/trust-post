@@ -12,7 +12,7 @@
  * Full seed: npm run seed:full -- --posts=25
  */
 
-// eslint-disable-next-line import/no-extraneous-dependencies
+/* eslint-disable */
 import {
   Prisma,
   PrismaClient,
@@ -30,6 +30,10 @@ import { resolve } from 'node:path';
 const prisma = new PrismaClient();
 const SEED_REFERENCE_PREFIX = 'SEED';
 const DEFAULT_REGULAR_USERS_COUNT = 10;
+const IMAGES_FILE_PATH_CANDIDATES = [
+  resolve(__dirname, 'imgs.json'),
+  resolve(process.cwd(), 'tools', 'imgs.json'),
+];
 
 const STAFF_USERS = {
   admin: {
@@ -55,8 +59,6 @@ type CliOptions = {
   command: string;
   postsCount?: number;
 };
-
-const IMAGES_FILE_PATH = 'tools/imgs.json';
 
 // ============== HELPER FUNCTIONS ==============
 
@@ -98,19 +100,23 @@ function generateCommentContent(): string {
 }
 
 async function loadSeedImages(): Promise<string[]> {
-  try {
-    const fileContent = await readFile(resolve(process.cwd(), IMAGES_FILE_PATH), 'utf-8');
-    const parsed = JSON.parse(fileContent);
+  for (const filePath of IMAGES_FILE_PATH_CANDIDATES) {
+    try {
+      const fileContent = await readFile(filePath, 'utf-8');
+      const parsed = JSON.parse(fileContent);
 
-    if (!Array.isArray(parsed)) {
-      return [];
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed.filter((item): item is string => typeof item === 'string' && item.length > 0);
+    } catch {
+      continue;
     }
-
-    return parsed.filter((item): item is string => typeof item === 'string' && item.length > 0);
-  } catch (error) {
-    console.warn('⚠️  Unable to load tools/imgs.json. Posts will be created without images.');
-    return [];
   }
+
+  console.warn('⚠️  Unable to load tools/imgs.json. Posts will be created without images.');
+  return [];
 }
 
 function pickRandomUniqueItems<T>(items: T[], count: number): T[] {

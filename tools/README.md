@@ -65,7 +65,17 @@ make prod-local-seed ENV_FILE=.env.prod.local
 npm run docker:prod-local:seed
 ```
 
-Note: `npm run seed:full` on host uses `ts-node` and is intended for local dev mode, not container runtime.
+The seed launcher now resolves the right entry automatically:
+- on host it runs the TypeScript source through `ts-node`
+- in runtime containers it falls back to the compiled `dist/tools/seeds.js`
+
+For the full frontend+backend stack from `deploy/full-stack`, use:
+
+```bash
+make full-seed
+# or
+make full-bootstrap
+```
 
 ### Usage
 

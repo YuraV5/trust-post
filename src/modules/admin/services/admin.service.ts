@@ -165,36 +165,35 @@ export class AdminService {
     }
 
     const result = await this.prismaService.transaction(async (tx) => {
-      const isPrivilegedRole = user.role === UserRoles.ADMIN || user.role === UserRoles.MODERATOR;
-      const isDemotionToUser = role === UserRoles.USER;
+      const isSameRole = user.role === role;
 
-      if (isPrivilegedRole && isDemotionToUser) {
-        const adminCount = await tx.user.count({
+      if (!isSameRole) {
+        const rolesCount = await tx.user.groupBy({
+          by: ['role'],
           where: {
-            id: {
-              not: id,
+            id: { not: id },
+            role: {
+              in: [UserRoles.ADMIN, UserRoles.MODERATOR],
             },
-            role: UserRoles.ADMIN,
           },
+          _count: true,
         });
 
-        const moderatorCount = await tx.user.count({
-          where: {
-            id: {
-              not: id,
-            },
-            role: UserRoles.MODERATOR,
-          },
-        });
+        const getCount = (r: UserRoles) => rolesCount.find((x) => x.role === r)?._count ?? 0;
 
-        const isLastAdmin = user.role === UserRoles.ADMIN && adminCount === 0;
+        let admins = getCount(UserRoles.ADMIN);
+        let moderators = getCount(UserRoles.MODERATOR);
 
-        const isLastModerator = user.role === UserRoles.MODERATOR && moderatorCount === 0;
+        // "subtract" the current role if it was important
+        if (user.role === UserRoles.ADMIN) admins -= 1;
+        if (user.role === UserRoles.MODERATOR) moderators -= 1;
 
-        if (isLastAdmin || isLastModerator) {
-          throw new AppBadRequestException(
-            'At least one admin or moderator must remain assigned. Assign a new admin or moderator before changing this role.',
-          );
+        // "add" the new role if it's important
+        if (role === UserRoles.ADMIN) admins += 1;
+        if (role === UserRoles.MODERATOR) moderators += 1;
+
+        if (admins < 1 || moderators < 1) {
+          throw new AppBadRequestException('At least one admin and one moderator must remain assigned.');
         }
       }
 

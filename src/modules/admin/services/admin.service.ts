@@ -169,18 +169,29 @@ export class AdminService {
       const isDemotionToUser = role === UserRoles.USER;
 
       if (isPrivilegedRole && isDemotionToUser) {
-        const remainingPrivilegedUsers = await tx.user.count({
+        const adminCount = await tx.user.count({
           where: {
             id: {
               not: id,
             },
-            role: {
-              in: [UserRoles.ADMIN, UserRoles.MODERATOR],
-            },
+            role: UserRoles.ADMIN,
           },
         });
 
-        if (remainingPrivilegedUsers === 0) {
+        const moderatorCount = await tx.user.count({
+          where: {
+            id: {
+              not: id,
+            },
+            role: UserRoles.MODERATOR,
+          },
+        });
+
+        const isLastAdmin = user.role === UserRoles.ADMIN && adminCount === 0;
+
+        const isLastModerator = user.role === UserRoles.MODERATOR && moderatorCount === 0;
+
+        if (isLastAdmin || isLastModerator) {
           throw new AppBadRequestException(
             'At least one admin or moderator must remain assigned. Assign a new admin or moderator before changing this role.',
           );

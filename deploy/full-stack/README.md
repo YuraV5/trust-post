@@ -1,5 +1,18 @@
 # Full Stack Compose
 
+## Steps for quick start
+1. Copy environment file:
+   cp .env.example .env  
+   Then set your credentials by following the instructions in `.env.example` (do not use shared credentials).
+2. Start full stack:
+   make full-start
+3. Run database migrations:
+   make full-migrate
+4. Seed demo data if needed:
+   make full-seed
+5. Open browser:
+   http://localhost
+
 This folder runs the full deployment stack from the backend repository:
 
 - frontend image `${DOCKERHUB_USERNAME}/trust-front:latest`
@@ -47,9 +60,4 @@ must be registered in Google Cloud Console unless you override it with `FULL_STA
 - API: `http://localhost/api/v1`
 - Swagger: `http://localhost/docs`
 
-## Steps
-1 Copy environment file: cp .env.example .env
-2 Start full stack: make full-start
-3 Run database migrations: make full-migrate
-4 Seed demo data if needed: make full-seed
-5 Open browser: http://localhost 
+

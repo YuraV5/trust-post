@@ -20,7 +20,8 @@ import { UserAdminOutput } from '../../users/types';
 import { PaginatedResult } from '../../users/types/paginated';
 import { UserRolePeriodResponseDto } from '../../user-role-periods/dtos';
 import { UserRolePeriodOutput } from '../../user-role-periods/types';
-import { AdminDashboardOutput, AdminRoleHistoryEntryOutput, AdminService } from '../services';
+import { AdminService } from '../services';
+import { AdminDashboardOutput, AdminRoleHistoryEntryOutput } from '../types';
 
 @ApiTags('admin-users')
 @ApiBearerAuth('JWT-auth')

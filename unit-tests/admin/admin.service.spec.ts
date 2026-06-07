@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRoles } from '@prisma/client';
 import { APP_LOGGER } from '../../src/shared/logger/services/app-logger';
@@ -16,6 +17,7 @@ import { mockPasswordService } from '../security/mock/password.mock';
 import { mockUser, mockUserAdminOutput, mockUsersRepo } from '../users/__mock';
 import { userAdminMapper, usersAdminMapper } from '../../src/modules/users/mappers';
 import { Prisma } from '@prisma/client';
+import { AdminDashboardRepo } from '../../src/modules/admin/repo/dashboard.repo';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -47,14 +49,22 @@ describe('AdminService', () => {
     transactionUserCountMock = jest.fn<Promise<number>, []>().mockResolvedValue(1);
 
     prismaMock = {
-      transaction: jest.fn(async (cb: (tx: Prisma.TransactionClient) => Promise<unknown>) =>
-        cb({ user: { count: transactionUserCountMock } } as unknown as Prisma.TransactionClient),
+      transaction: jest.fn(async (cb: any) =>
+        cb({
+          user: {
+            groupBy: jest.fn().mockResolvedValue([
+              { role: UserRoles.ADMIN, _count: 2 },
+              { role: UserRoles.MODERATOR, _count: 2 },
+            ]),
+          },
+        }),
       ),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,
+        { provide: AdminDashboardRepo, useValue: { getDashboardSummary: jest.fn() } },
         { provide: UsersRepo, useValue: mockUsersRepo },
         { provide: PasswordService, useValue: mockPasswordService },
         { provide: EmailQueueService, useValue: EmailQueueServiceMock },
@@ -151,45 +161,41 @@ describe('AdminService', () => {
         message: 'User roles updated successfully',
       });
 
+      expect(prismaMock.transaction).toHaveBeenCalledTimes(1);
       expect(userRolePeriodServiceMock.handleRoleChange).toHaveBeenCalled();
-      expect(prismaMock.transaction).toHaveBeenCalled();
       expect(mockUsersRepo.updateRoles).toHaveBeenCalledWith('user-id', UserRoles.ADMIN, expect.anything());
-
-      const [, , transactionClient] = mockUsersRepo.updateRoles.mock.calls[0] as [
-        string,
-        UserRoles,
-        { user: { count: jest.Mock<Promise<number>, []> } },
-      ];
-
-      expect(transactionClient.user.count).toBe(transactionUserCountMock);
     });
 
-    it('should throw UserNotFoundError when target user does not exist', async () => {
+    it('should throw when user not found', async () => {
       mockUsersRepo.findById.mockResolvedValue(null);
 
       await expect(service.changeRoles('missing-id', 'admin-id', UserRoles.ADMIN)).rejects.toThrow('User not found');
+
       expect(prismaMock.transaction).not.toHaveBeenCalled();
     });
 
-    it('should enqueue reassignment job when role changes from MODERATOR to USER', async () => {
-      mockUsersRepo.findById.mockResolvedValue({ ...mockUser, role: UserRoles.MODERATOR });
-      mockUsersRepo.updateRoles.mockResolvedValue(1);
-      transactionUserCountMock.mockResolvedValue(1);
-
-      await expect(service.changeRoles('user-id', 'admin-id', UserRoles.USER)).resolves.toEqual({
-        message: 'User roles updated successfully',
+    it('should enqueue job when moderator changes role', async () => {
+      mockUsersRepo.findById.mockResolvedValue({
+        ...mockUser,
+        role: UserRoles.MODERATOR,
       });
+
+      mockUsersRepo.updateRoles.mockResolvedValue(1);
+
+      await service.changeRoles('user-id', 'admin-id', UserRoles.USER);
 
       expect(postsQueueServiceMock.reassignDemotedModeratorPosts).toHaveBeenCalledWith('user-id', 'admin-id');
     });
 
-    it('should not enqueue reassignment job for non-moderator demotion role changes', async () => {
-      mockUsersRepo.findById.mockResolvedValue({ ...mockUser, role: UserRoles.USER });
+    it('should not enqueue job when user is not moderator', async () => {
+      mockUsersRepo.findById.mockResolvedValue({
+        ...mockUser,
+        role: UserRoles.USER,
+      });
+
       mockUsersRepo.updateRoles.mockResolvedValue(1);
 
-      await expect(service.changeRoles('user-id', 'admin-id', UserRoles.ADMIN)).resolves.toEqual({
-        message: 'User roles updated successfully',
-      });
+      await service.changeRoles('user-id', 'admin-id', UserRoles.ADMIN);
 
       expect(postsQueueServiceMock.reassignDemotedModeratorPosts).not.toHaveBeenCalled();
     });

@@ -9,6 +9,8 @@ import { AdminCommentsController, AdminPostsController, AdminUsersController } f
 import { AdminService } from './services';
 import { UsersRepo } from '../users/repo/users-repo';
 import { CommentsModule } from '../posts/comments/comments.module';
+import { AdminDashboardRepo } from './repo/dashboard.repo';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [
@@ -19,9 +21,10 @@ import { CommentsModule } from '../posts/comments/comments.module';
     UserRolePeriodsModule,
     CommentsModule,
     PostsModule,
+    PrismaModule,
   ],
   controllers: [AdminUsersController, AdminCommentsController, AdminPostsController],
-  providers: [AdminService, UsersRepo],
+  providers: [AdminService, UsersRepo, AdminDashboardRepo],
   exports: [AdminService],
 })
 export class AdminModule {}

@@ -213,3 +213,16 @@ docs/               # Architecture, decisions, API guide, project overview
 | [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) | Step-by-step onboarding guide |
 | [docs/API_SWAGGER.md](docs/API_SWAGGER.md) | How to use Swagger UI and authenticate |
 | [docs/TESTING_SHORT.md](docs/TESTING_SHORT.md) | Test setup notes and commands |
+
+## Steps for quick start
+1. Copy environment file:
+   cp .env.example .env  
+   Then set your credentials by following the instructions in `.env.example` (do not use shared credentials).
+2. Start full stack:
+   make full-start
+3. Run database migrations:
+   make full-migrate
+4. Seed demo data if needed:
+   make full-seed
+5. Open browser:
+   http://localhost
